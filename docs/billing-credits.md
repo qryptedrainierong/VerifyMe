@@ -12,30 +12,33 @@ VerifyMe commercial model centers on **monetary credits** consumed by **billable
 - **Tiers:** Starter, Professional, Enterprise (names and entitlements are product/marketing; technical mapping TBD).
 - **Example initial credits (illustrative):** $10, $50, $250 — not binding quotes.
 
-## Verification Pricing
+## Billable outcomes (final)
 
-- **Per-organization** configuration: **verification API call price** (price per verification attempt or per completed flow—exact unit to be finalized with finance) is set **per organization** (and may vary by tier or contract).
+Billing is driven by the **final verification outcome** of a verification session. The rules are:
 
-## Billable Outcomes
+| Outcome | Billable? |
+|---------|-----------|
+| **Verified** | **Yes** — billable |
+| **Failed** | **Yes** — billable |
+| **Expired** | **No** — not billable |
+| **Error** | **No** — not billable |
+| **Indeterminate** | **No** — not billable |
 
-| Verification outcome | Billable? (design default) |
-|---------------------|----------------------------|
-| **Verified** (successful identity verification) | **Yes** |
-| **Failed** (explicit failure after honest attempt) | **Yes** |
-| **Expired** (user or org abandoned flow) | **No** |
-| **Error** (platform or integration fault) | **No** |
-| **Indeterminate** (cannot classify) | **No** |
+Organizations are charged only when work resolves to **Verified** or **Failed**. They are **not** charged for abandoned sessions (**Expired**), platform or integration faults (**Error**), or outcomes that cannot be classified (**Indeterminate**).
 
-Rationale: organizations should not pay for broken infrastructure or abandoned sessions; they do pay for genuine verification work succeeded or failed under normal conditions.
+## Verification pricing (per organization)
 
-## OTP Billing
+- Each organization has a **per-unit price** (and optional tier or contract modifiers) applied when posting **billable** usage—that is, when sessions settle as **Verified** or **Failed** as above.
+- Pricing configuration is owned in the **VerifyMe Admin Portal** / finance workflows; this document does not fix currency minor units or invoice line-item layout.
+
+## OTP billing
 
 - **Email OTP** billing is **configurable** (per org or per plan): may be included, per-message, or bundled.
-- **Future SMS OTP** is expected to be **billable per send** once offered.
+- **SMS OTP** (future) is **billable per send** once the product offers it.
 
-## Relationship To “Usage” In UI
+## Relationship to verification logs and usage & credits in UI
 
-Admin screens may still show charts labeled for **design exploration**. Product copy should refer to **verification attempts**, **verification volume**, **credits consumed**, and **OTP charges**—not “subscription usage” or “API quota” unless explicitly referring to a legacy metric name in an audit log key (see audit log terminology notes in repo `documentation/README.md`).
+Admin screens may still show charts for **design exploration**. Product copy should refer to **verification logs**, **verification volume**, **usage & credits**, and **OTP charges**—not “subscription usage” or “API quota” unless explicitly referring to a **legacy audit log action key** (see `documentation/README.md`: product wording uses **plans** and **credits**; internal keys such as `subscription.*` may stay for backward compatibility).
 
 ## Related Documents
 

@@ -13,14 +13,26 @@
 
 ## client_id Format
 
-**Pattern:** `<ORG_CODE>_<APP_TYPE>_<ENV>_<SEQ>`
+External `client_id` values are structured as four underscore-separated segments. Placeholder names below describe each segment (they are not HTML).
+
+**Pattern** (read left to right, underscores between segments):
+
+```text
+<ORG_CODE>_<APP_TYPE>_<ENV>_<SEQ>
+```
+
+**Example:**
+
+```text
+DEMO_CALLCENTER_PROD_001
+```
+
+Segment meanings:
 
 - **ORG_CODE** — Short, stable code for the organization (not the UUID).
 - **APP_TYPE** — Logical application class (e.g. `CALLCENTER`, `MESSAGING`, `BACKOFFICE`).
 - **ENV** — `PROD`, `STAGING`, `SANDBOX`, etc.
 - **SEQ** — Zero-padded sequence when multiple apps share type + env.
-
-**Example:** `DEMO_CALLCENTER_PROD_001`
 
 Exact validation rules (length, charset, reserved words) are TBD at implementation time; this format is the **design anchor**.
 

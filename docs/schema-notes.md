@@ -24,7 +24,22 @@ These names are **working** relational concepts for engineering alignment. Colum
 |-------|---------|
 | **verifyme_users** | Mobile identity: email, name, status, recovery handles. |
 | **user_devices** | Device binding, active device flag (MVP single device). |
-| **user_device_secure_state** | Key material references, biometric capability flags, revocation (no raw secrets in DB design intent). |
+| **user_device_secure_state** | Device-bound secrets required by the Verification Service (see subsection below). |
+
+### `user_device_secure_state` (privacy-preserving design)
+
+This row holds material the **VerifyMe Verification Service** needs to validate end-user actions **without** persisting human-readable secrets or biometrics in the clear.
+
+It stores device-bound **Encrypted_Auth_Cred** and **Transaction_Code** (and related references such as key handles and rotation metadata) as required by the VerifyMe Verification Service.
+
+**Explicitly not stored** in this secure state (or elsewhere as plaintext at rest in this design):
+
+- No **passcode**
+- No **OTP** value or OTP seed
+- No **biometric** template or raw biometric data
+- No **generated one-time verification token** (the token is generated and consumed in the flow; storage is limited to what the Verification Service needs for validation, not a copy of the token shown to the org rep)
+
+Wording intent: **privacy-preserving** — only the minimum device-bound cryptographic material needed for the service to function.
 
 ## Organization ↔ End-User Linking
 

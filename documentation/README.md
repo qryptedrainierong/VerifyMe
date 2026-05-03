@@ -23,6 +23,8 @@ Agreed **VerifyMe** product language, flows, billing, QR linking, and high-level
 
 Prefer **verification**, **credits**, **linked end users**, and **organization admin** language over legacy SaaS terms such as **API quota**, **subscription usage**, or generic **team** where those terms conflict with VerifyMe.
 
+**Audit logs:** Product terminology uses **plans** and **credits**. Existing **audit log action keys** (for example `subscription.*`, `platform.*`) are **not renamed** in those documents so stored logs and prototypes stay backward-compatible; UI labels should still follow product wording where readers see them.
+
 ## Project Snapshot
 
 VerifyMe Admin Portals is a Vite + React + TypeScript frontend project that presents two separate admin experiences from a single entry point:
@@ -87,9 +89,9 @@ This means the project behaves like a single frontend app with two portal modes,
 - `App.tsx`
   Portal selector and high-level app switcher
 - `platform/`
-  Platform admin portal app, routes, and pages
+  VerifyMe Admin Portal app, routes, and pages
 - `enterprise/`
-  Organization portal app, routes, and pages
+  Organization Admin Portal app, routes, and pages
 - `shared/`
   Components, hooks, and utilities used across both portals
 
@@ -113,7 +115,7 @@ Contains the **Organization Admin Portal**:
 - `routes.tsx`
   Route configuration for organization pages
 - `pages/`
-  Screens such as dashboard, linked end users, verification logs, API integration, QR linking placeholders, team & roles, usage & credits, billing, and settings
+  Screens such as dashboard, linked end users, verification logs, API integration, QR linking, team & roles, usage & credits, billing, and settings
 
 ### `src/app/shared`
 
