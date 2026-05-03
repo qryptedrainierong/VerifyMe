@@ -1,4 +1,5 @@
 import {
+  formatIntegrationStatus,
   getSampleOrganizationById,
   getVerificationSpend,
   planDefaults,
@@ -58,3 +59,172 @@ export const enterpriseInvoices = [
     period: "Feb 2024",
   },
 ];
+
+/** Design-phase: some steps incomplete so dashboard checklist is visible (UI only). */
+export type EnterpriseSetupStepId =
+  | "profile"
+  | "api"
+  | "redirect"
+  | "qr"
+  | "verification"
+  | "test";
+
+export type EnterpriseSetupStep = {
+  id: EnterpriseSetupStepId;
+  title: string;
+  description: string;
+  complete: boolean;
+  ctaLabel: string;
+  href: string;
+};
+
+export const enterpriseSetupSteps: EnterpriseSetupStep[] = [
+  {
+    id: "profile",
+    title: "Complete organization profile",
+    description:
+      "Confirm legal name, organization type, industry, company size, address, timezone, currency, and key contacts.",
+    complete: true,
+    ctaLabel: "Review profile",
+    href: "/settings",
+  },
+  {
+    id: "api",
+    title: "Configure API integration",
+    description:
+      "Review your client application, allowed scopes, and OIDC-style endpoints. Rotate credentials on a schedule.",
+    complete: true,
+    ctaLabel: "Open API integration",
+    href: "/api-integration",
+  },
+  {
+    id: "redirect",
+    title: "Add redirect URI",
+    description:
+      "Configure the callback URL used after VerifyMe returns the OIDC authorization code. Only registered URIs can receive codes.",
+    complete: false,
+    ctaLabel: "Configure redirect URI",
+    href: "/api-integration#redirect-uris",
+  },
+  {
+    id: "qr",
+    title: "Configure QR linking keys",
+    description:
+      "Upload your organization public key and confirm VerifyMe key material so QR and deep links can be issued safely.",
+    complete: false,
+    ctaLabel: "Open QR linking",
+    href: "/qr-linking",
+  },
+  {
+    id: "verification",
+    title: "Configure verification settings",
+    description:
+      "Set verification attempts, session timeout, and resend behavior within platform limits for your organization.",
+    complete: false,
+    ctaLabel: "Open verification settings",
+    href: "/settings#verification-settings",
+  },
+  {
+    id: "test",
+    title: "Test integration",
+    description:
+      "Run a sandbox verification through your callback and linking flow before enabling production traffic.",
+    complete: false,
+    ctaLabel: "View testing checklist",
+    href: "/api-integration",
+  },
+];
+
+export const enterprisePortalSetupIncomplete = enterpriseSetupSteps.some((s) => !s.complete);
+
+export const enterpriseMockClientApplication = {
+  clientId: enterpriseOrganization.primaryClientId,
+  name: "Call Center Production",
+  environment: "PROD" as const,
+  secretStatus: "Secret active" as const,
+  lastRotated: "2024-03-01",
+  allowedScopes: ["openid", "profile", "offline_access", "verifyme:verification"],
+  integrationStatusLabel: formatIntegrationStatus(enterpriseOrganization.integrationStatus),
+};
+
+export type EnterpriseMockRedirectUri = {
+  id: string;
+  redirectUri: string;
+  environment: string;
+  status: "active" | "disabled";
+  created: string;
+};
+
+export const enterpriseMockRedirectUris: EnterpriseMockRedirectUri[] = [
+  {
+    id: "ru-1",
+    redirectUri: "https://demoenterprise.qryptedtech.com/callback",
+    environment: "PROD",
+    status: "active",
+    created: "2024-02-10",
+  },
+  {
+    id: "ru-2",
+    redirectUri: "https://acme.com/auth/verifyme/callback",
+    environment: "PROD",
+    status: "active",
+    created: "2024-01-20",
+  },
+];
+
+export type EnterpriseApiDocCard = {
+  id: string;
+  title: string;
+  purpose: string;
+  parametersSummary: string;
+  readiness: "Ready" | "Configure redirect URI" | "Review scopes";
+};
+
+export const enterpriseApiDocCards: EnterpriseApiDocCard[] = [
+  {
+    id: "authorize",
+    title: "Authorize",
+    purpose: "Start the OIDC authorization request and send the end user to VerifyMe for verification.",
+    parametersSummary: "response_type=code, client_id, redirect_uri, scope, state, nonce (recommended)",
+    readiness: "Ready",
+  },
+  {
+    id: "handle-auth",
+    title: "Handle authorization",
+    purpose: "Receive the authorization code at your registered redirect URI and validate state.",
+    parametersSummary: "code, state — exchange server-side only",
+    readiness: "Configure redirect URI",
+  },
+  {
+    id: "token",
+    title: "Token",
+    purpose: "Exchange the authorization code for tokens using client authentication (confidential client).",
+    parametersSummary: "grant_type=authorization_code, code, redirect_uri, client_id",
+    readiness: "Ready",
+  },
+];
+
+export const enterpriseQrKeyRow = {
+  verifyMePublicKeyStatus: "Active" as const,
+  organizationPublicKeyStatus: "Missing" as const,
+  keyId: "org-key-acme-2024-01",
+  algorithm: "RSA-4096 / SHA-256 (sample)",
+  lastRotated: "—",
+};
+
+export const enterpriseOrganizationProfileExtended = {
+  fullAddress: "500 Howard Street, San Francisco, CA 94105, United States",
+  primaryContact: { name: "Jordan Lee", email: "jordan.lee@acme.com", phone: "+1 (415) 555-0142" },
+  technicalContact: { name: "Sam Rivera", email: "sam.rivera@acme.com", phone: "+1 (415) 555-0198" },
+  billingContact: { name: "Alex Morgan", email: "billing@acme.com", phone: "+1 (415) 555-0100" },
+  securityContact: { name: "Casey Kim", email: "security@acme.com", phone: "+1 (415) 555-0177" },
+};
+
+export const enterpriseVerificationSettingsMock = {
+  maxAttemptsPerVerification: 8,
+  verificationSessionTimeoutSeconds: 300,
+  allowVerificationResend: true,
+  maxResendCount: 3,
+  platformMaxAttempts: 10,
+  platformMaxTimeoutSeconds: 600,
+};

@@ -1,4 +1,4 @@
-import { Users, CreditCard, AlertCircle, BarChart3 } from "lucide-react";
+import { CheckCircle2, Circle, CreditCard, Users, AlertCircle, BarChart3 } from "lucide-react";
 import { Link } from "react-router";
 import { Card } from "../../shared/components/ui/card";
 import { Button } from "../../shared/components/ui/button";
@@ -10,6 +10,8 @@ import {
   enterpriseCreditUtilizationPct,
   enterpriseEndUsers,
   enterpriseOrganization,
+  enterprisePortalSetupIncomplete,
+  enterpriseSetupSteps,
   enterpriseUsageTrend,
   enterpriseUsageSpend,
 } from "../data/enterpriseSample";
@@ -21,7 +23,7 @@ export function EnterpriseDashboard() {
     id: index + 1,
     user: user.enterpriseUsername,
     action:
-      user.status === "active" ? "Completed an identity verification session" : "Has a pending VerifyMe link",
+      user.status === "active" ? "Completed a billable verification session" : "Has a pending VerifyMe link",
     timestamp: `${2 + index * 2} hour${index === 0 ? "" : "s"} ago`,
   }));
 
@@ -56,12 +58,65 @@ export function EnterpriseDashboard() {
       <div>
         <h1 className="text-[28px] font-semibold text-foreground">Dashboard</h1>
         <p className="text-[15px] text-muted-foreground mt-1 max-w-3xl">
-          Organization-level overview of credit balance, verification attempts, success and failure results, OTP events,
-          recent activity, and integration status (sample data).
+          Organization-level overview of credits, verification sessions, linked end users, and integration readiness
+          (sample data).
         </p>
       </div>
 
-      {/* KPI Cards */}
+      {enterprisePortalSetupIncomplete ? (
+        <Card className="p-6 border-2 border-primary/30 bg-primary/5 shadow-sm">
+          <div className="mb-4">
+            <h2 className="text-[18px] font-semibold text-foreground">Finish organization setup</h2>
+            <p className="text-[14px] text-muted-foreground mt-1 max-w-3xl">
+              VerifyMe Admin created your organization (profile, initial admin, plan & credits). Complete the steps below
+              in this portal before relying on production verification traffic.
+            </p>
+            <p className="text-[13px] text-foreground mt-3 rounded-md border border-amber-200 bg-amber-50/80 px-3 py-2 dark:bg-amber-950/30 dark:border-amber-800">
+              Verification API usage should remain <strong>disabled</strong> until redirect URI, QR keys, and
+              verification settings are configured and tested (policy copy — not enforced in this UI build).
+            </p>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {enterpriseSetupSteps.map((step) => (
+              <Card
+                key={step.id}
+                className={`p-4 border shadow-sm ${step.complete ? "border-green-200/80 bg-green-50/30 dark:bg-green-950/20" : "border-border bg-card"}`}
+              >
+                <div className="flex items-start gap-3">
+                  {step.complete ? (
+                    <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0 mt-0.5" aria-hidden />
+                  ) : (
+                    <Circle className="w-5 h-5 text-muted-foreground shrink-0 mt-0.5" aria-hidden />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                      <h3 className="text-[15px] font-semibold text-foreground">{step.title}</h3>
+                      <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                        {step.complete ? "Complete" : "Incomplete"}
+                      </span>
+                    </div>
+                    <p className="text-[13px] text-muted-foreground leading-relaxed">{step.description}</p>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <Button size="sm" variant={step.complete ? "outline" : "default"} asChild>
+                        <Link to={step.href}>{step.ctaLabel}</Link>
+                      </Button>
+                      <span className="text-[11px] text-muted-foreground">Opens: {step.href}</span>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </Card>
+      ) : (
+        <Card className="p-4 border border-green-200 bg-green-50/40 dark:bg-green-950/20 dark:border-green-900">
+          <div className="flex items-center gap-2 text-[14px] text-foreground">
+            <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0" />
+            <span>All setup steps are complete. Monitor usage and credits below.</span>
+          </div>
+        </Card>
+      )}
+
       <div className="grid grid-cols-4 gap-6">
         <Card className="p-6 border border-border shadow-sm">
           <div className="flex items-start justify-between mb-3">
@@ -70,9 +125,11 @@ export function EnterpriseDashboard() {
             </div>
           </div>
           <div>
-            <p className="text-[13px] text-muted-foreground mb-1">Team seats</p>
+            <p className="text-[13px] text-muted-foreground mb-1">Admin seats</p>
             <p className="text-[32px] font-semibold text-foreground leading-none">{enterpriseOrganization.seatsUsed}</p>
-            <p className="text-[13px] text-muted-foreground mt-2">Organization portal users</p>
+            <p className="text-[13px] text-muted-foreground mt-2">
+              of {enterpriseOrganization.seatLimit} seat limit
+            </p>
           </div>
         </Card>
 
@@ -99,7 +156,7 @@ export function EnterpriseDashboard() {
             <p className="text-[13px] text-muted-foreground mb-1">Plan and credits</p>
             <p className="text-[32px] font-semibold text-foreground leading-none">{enterpriseOrganization.plan}</p>
             <p className="text-[13px] text-muted-foreground mt-2">
-              {formatCurrency(enterpriseOrganization.creditBalance)} included credit
+              {formatCurrency(enterpriseOrganization.creditBalance)} credit balance
             </p>
           </div>
         </Card>
@@ -111,18 +168,17 @@ export function EnterpriseDashboard() {
             </div>
           </div>
           <div>
-            <p className="text-[13px] text-muted-foreground mb-1">Verifications this month</p>
+            <p className="text-[13px] text-muted-foreground mb-1">Verification sessions (period)</p>
             <p className="text-[32px] font-semibold text-foreground leading-none">
               {enterpriseOrganization.usage.toLocaleString()}
             </p>
             <p className="text-[13px] text-muted-foreground mt-2">
-              {formatCurrency(enterpriseUsageSpend)} verification spend
+              {formatCurrency(enterpriseUsageSpend)} billable spend (sample)
             </p>
           </div>
         </Card>
       </div>
 
-      {/* Alerts */}
       {alerts.length > 0 && (
         <div className="space-y-3">
           {alerts.map((alert) => (
@@ -155,15 +211,14 @@ export function EnterpriseDashboard() {
       )}
 
       <div className="grid grid-cols-3 gap-6">
-        {/* Usage Trend Chart */}
         <Card className="col-span-2 border border-border shadow-sm">
           <div className="p-6 border-b border-border">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-[16px] font-semibold text-foreground">Verification volume</h3>
-                <p className="text-[13px] text-muted-foreground">Completed verification attempts over the last 9 days (sample)</p>
+                <h3 className="text-[16px] font-semibold text-foreground">Verification session volume</h3>
+                <p className="text-[13px] text-muted-foreground">Last 9 days (sample trend)</p>
               </div>
-              <Button variant="outline" size="sm">Last 30 Days</Button>
+              <Button variant="outline" size="sm">Last 30 days</Button>
             </div>
           </div>
           <div className="p-6">
@@ -194,7 +249,7 @@ export function EnterpriseDashboard() {
                     borderRadius: "8px",
                     fontSize: "12px",
                   }}
-                  formatter={(value: any) => [`${value.toLocaleString()} verifications`, "Volume"]}
+                  formatter={(value: number | string) => [`${Number(value).toLocaleString()} sessions`, "Volume"]}
                 />
                 <Line
                   key="usage-line"
@@ -209,40 +264,35 @@ export function EnterpriseDashboard() {
           </div>
         </Card>
 
-        {/* Credit Progress */}
         <Card className="border border-border shadow-sm">
           <div className="p-6 border-b border-border">
-            <h3 className="text-[16px] font-semibold text-foreground">Credit Status</h3>
-            <p className="text-[13px] text-muted-foreground">Current billing period</p>
+            <h3 className="text-[16px] font-semibold text-foreground">Credits</h3>
+            <p className="text-[13px] text-muted-foreground">Wallet vs billable spend (sample)</p>
           </div>
           <div className="p-6 space-y-6">
             <div>
               <div className="flex items-center justify-between mb-2">
-                <p className="text-[13px] font-medium text-foreground">Verification Spend</p>
+                <p className="text-[13px] font-medium text-foreground">Billable verification spend</p>
                 <p className="text-[13px] text-muted-foreground">
-                  {formatCurrency(enterpriseUsageSpend)} / {formatCurrency(enterpriseOrganization.creditBalance)} included credit
+                  {formatCurrency(enterpriseUsageSpend)} / {formatCurrency(enterpriseOrganization.creditBalance)}
                 </p>
               </div>
               <Progress value={Math.min(enterpriseCreditUtilizationPct, 100)} className="h-2" />
-              <p className="text-[12px] text-orange-600 mt-1.5">{enterpriseCreditUtilizationPct.toFixed(1)}% credit used</p>
+              <p className="text-[12px] text-orange-600 mt-1.5">{enterpriseCreditUtilizationPct.toFixed(1)}% of balance used</p>
             </div>
 
             <div className="pt-4 space-y-2">
               <div className="flex items-center justify-between">
-                <p className="text-[12px] text-muted-foreground">Resets in</p>
+                <p className="text-[12px] text-muted-foreground">Period resets in</p>
                 <p className="text-[12px] font-medium text-foreground">12 days</p>
               </div>
               <div className="flex items-center justify-between">
-                <p className="text-[12px] text-muted-foreground">Avg. daily verifications</p>
+                <p className="text-[12px] text-muted-foreground">Avg. daily sessions</p>
                 <p className="text-[12px] font-medium text-foreground">6.9K</p>
               </div>
               <div className="flex items-center justify-between">
                 <p className="text-[12px] text-muted-foreground">Credit remaining</p>
                 <p className="text-[12px] font-medium text-foreground">{formatCurrency(enterpriseCreditRemaining)}</p>
-              </div>
-              <div className="flex items-center justify-between">
-                <p className="text-[12px] text-muted-foreground">Credit utilization</p>
-                <p className="text-[12px] font-medium text-foreground">{enterpriseCreditUtilizationPct.toFixed(1)}%</p>
               </div>
             </div>
 
@@ -253,7 +303,6 @@ export function EnterpriseDashboard() {
         </Card>
       </div>
 
-      {/* Recent Team Activity */}
       <Card className="border border-border shadow-sm">
         <div className="p-6 border-b border-border">
           <div className="flex items-center justify-between">
@@ -261,7 +310,7 @@ export function EnterpriseDashboard() {
               <h3 className="text-[16px] font-semibold text-foreground">Recent activity</h3>
               <p className="text-[13px] text-muted-foreground">Verification and portal actions (sample)</p>
             </div>
-            <Button variant="ghost" size="sm">View All</Button>
+            <Button variant="ghost" size="sm">View all</Button>
           </div>
         </div>
         <div className="divide-y divide-border">

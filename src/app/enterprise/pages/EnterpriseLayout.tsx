@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { PortalSidebar } from "../../shared/components/PortalSidebar";
 import { TopBar } from "../../shared/components/TopBar";
+import { enterpriseOrganization } from "../data/enterpriseSample";
 
 export function EnterpriseLayout() {
   const navItems = [
@@ -35,7 +36,7 @@ export function EnterpriseLayout() {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <PortalSidebar title="Acme Corp" items={navItems} logo={logo} />
+      <PortalSidebar title={enterpriseOrganization.organizationName} items={navItems} logo={logo} />
       <div className="flex-1 flex flex-col overflow-hidden">
         <TopBar title="Organization Admin Portal" />
         <main className="flex-1 overflow-auto bg-background">

@@ -6,11 +6,9 @@ import { EnterpriseTeam } from "./pages/EnterpriseTeam";
 import { EnterpriseUsage } from "./pages/EnterpriseUsage";
 import { EnterpriseBilling } from "./pages/EnterpriseBilling";
 import { EnterpriseSettings } from "./pages/EnterpriseSettings";
-import {
-  EnterpriseApiIntegration,
-  EnterpriseQrLinking,
-  EnterpriseVerificationLogs,
-} from "./pages/EnterpriseIaPlaceholders";
+import { EnterpriseVerificationLogs } from "./pages/EnterpriseIaPlaceholders";
+import { EnterpriseApiIntegration } from "./pages/EnterpriseApiIntegration";
+import { EnterpriseQrLinking } from "./pages/EnterpriseQrLinking";
 
 // Lazy router creation to prevent HMR connection errors
 // Reset router on each call to ensure fresh state
