@@ -28,7 +28,7 @@ type OrganizationProfile = {
 };
 
 type EnterpriseRole =
-  | "Super Admin"
+  | "Owner"
   | "Admin"
   | "Operations"
   | "Technical / API Manager"
@@ -51,14 +51,14 @@ const enterpriseRoleDefinitions: Array<{
   restrictions: string[];
 }> = [
   {
-    role: "Super Admin",
+    role: "Owner",
     access: "FULL",
     responsibilities: [
-      "Manage all users and roles",
-      "Configure verification workflows",
-      "Manage API integrations and keys",
+      "Manage all portal users and roles",
+      "Configure verification workflows and limits",
+      "Manage OIDC-style client apps and integration settings",
       "Access logs, reports, and dashboards",
-      "Manage billing and subscription",
+      "Manage billing, credits, and verification pricing",
       "View audit logs and compliance data",
     ],
     restrictions: [],
@@ -114,7 +114,7 @@ const enterpriseRoleDefinitions: Array<{
       "View and download invoices",
       "Manage payment methods",
       "Monitor usage and cost",
-      "View subscription details",
+      "View plan invoices and credit statements",
     ],
     restrictions: [
       "No access to verification logs",
@@ -141,7 +141,7 @@ const enterpriseRoleDefinitions: Array<{
 
 function buildEnterpriseDummyUsers(org: PlatformOrganization): EnterpriseUser[] {
   const seedRoles: EnterpriseRole[] = [
-    "Super Admin",
+    "Owner",
     "Admin",
     "Operations",
     "Technical / API Manager",
@@ -154,7 +154,7 @@ function buildEnterpriseDummyUsers(org: PlatformOrganization): EnterpriseUser[] 
     const isActive = sequence <= org.seatsUsed;
     const baseRole = seedRoles[index % seedRoles.length];
     const extraRoles: EnterpriseRole[] =
-      baseRole === "Super Admin"
+      baseRole === "Owner"
         ? ["Compliance / Auditor", "Technical / API Manager"]
         : baseRole === "Admin"
           ? ["Operations"]
@@ -370,11 +370,11 @@ export function PlatformOrganizationDetail() {
           <div className="border-b border-border px-8">
             <TabsList className="bg-transparent">
               <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="end-users">End Users</TabsTrigger>
-              <TabsTrigger value="usage">Usage</TabsTrigger>
+              <TabsTrigger value="end-users">Linked end users</TabsTrigger>
+              <TabsTrigger value="usage">Credits and usage</TabsTrigger>
               <TabsTrigger value="billing">Billing</TabsTrigger>
               <TabsTrigger value="audit">Audit Logs</TabsTrigger>
-              <TabsTrigger value="users">Users</TabsTrigger>
+              <TabsTrigger value="users">Team and roles</TabsTrigger>
               <TabsTrigger value="settings">Settings</TabsTrigger>
             </TabsList>
           </div>
@@ -419,11 +419,11 @@ export function PlatformOrganizationDetail() {
               </div>
             </Card>
 
-            {/* Subscription Summary */}
+            {/* Plan & credits summary */}
             <Card className="border border-border shadow-sm">
               <div className="p-6 border-b border-border">
                 <h3 className="text-[16px] font-semibold text-foreground">
-                  Subscription Summary
+                  Plan and credits summary
                 </h3>
               </div>
               <div className="p-6 grid grid-cols-2 gap-6">
@@ -585,9 +585,9 @@ export function PlatformOrganizationDetail() {
               <div className="p-6 border-b border-border">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-[16px] font-semibold text-foreground">End Users</h3>
+                    <h3 className="text-[16px] font-semibold text-foreground">Linked end users</h3>
                     <p className="text-[13px] text-muted-foreground">
-                      Users associated with {organization.name}
+                      Client records linked to VerifyMe identities for {organization.name}
                     </p>
                   </div>
                   <p className="text-[13px] text-muted-foreground">
@@ -603,7 +603,7 @@ export function PlatformOrganizationDetail() {
                         VerifyMe Username
                       </th>
                       <th className="text-left p-4 text-[12px] font-semibold tracking-wide text-muted-foreground uppercase">
-                        Enterprise Username
+                        Client user ID
                       </th>
                       <th className="text-left p-4 text-[12px] font-semibold tracking-wide text-muted-foreground uppercase">
                         Email
@@ -612,7 +612,7 @@ export function PlatformOrganizationDetail() {
                         Status
                       </th>
                       <th className="text-left p-4 text-[12px] font-semibold tracking-wide text-muted-foreground uppercase">
-                        API Calls
+                        Verifications
                       </th>
                       <th className="text-left p-4 text-[12px] font-semibold tracking-wide text-muted-foreground uppercase">
                         Last Active
@@ -662,9 +662,9 @@ export function PlatformOrganizationDetail() {
                     {organizationEndUsers.length === 0 && (
                       <tr>
                         <td colSpan={6} className="p-10 text-center">
-                          <p className="text-sm font-medium text-foreground">No end users associated</p>
+                          <p className="text-sm font-medium text-foreground">No linked end users</p>
                           <p className="text-xs text-muted-foreground mt-1">
-                            This organization currently has no mapped end-users.
+                            This organization currently has no mapped client_user_id links to VerifyMe identities.
                           </p>
                         </td>
                       </tr>
@@ -679,25 +679,25 @@ export function PlatformOrganizationDetail() {
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                 <Card className="p-6 border border-border shadow-sm">
-                  <p className="text-[13px] text-muted-foreground mb-1">Verification API Calls</p>
+                  <p className="text-[13px] text-muted-foreground mb-1">Verification attempts</p>
                   <p className="text-[28px] font-semibold text-foreground tabular-nums">
                     {formatNumber(organization.usage)}
                   </p>
                   <p className="text-[12px] text-muted-foreground mt-1">Current billing period</p>
                 </Card>
                 <Card className="p-6 border border-border shadow-sm">
-                  <p className="text-[13px] text-muted-foreground mb-1">End Users</p>
+                  <p className="text-[13px] text-muted-foreground mb-1">Linked end users</p>
                   <p className="text-[28px] font-semibold text-foreground tabular-nums">
                     {formatNumber(organizationEndUsers.length)}
                   </p>
-                  <p className="text-[12px] text-muted-foreground mt-1">Associated with this organization</p>
+                  <p className="text-[12px] text-muted-foreground mt-1">QR-linked customer records</p>
                 </Card>
                 <Card className="p-6 border border-border shadow-sm">
                   <p className="text-[13px] text-muted-foreground mb-1">Usage Spend</p>
                   <p className="text-[28px] font-semibold text-foreground tabular-nums">
                     {formatCurrency(usageSpend)}
                   </p>
-                  <p className="text-[12px] text-muted-foreground mt-1">At $0.05 per verification call</p>
+                  <p className="text-[12px] text-muted-foreground mt-1">Sample rate per billable verification</p>
                 </Card>
                 <Card className="p-6 border border-border shadow-sm">
                   <p className="text-[13px] text-muted-foreground mb-1">Credit Utilization</p>
@@ -944,9 +944,9 @@ export function PlatformOrganizationDetail() {
               <div className="p-6 border-b border-border">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-[16px] font-semibold text-foreground">Users</h3>
+                    <h3 className="text-[16px] font-semibold text-foreground">Team and roles</h3>
                     <p className="text-[13px] text-muted-foreground">
-                      Enterprise users who manage {organization.name}
+                      Organization portal users for {organization.name}
                     </p>
                   </div>
                   <p className="text-[13px] text-muted-foreground">
@@ -954,7 +954,7 @@ export function PlatformOrganizationDetail() {
                   </p>
                 </div>
                 <p className="mt-2 text-[12px] text-muted-foreground">
-                  Super Admin can assign multiple roles to an enterprise user.
+                  An Owner can assign multiple roles to a portal user.
                 </p>
                 {roleMessage && (
                   <div className="mt-3 rounded-md border border-green-500/40 bg-green-500/10 px-3 py-2 text-xs text-green-700 dark:text-green-300">
@@ -967,7 +967,7 @@ export function PlatformOrganizationDetail() {
                   <thead className="border-b border-border bg-accent/5">
                     <tr>
                       <th className="text-left p-4 text-[12px] font-semibold tracking-wide text-muted-foreground uppercase">
-                        Enterprise Username
+                        Portal username
                       </th>
                       <th className="text-left p-4 text-[12px] font-semibold tracking-wide text-muted-foreground uppercase">
                         Email
@@ -1050,11 +1050,11 @@ export function PlatformOrganizationDetail() {
             <Dialog open={roleEditorUser !== null} onOpenChange={(open) => !open && setRoleEditorUserId(null)}>
               <DialogContent className="sm:max-w-xl">
                 <DialogHeader>
-                  <DialogTitle>Assign Enterprise Roles</DialogTitle>
+                  <DialogTitle>Assign portal roles</DialogTitle>
                   <DialogDescription>
                     {roleEditorUser
                       ? `Assign one or more roles for ${roleEditorUser.enterpriseUsername}.`
-                      : "Assign one or more enterprise roles."}
+                      : "Assign one or more organization portal roles."}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-3 max-h-[420px] overflow-auto pr-1">

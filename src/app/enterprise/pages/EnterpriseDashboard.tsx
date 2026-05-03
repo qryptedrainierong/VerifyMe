@@ -1,4 +1,5 @@
 import { Users, CreditCard, AlertCircle, BarChart3 } from "lucide-react";
+import { Link } from "react-router";
 import { Card } from "../../shared/components/ui/card";
 import { Button } from "../../shared/components/ui/button";
 import { Progress } from "../../shared/components/ui/progress";
@@ -19,7 +20,8 @@ export function EnterpriseDashboard() {
   const recentActivity = enterpriseEndUsers.slice(0, 4).map((user, index) => ({
     id: index + 1,
     user: user.enterpriseUsername,
-    action: user.status === "active" ? "Completed verification checks" : "Pending onboarding completion",
+    action:
+      user.status === "active" ? "Completed an identity verification session" : "Has a pending VerifyMe link",
     timestamp: `${2 + index * 2} hour${index === 0 ? "" : "s"} ago`,
   }));
 
@@ -31,13 +33,13 @@ export function EnterpriseDashboard() {
         enterpriseCreditUtilizationPct >= 100
           ? "Your included credit is exhausted for this period"
           : `You're using ${enterpriseCreditUtilizationPct.toFixed(1)}% of your included credit`,
-      action: "View Usage",
+      action: "usage",
     },
     {
       id: 2,
       type: "info",
       message: "Your invoice for April is ready",
-      action: "View Invoice",
+      action: "billing",
     },
   ];
 
@@ -51,11 +53,11 @@ export function EnterpriseDashboard() {
 
   return (
     <div className="p-8 space-y-6 max-w-[1400px]">
-      {/* Welcome Header */}
       <div>
-        <h1 className="text-[28px] font-semibold text-foreground">Welcome back</h1>
-        <p className="text-[15px] text-muted-foreground mt-1">
-          Here's what's happening with your workspace
+        <h1 className="text-[28px] font-semibold text-foreground">Dashboard</h1>
+        <p className="text-[15px] text-muted-foreground mt-1 max-w-3xl">
+          Organization-level overview of credit balance, verification attempts, success and failure results, OTP events,
+          recent activity, and integration status (sample data).
         </p>
       </div>
 
@@ -68,9 +70,9 @@ export function EnterpriseDashboard() {
             </div>
           </div>
           <div>
-            <p className="text-[13px] text-muted-foreground mb-1">Users</p>
+            <p className="text-[13px] text-muted-foreground mb-1">Team seats</p>
             <p className="text-[32px] font-semibold text-foreground leading-none">{enterpriseOrganization.seatsUsed}</p>
-            <p className="text-[13px] text-muted-foreground mt-2">Portal access users</p>
+            <p className="text-[13px] text-muted-foreground mt-2">Organization portal users</p>
           </div>
         </Card>
 
@@ -81,7 +83,7 @@ export function EnterpriseDashboard() {
             </div>
           </div>
           <div>
-            <p className="text-[13px] text-muted-foreground mb-1">End Users</p>
+            <p className="text-[13px] text-muted-foreground mb-1">Linked end users</p>
             <p className="text-[32px] font-semibold text-foreground leading-none">{enterpriseEndUsers.length}</p>
             <p className="text-[13px] text-muted-foreground mt-2">{enterpriseActiveEndUsers} active</p>
           </div>
@@ -94,7 +96,7 @@ export function EnterpriseDashboard() {
             </div>
           </div>
           <div>
-            <p className="text-[13px] text-muted-foreground mb-1">Current Plan</p>
+            <p className="text-[13px] text-muted-foreground mb-1">Plan and credits</p>
             <p className="text-[32px] font-semibold text-foreground leading-none">{enterpriseOrganization.plan}</p>
             <p className="text-[13px] text-muted-foreground mt-2">
               {formatCurrency(enterpriseOrganization.credit)} included credit
@@ -109,7 +111,7 @@ export function EnterpriseDashboard() {
             </div>
           </div>
           <div>
-            <p className="text-[13px] text-muted-foreground mb-1">Usage This Month</p>
+            <p className="text-[13px] text-muted-foreground mb-1">Verifications this month</p>
             <p className="text-[32px] font-semibold text-foreground leading-none">
               {enterpriseOrganization.usage.toLocaleString()}
             </p>
@@ -141,8 +143,10 @@ export function EnterpriseDashboard() {
                   />
                   <p className="text-[14px] text-foreground font-medium">{alert.message}</p>
                 </div>
-                <Button variant="outline" size="sm">
-                  {alert.action}
+                <Button variant="outline" size="sm" asChild>
+                  <Link to={alert.action === "usage" ? "/usage-credits" : "/billing"}>
+                    {alert.action === "usage" ? "View usage and credits" : "View billing"}
+                  </Link>
                 </Button>
               </div>
             </Card>
@@ -156,8 +160,8 @@ export function EnterpriseDashboard() {
           <div className="p-6 border-b border-border">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-[16px] font-semibold text-foreground">Usage Trend</h3>
-                <p className="text-[13px] text-muted-foreground">API calls over the last 9 days</p>
+                <h3 className="text-[16px] font-semibold text-foreground">Verification volume</h3>
+                <p className="text-[13px] text-muted-foreground">Completed verification attempts over the last 9 days (sample)</p>
               </div>
               <Button variant="outline" size="sm">Last 30 Days</Button>
             </div>
@@ -190,7 +194,7 @@ export function EnterpriseDashboard() {
                     borderRadius: "8px",
                     fontSize: "12px",
                   }}
-                  formatter={(value: any) => [`${value.toLocaleString()} calls`, "Usage"]}
+                  formatter={(value: any) => [`${value.toLocaleString()} verifications`, "Volume"]}
                 />
                 <Line
                   key="usage-line"
@@ -229,8 +233,8 @@ export function EnterpriseDashboard() {
                 <p className="text-[12px] font-medium text-foreground">12 days</p>
               </div>
               <div className="flex items-center justify-between">
-                <p className="text-[12px] text-muted-foreground">Avg daily usage</p>
-                <p className="text-[12px] font-medium text-foreground">6.9K calls</p>
+                <p className="text-[12px] text-muted-foreground">Avg. daily verifications</p>
+                <p className="text-[12px] font-medium text-foreground">6.9K</p>
               </div>
               <div className="flex items-center justify-between">
                 <p className="text-[12px] text-muted-foreground">Credit remaining</p>
@@ -242,8 +246,8 @@ export function EnterpriseDashboard() {
               </div>
             </div>
 
-            <Button className="w-full" variant="outline">
-              View Detailed Usage
+            <Button className="w-full" variant="outline" asChild>
+              <Link to="/usage-credits">View usage and credits</Link>
             </Button>
           </div>
         </Card>
@@ -254,8 +258,8 @@ export function EnterpriseDashboard() {
         <div className="p-6 border-b border-border">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-[16px] font-semibold text-foreground">Recent Team Activity</h3>
-              <p className="text-[13px] text-muted-foreground">Latest actions by your team</p>
+              <h3 className="text-[16px] font-semibold text-foreground">Recent activity</h3>
+              <p className="text-[13px] text-muted-foreground">Verification and portal actions (sample)</p>
             </div>
             <Button variant="ghost" size="sm">View All</Button>
           </div>

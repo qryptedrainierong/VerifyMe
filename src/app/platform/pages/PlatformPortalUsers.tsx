@@ -36,7 +36,7 @@ const statusLabel: Record<PlatformPortalUser["status"], "Active" | "Invited" | "
 };
 
 const roleOptions: PlatformPortalUser["role"][] = [
-  "Super Admin",
+  "Owner",
   "Admin",
   "Operations Manager",
   "Support / Customer Success",
@@ -48,14 +48,14 @@ const roleAccess: Record<
 PlatformPortalUser["role"],
 { summary: string; can: string[]; cannot: string[] }
 > = {
-  "Super Admin": {
-    summary: "Full control over platform operations, policy, billing, and access.",
+  Owner: {
+    summary: "Full control over VerifyMe platform operations, policy, billing, and access.",
     can: [
-      "Create, edit, and deactivate enterprise accounts",
-      "View all enterprise data and activity",
-      "Access enterprise portals via view-as mode",
+      "Create, edit, and deactivate organization accounts",
+      "View all organization data and verification activity",
+      "Access organization portals via view-as mode",
       "Configure system-wide security, policies, and integrations",
-      "Manage billing rules and pricing",
+      "Manage billing rules and verification pricing",
       "Assign roles to platform users",
     ],
     cannot: [],
@@ -91,10 +91,10 @@ PlatformPortalUser["role"],
     cannot: ["Edit sensitive security settings", "Change billing rules and pricing"],
   },
   "Finance / Billing Admin": {
-    summary: "Billing and subscription management role.",
+    summary: "Billing and credit management role.",
     can: [
-      "Manage subscriptions and invoices",
-      "Track usage-based billing",
+      "Manage plans, invoices, and credit top-ups",
+      "Track verification and OTP-related billing",
       "Generate billing reports",
     ],
     cannot: ["Access verification data content", "Change system security configurations"],
@@ -125,7 +125,7 @@ export function PlatformPortalUsers() {
   const [editingRoleUserId, setEditingRoleUserId] = useState<string | null>(null);
   const [nextRole, setNextRole] = useState<PlatformPortalUser["role"]>("Operations Manager");
   const [message, setMessage] = useState<string | null>(null);
-  const superAdminCount = useMemo(() => usersData.filter((user) => user.role === "Super Admin").length, [usersData]);
+  const ownerCount = useMemo(() => usersData.filter((user) => user.role === "Owner").length, [usersData]);
 
   const users = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -144,7 +144,7 @@ export function PlatformPortalUsers() {
   const stats = useMemo(() => {
     const totalUsers = usersData.length;
     const activeUsers = usersData.filter((user) => user.status === "active").length;
-    const adminUsers = usersData.filter((user) => user.role === "Super Admin" || user.role === "Admin").length;
+    const adminUsers = usersData.filter((user) => user.role === "Owner" || user.role === "Admin").length;
     const pendingInvites = usersData.filter((user) => user.status === "invited").length;
     return { totalUsers, activeUsers, adminUsers, pendingInvites };
   }, [usersData]);
@@ -190,8 +190,8 @@ export function PlatformPortalUsers() {
       setMessage("Enter a valid name and email address.");
       return;
     }
-    if (newUserRole === "Super Admin" && superAdminCount >= 1) {
-      setMessage("Only one Super Admin is allowed.");
+    if (newUserRole === "Owner" && ownerCount >= 1) {
+      setMessage("Only one Owner is allowed.");
       return;
     }
 
@@ -220,9 +220,9 @@ export function PlatformPortalUsers() {
 
   const applyEditedRole = () => {
     if (!editingRoleUserId) return;
-    const existingSuperAdmin = usersData.find((user) => user.role === "Super Admin");
-    if (nextRole === "Super Admin" && existingSuperAdmin && existingSuperAdmin.id !== editingRoleUserId) {
-      setMessage("Only one Super Admin is allowed.");
+    const existingOwner = usersData.find((user) => user.role === "Owner");
+    if (nextRole === "Owner" && existingOwner && existingOwner.id !== editingRoleUserId) {
+      setMessage("Only one Owner is allowed.");
       return;
     }
     setUsersData((prev) =>
@@ -275,9 +275,9 @@ export function PlatformPortalUsers() {
       <div className="p-8 border-b border-border">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-[24px] font-semibold text-foreground">Users</h1>
+            <h1 className="text-[24px] font-semibold text-foreground">VerifyMe platform users</h1>
             <p className="text-[14px] text-muted-foreground mt-1">
-              Manage portal-access users who administer organizations and account settings
+              Internal Qrypted / VerifyMe staff who operate the VerifyMe admin portal and organization lifecycle tools
             </p>
           </div>
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>

@@ -29,7 +29,7 @@ import {
 } from "../../shared/components/ui/dropdown-menu";
 
 type EnterpriseRole =
-  | "Super Admin"
+  | "Owner"
   | "Admin"
   | "Operations"
   | "Technical / API Manager"
@@ -37,7 +37,7 @@ type EnterpriseRole =
   | "Compliance / Auditor";
 
 const enterpriseRoleOptions: EnterpriseRole[] = [
-  "Super Admin",
+  "Owner",
   "Admin",
   "Operations",
   "Technical / API Manager",
@@ -50,7 +50,7 @@ export function EnterpriseTeam() {
     {
       name: "Sarah Johnson",
       email: "sarah@company.com",
-      role: "Super Admin",
+      role: "Owner",
       department: "Marketing",
       status: "active",
       joined: "Jan 15, 2024",
@@ -107,9 +107,10 @@ export function EnterpriseTeam() {
     <div className="p-8 space-y-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-[24px] font-semibold text-foreground">Users</h2>
+          <h2 className="text-[24px] font-semibold text-foreground">Team & Roles</h2>
           <p className="text-[15px] text-muted-foreground mt-1">
-            Manage your organization's portal users and roles
+            Organization portal users: Owner, Admin, Operations, Technical / API Manager, Finance / Billing, Compliance
+            / Auditor
           </p>
         </div>
         <Dialog>

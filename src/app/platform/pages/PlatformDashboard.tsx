@@ -59,9 +59,9 @@ export function PlatformDashboard() {
           if (usageRatio >= 0.9) {
             return {
               id: index + 1,
-              type: "quota",
+              type: "credit",
               org: org.name,
-              message: `Credit utilization at ${(usageRatio * 100).toFixed(0)}%`,
+              message: `Verification credit utilization at ${(usageRatio * 100).toFixed(0)}%`,
               severity: usageRatio >= 1 ? "high" : "medium",
               time: "1 hour ago",
             };
@@ -79,10 +79,10 @@ export function PlatformDashboard() {
         id: index + 1,
         action:
           index % 3 === 0
-            ? "Usage threshold reviewed"
+            ? "Verification volume threshold reviewed"
             : index % 3 === 1
-              ? "Billing status synced"
-              : "Plan and seats audited",
+              ? "Organization billing status synced"
+              : "Plan credits and OTP pricing audited",
         org: org.name,
         user: `ops@${org.domain}`,
         time: `${5 + index * 12} min ago`,
@@ -92,6 +92,14 @@ export function PlatformDashboard() {
 
   return (
     <div className="p-8 space-y-6 max-w-[1800px]">
+      <div>
+        <h1 className="text-[24px] font-semibold text-foreground">Dashboard</h1>
+        <p className="text-[14px] text-muted-foreground mt-1 max-w-4xl">
+          Platform-wide overview of organizations, VerifyMe users, verification activity, billable events, credit usage,
+          and system health (sample metrics for UI design).
+        </p>
+      </div>
+
       {/* KPI Cards */}
       <div className="grid grid-cols-4 gap-6">
         <Card className="p-6 border border-border shadow-sm">
@@ -122,7 +130,7 @@ export function PlatformDashboard() {
             </span>
           </div>
           <div>
-            <p className="text-[13px] text-muted-foreground mb-1">End Users</p>
+            <p className="text-[13px] text-muted-foreground mb-1">VerifyMe users</p>
             <p className="text-[32px] font-semibold text-foreground leading-none">{totalEndUsers}</p>
             <p className="text-[12px] text-muted-foreground mt-2">Across all organizations</p>
           </div>
@@ -139,11 +147,11 @@ export function PlatformDashboard() {
             </span>
           </div>
           <div>
-            <p className="text-[13px] text-muted-foreground mb-1">Monthly Revenue</p>
+            <p className="text-[13px] text-muted-foreground mb-1">Billable revenue (sample)</p>
             <p className="text-[32px] font-semibold text-foreground leading-none">
               ${Math.round(totalRevenue).toLocaleString()}
             </p>
-            <p className="text-[12px] text-muted-foreground mt-2">Derived from usage spend</p>
+            <p className="text-[12px] text-muted-foreground mt-2">From verification and OTP-style charges (sample)</p>
           </div>
         </Card>
 
@@ -158,11 +166,11 @@ export function PlatformDashboard() {
             </span>
           </div>
           <div>
-            <p className="text-[13px] text-muted-foreground mb-1">Total Usage</p>
+            <p className="text-[13px] text-muted-foreground mb-1">Verification volume</p>
             <p className="text-[32px] font-semibold text-foreground leading-none">
               {Math.round(totalUsage).toLocaleString()}
             </p>
-            <p className="text-[12px] text-muted-foreground mt-2">API calls this month</p>
+            <p className="text-[12px] text-muted-foreground mt-2">Billable-style events this month (sample)</p>
           </div>
         </Card>
       </div>
@@ -176,8 +184,8 @@ export function PlatformDashboard() {
                 <AlertTriangle className="w-4 h-4 text-red-600" />
               </div>
               <div>
-                <h3 className="text-[15px] font-semibold text-foreground">Critical Alerts</h3>
-                <p className="text-[13px] text-muted-foreground">Requires immediate attention</p>
+                <h3 className="text-[15px] font-semibold text-foreground">Platform alerts</h3>
+                <p className="text-[13px] text-muted-foreground">Billing, credits, and verification risk signals</p>
               </div>
             </div>
             <Button variant="outline" size="sm">View All Alerts</Button>
@@ -195,7 +203,7 @@ export function PlatformDashboard() {
                 <div className="flex items-start justify-between gap-4 mb-1">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      {alert.type === 'quota' && <AlertCircle className="w-4 h-4 text-orange-600" />}
+                      {alert.type === 'credit' && <AlertCircle className="w-4 h-4 text-orange-600" />}
                       {alert.type === 'payment' && <CreditCard className="w-4 h-4 text-red-600" />}
                       {alert.type === 'inactive' && <Activity className="w-4 h-4 text-yellow-600" />}
                       <span className="text-[14px] font-medium text-foreground">{alert.org}</span>
@@ -218,8 +226,8 @@ export function PlatformDashboard() {
           <div className="p-6 border-b border-border">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-[15px] font-semibold text-foreground">Usage Trend</h3>
-                <p className="text-[13px] text-muted-foreground">Total API calls over time</p>
+                <h3 className="text-[15px] font-semibold text-foreground">Verification activity</h3>
+                <p className="text-[13px] text-muted-foreground">Organization-wide verification attempts over time (sample)</p>
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="ghost" size="sm">1M</Button>
@@ -262,7 +270,7 @@ export function PlatformDashboard() {
                     borderRadius: '8px',
                     fontSize: '12px'
                   }}
-                  formatter={(value: any) => [`${(value / 1000).toFixed(0)}K calls`, 'Usage']}
+                  formatter={(value: any) => [`${(value / 1000).toFixed(0)}K events`, 'Verifications']}
                 />
                 <Area
                   key="area"
@@ -282,8 +290,8 @@ export function PlatformDashboard() {
           <div className="p-6 border-b border-border">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-[15px] font-semibold text-foreground">Revenue Trend</h3>
-                <p className="text-[13px] text-muted-foreground">Actual vs forecast revenue</p>
+                <h3 className="text-[15px] font-semibold text-foreground">Billable revenue trend</h3>
+                <p className="text-[13px] text-muted-foreground">Credits, verification fees, and OTP charges (sample)</p>
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="ghost" size="sm">1M</Button>
@@ -356,8 +364,8 @@ export function PlatformDashboard() {
                 <Clock className="w-4 h-4 text-primary" />
               </div>
               <div>
-                <h3 className="text-[15px] font-semibold text-foreground">Recent Platform Activity</h3>
-                <p className="text-[13px] text-muted-foreground">Last 24 hours of activity</p>
+                <h3 className="text-[15px] font-semibold text-foreground">Recent platform activity</h3>
+                <p className="text-[13px] text-muted-foreground">Verification, billing, and admin actions (sample)</p>
               </div>
             </div>
             <Button variant="outline" size="sm">View Full Log</Button>

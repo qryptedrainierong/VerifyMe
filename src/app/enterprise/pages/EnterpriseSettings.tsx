@@ -20,7 +20,8 @@ export function EnterpriseSettings() {
       <div>
         <h2 className="text-[24px] font-semibold text-foreground">Settings</h2>
         <p className="text-[15px] text-muted-foreground mt-1">
-          Manage your organization's settings and preferences
+          Organization profile, verification limits, session timeout, security and billing contacts, and portal
+          preferences
         </p>
       </div>
 
@@ -166,7 +167,7 @@ export function EnterpriseSettings() {
                 <div>
                   <p className="text-[14px] font-medium text-foreground">Billing Updates</p>
                   <p className="text-[13px] text-muted-foreground">
-                    Important updates about billing and subscriptions
+                    Important updates about billing, credits, and verification usage
                   </p>
                 </div>
                 <Switch defaultChecked />

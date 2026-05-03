@@ -788,7 +788,7 @@ export function PlatformAuditLogs() {
           <div>
             <h1 className="text-[24px] font-semibold text-foreground">Audit Logs</h1>
             <p className="text-[14px] text-muted-foreground mt-1">
-              Complete audit trail of all platform activities
+              Admin actions, API events, linking events, verification lifecycle events, and security-sensitive changes
             </p>
           </div>
           <Button variant="outline">

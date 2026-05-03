@@ -1,4 +1,5 @@
 import { BarChart3, AlertCircle, Calendar } from "lucide-react";
+import { Link } from "react-router";
 import { Card } from "../../shared/components/ui/card";
 import { Button } from "../../shared/components/ui/button";
 import { Progress } from "../../shared/components/ui/progress";
@@ -25,15 +26,15 @@ export function EnterpriseUsage() {
 
   const usageMetrics = [
     {
-      label: "API Calls",
+      label: "Verification attempts",
       current: enterpriseOrganization.usage,
       limit: enterpriseUsageLimit,
       percentage: Math.round(enterpriseUsagePct),
-      unit: "calls",
+      unit: "verifications",
       icon: <BarChart3 className="w-5 h-5 text-blue-600" />,
       color: "bg-blue-500/10",
       warning: enterpriseCreditUtilizationPct >= 80,
-      details: "Monthly API verification calls",
+      details: "OIDC-style verification sessions counted toward this period",
     },
   ];
 
@@ -56,9 +57,10 @@ export function EnterpriseUsage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-[28px] font-semibold text-foreground">Usage</h1>
+          <h1 className="text-[28px] font-semibold text-foreground">Usage & Credits</h1>
           <p className="text-[15px] text-muted-foreground mt-1">
-            Monitor your verification usage and included credit
+            Credit balance, monthly and top-up credits, deductions, verification pricing, OTP charges, and usage
+            breakdown (sample data)
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -96,7 +98,7 @@ export function EnterpriseUsage() {
         </Card>
       )}
 
-      {/* API Usage Card */}
+      {/* Verification volume */}
       <Card className="p-8 border border-border shadow-sm">
         <div className="flex items-start justify-between mb-6">
           <div className="flex items-center gap-4">
@@ -104,8 +106,8 @@ export function EnterpriseUsage() {
               <BarChart3 className="w-7 h-7 text-blue-600" />
             </div>
             <div>
-              <p className="text-[18px] font-semibold text-foreground">Verification API Calls</p>
-              <p className="text-[13px] text-muted-foreground">Current billing period</p>
+              <p className="text-[18px] font-semibold text-foreground">Verification attempts</p>
+              <p className="text-[13px] text-muted-foreground">Current billing period (sample)</p>
             </div>
           </div>
           <span className="inline-flex items-center px-3 py-1.5 rounded-md text-[12px] font-medium bg-orange-100 text-orange-700 border border-orange-200">
@@ -120,7 +122,7 @@ export function EnterpriseUsage() {
                 {formatNumber(enterpriseOrganization.usage)}
               </p>
               <p className="text-[15px] text-muted-foreground mt-2">
-                of {formatNumber(enterpriseUsageLimit)} calls used
+                of {formatNumber(enterpriseUsageLimit)} included verifications
               </p>
             </div>
             <p className="text-[32px] font-semibold text-orange-600">
@@ -138,7 +140,7 @@ export function EnterpriseUsage() {
           <div className="flex items-center justify-between pt-2">
             <p className="text-[14px] text-muted-foreground">
               <span className="font-medium text-foreground">
-                {formatNumber(Math.max(enterpriseUsageLimit - enterpriseOrganization.usage, 0))} calls
+                {formatNumber(Math.max(enterpriseUsageLimit - enterpriseOrganization.usage, 0))} verifications
               </span>{" "}
               remaining
             </p>
@@ -154,8 +156,8 @@ export function EnterpriseUsage() {
         <div className="p-6 border-b border-border">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-[16px] font-semibold text-foreground">Usage Over Time</h3>
-              <p className="text-[13px] text-muted-foreground">Track your usage trends</p>
+              <h3 className="text-[16px] font-semibold text-foreground">Verification volume over time</h3>
+              <p className="text-[13px] text-muted-foreground">Billable verification attempts (sample trend)</p>
             </div>
           </div>
         </div>
@@ -196,7 +198,7 @@ export function EnterpriseUsage() {
                 stroke="rgb(59, 130, 246)"
                 strokeWidth={3}
                 dot={{ r: 4 }}
-                name="Verification API Calls"
+                name="Verifications"
               />
             </LineChart>
           </ResponsiveContainer>
@@ -231,7 +233,9 @@ export function EnterpriseUsage() {
               </div>
             </div>
           </div>
-          <Button variant="outline">View Billing</Button>
+          <Button variant="outline" asChild>
+            <Link to="/billing">View billing</Link>
+          </Button>
         </div>
       </Card>
     </div>

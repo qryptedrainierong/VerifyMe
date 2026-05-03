@@ -6,6 +6,11 @@ import { EnterpriseTeam } from "./pages/EnterpriseTeam";
 import { EnterpriseUsage } from "./pages/EnterpriseUsage";
 import { EnterpriseBilling } from "./pages/EnterpriseBilling";
 import { EnterpriseSettings } from "./pages/EnterpriseSettings";
+import {
+  EnterpriseApiIntegration,
+  EnterpriseQrLinking,
+  EnterpriseVerificationLogs,
+} from "./pages/EnterpriseIaPlaceholders";
 
 // Lazy router creation to prevent HMR connection errors
 // Reset router on each call to ensure fresh state
@@ -17,10 +22,12 @@ export function getEnterpriseRouter() {
         Component: EnterpriseLayout,
         children: [
           { index: true, Component: EnterpriseDashboard },
-          { path: "end-users", Component: EnterpriseEndUsers },
-          { path: "users", Component: EnterpriseTeam },
-          { path: "team", Component: EnterpriseTeam },
-          { path: "usage", Component: EnterpriseUsage },
+          { path: "linked-end-users", Component: EnterpriseEndUsers },
+          { path: "verification-logs", Component: EnterpriseVerificationLogs },
+          { path: "api-integration", Component: EnterpriseApiIntegration },
+          { path: "qr-linking", Component: EnterpriseQrLinking },
+          { path: "team-roles", Component: EnterpriseTeam },
+          { path: "usage-credits", Component: EnterpriseUsage },
           { path: "billing", Component: EnterpriseBilling },
           { path: "settings", Component: EnterpriseSettings },
           { path: "*", Component: NotFoundPage },

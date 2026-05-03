@@ -3,12 +3,15 @@ import { PlatformLayout } from "./pages/PlatformLayout";
 import { PlatformDashboard } from "./pages/PlatformDashboard";
 import { PlatformOrganizations } from "./pages/PlatformOrganizations";
 import { PlatformOrganizationDetail } from "./pages/PlatformOrganizationDetail";
-import { PlatformPortalUsers } from "./pages/PlatformPortalUsers";
 import { PlatformUsers } from "./pages/PlatformUsers";
-import { PlatformUsage } from "./pages/PlatformUsage";
 import { PlatformBilling } from "./pages/PlatformBilling";
 import { PlatformAuditLogs } from "./pages/PlatformAuditLogs";
 import { PlatformSettings } from "./pages/PlatformSettings";
+import {
+  PlatformClientApps,
+  PlatformIdentityLinks,
+  PlatformVerificationSessions,
+} from "./pages/PlatformIaPlaceholders";
 
 // Lazy router creation to prevent HMR connection errors
 // Reset router on each call to ensure fresh state
@@ -28,12 +31,12 @@ export function getPlatformRouter() {
             path: "organizations/:id",
             Component: PlatformOrganizationDetail,
           },
-          { path: "users", Component: PlatformPortalUsers },
-          { path: "end-users", Component: PlatformUsers },
-          { path: "usage", Component: PlatformUsage },
+          { path: "verifyme-users", Component: PlatformUsers },
+          { path: "identity-links", Component: PlatformIdentityLinks },
+          { path: "verification-sessions", Component: PlatformVerificationSessions },
+          { path: "client-apps", Component: PlatformClientApps },
           { path: "billing", Component: PlatformBilling },
           { path: "audit-logs", Component: PlatformAuditLogs },
-          { path: "error-logs", Component: PlaceholderPage },
           { path: "settings", Component: PlatformSettings },
           { path: "*", Component: NotFoundPage },
         ],
@@ -49,22 +52,6 @@ export function getPlatformRouter() {
         v7_skipActionErrorRevalidation: true,
       },
     },
-  );
-}
-
-function PlaceholderPage() {
-  return (
-    <div className="p-8">
-      <div className="max-w-2xl mx-auto text-center py-20">
-        <h2 className="text-[24px] font-semibold text-foreground mb-2">
-          Page Coming Soon
-        </h2>
-        <p className="text-[15px] text-muted-foreground">
-          This page is part of the platform admin portal and
-          will be implemented.
-        </p>
-      </div>
-    </div>
   );
 }
 

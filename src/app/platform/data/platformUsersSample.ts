@@ -1,5 +1,5 @@
 export type PortalUserRole =
-  | "Super Admin"
+  | "Owner"
   | "Admin"
   | "Operations Manager"
   | "Support / Customer Success"
@@ -36,7 +36,7 @@ export const platformPortalUsers: PlatformPortalUser[] = [
     id: "PLT-001",
     name: "Rainier Ong",
     email: "rainier@verifyme.com",
-    role: "Super Admin",
+    role: "Owner",
     status: "active",
     organizationScope: "All Organizations",
     created: "2023-09-12",

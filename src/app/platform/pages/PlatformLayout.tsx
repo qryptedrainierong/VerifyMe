@@ -1,19 +1,34 @@
 import { Outlet } from "react-router";
-import { LayoutDashboard, Building2, Users, UserCog, Settings, BarChart3, CreditCard, ScrollText, Shield, NotebookText } from "lucide-react";
+import {
+  LayoutDashboard,
+  Building2,
+  Users,
+  Link2,
+  ListChecks,
+  Code2,
+  Coins,
+  ScrollText,
+  Settings,
+  Shield,
+} from "lucide-react";
 import { PortalSidebar } from "../../shared/components/PortalSidebar";
 import { TopBar } from "../../shared/components/TopBar";
 
 export function PlatformLayout() {
   const navItems = [
-    { label: "Dashboard", href: "/", icon: <LayoutDashboard className="w-5 h-5" /> },
+    { label: "Dashboard", href: "/", icon: <LayoutDashboard className="w-5 h-5" />, end: true },
     { label: "Organizations", href: "/organizations", icon: <Building2 className="w-5 h-5" /> },
-    { label: "Usage", href: "/usage", icon: <BarChart3 className="w-5 h-5" /> },
-    { label: "Billing", href: "/billing", icon: <CreditCard className="w-5 h-5" /> },
-    { label: "End Users", href: "/end-users", icon: <Users className="w-5 h-5" /> },
-    { label: "Users", href: "/users", icon: <UserCog className="w-5 h-5" /> },
-    { label: "Settings", href: "/settings", icon: <Settings className="w-5 h-5" /> },
+    { label: "VerifyMe Users", href: "/verifyme-users", icon: <Users className="w-5 h-5" /> },
+    { label: "Identity Links", href: "/identity-links", icon: <Link2 className="w-5 h-5" /> },
+    {
+      label: "Verification Sessions",
+      href: "/verification-sessions",
+      icon: <ListChecks className="w-5 h-5" />,
+    },
+    { label: "Client Apps / API", href: "/client-apps", icon: <Code2 className="w-5 h-5" /> },
+    { label: "Billing & Credits", href: "/billing", icon: <Coins className="w-5 h-5" /> },
     { label: "Audit Logs", href: "/audit-logs", icon: <ScrollText className="w-5 h-5" /> },
-    { label: "Error Logs", href: "/error-logs", icon: <NotebookText className="w-5 h-5" /> },
+    { label: "Platform Settings", href: "/settings", icon: <Settings className="w-5 h-5" /> },
   ];
 
   const logo = (
@@ -24,9 +39,9 @@ export function PlatformLayout() {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <PortalSidebar title="Platform Admin" items={navItems} logo={logo} />
+      <PortalSidebar title="VerifyMe Admin" items={navItems} logo={logo} />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <TopBar title="Platform Administration" />
+        <TopBar title="VerifyMe Admin Portal" />
         <main className="flex-1 overflow-auto bg-background">
           <Outlet />
         </main>

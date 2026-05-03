@@ -6,6 +6,8 @@ interface NavItem {
   label: string;
   href: string;
   icon: React.ReactNode;
+  /** When true, only exact path matches (e.g. dashboard at `/`). */
+  end?: boolean;
 }
 
 interface PortalSidebarProps {
@@ -31,6 +33,7 @@ export function PortalSidebar({ title, items, logo }: PortalSidebarProps) {
           <NavLink
             key={item.href}
             to={item.href}
+            end={item.end}
             className={({ isActive }) =>
               cn(
                 "flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-[14px]",
@@ -48,7 +51,7 @@ export function PortalSidebar({ title, items, logo }: PortalSidebarProps) {
 
       <div className="p-4 border-t border-border">
         <p className="text-[11px] text-muted-foreground text-center">
-          © 2024 VerifyMe
+          © 2026 VerifyMe
         </p>
       </div>
     </aside>

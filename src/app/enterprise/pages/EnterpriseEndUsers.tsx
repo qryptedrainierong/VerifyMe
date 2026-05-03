@@ -76,9 +76,9 @@ export function EnterpriseEndUsers() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-[24px] font-semibold text-foreground">End Users</h2>
+          <h2 className="text-[24px] font-semibold text-foreground">Linked End Users</h2>
           <p className="text-[15px] text-muted-foreground mt-1">
-            Manage end users for {enterpriseOrganization.name}
+            Customer records linked to VerifyMe identities via QR linking for {enterpriseOrganization.name}
           </p>
         </div>
       </div>
@@ -96,11 +96,11 @@ export function EnterpriseEndUsers() {
       {/* Stats Cards */}
       <div className="grid grid-cols-4 gap-4">
         <Card className="p-4 shadow-sm">
-          <p className="text-[13px] text-muted-foreground mb-1">Total Users</p>
+          <p className="text-[13px] text-muted-foreground mb-1">Linked records</p>
           <p className="text-[24px] font-semibold">{totalUsers}</p>
         </Card>
         <Card className="p-4 shadow-sm">
-          <p className="text-[13px] text-muted-foreground mb-1">Active Users</p>
+          <p className="text-[13px] text-muted-foreground mb-1">Active links</p>
           <p className="text-[24px] font-semibold text-green-600">{activeUsers}</p>
         </Card>
         <Card className="p-4 shadow-sm">
@@ -108,7 +108,7 @@ export function EnterpriseEndUsers() {
           <p className="text-[24px] font-semibold text-red-600">{suspendedUsers}</p>
         </Card>
         <Card className="p-4 shadow-sm">
-          <p className="text-[13px] text-muted-foreground mb-1">Total API Calls</p>
+          <p className="text-[13px] text-muted-foreground mb-1">Verification attempts (period)</p>
           <p className="text-[24px] font-semibold">{(totalApiCalls / 1000).toFixed(1)}K</p>
         </Card>
       </div>
@@ -120,16 +120,16 @@ export function EnterpriseEndUsers() {
             <thead className="border-b border-border bg-accent/5">
               <tr>
                 <th className="text-left p-4 text-[13px] font-medium text-muted-foreground">
-                  Enterprise Username
+                  Client user ID
                 </th>
                 <th className="text-left p-4 text-[13px] font-medium text-muted-foreground">
-                  VerifyMe Username
+                  Display name / VerifyMe handle
                 </th>
                 <th className="text-left p-4 text-[13px] font-medium text-muted-foreground">
                   Status
                 </th>
                 <th className="text-left p-4 text-[13px] font-medium text-muted-foreground">
-                  API Calls
+                  Verifications (sample)
                 </th>
                 <th className="text-left p-4 text-[13px] font-medium text-muted-foreground">
                   Last Active
@@ -182,7 +182,7 @@ export function EnterpriseEndUsers() {
                               Edit User
                             </DropdownMenuItem>
                           </DialogTrigger>
-                          <DropdownMenuItem>View Usage Details</DropdownMenuItem>
+                          <DropdownMenuItem>View verification history</DropdownMenuItem>
                           <DropdownMenuItem>
                             {user.status === "active" ? "Suspend User" : "Activate User"}
                           </DropdownMenuItem>
@@ -201,7 +201,7 @@ export function EnterpriseEndUsers() {
                         </DialogHeader>
                         <div className="space-y-4 py-4">
                           <div className="space-y-2">
-                            <Label htmlFor="edit-username">Enterprise Username</Label>
+                            <Label htmlFor="edit-username">Client user ID</Label>
                             <Input
                               id="edit-username"
                               defaultValue={editingUser?.username || ""}

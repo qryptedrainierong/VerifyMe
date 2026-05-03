@@ -128,9 +128,9 @@ export function PlatformBilling() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-[24px] font-semibold text-foreground">Billing Management</h1>
+          <h1 className="text-[24px] font-semibold text-foreground">Billing & Credits</h1>
           <p className="text-[14px] text-muted-foreground mt-1">
-            Monitor revenue and manage invoices
+            Plan credits, top-ups, per-organization pricing, verification charges, OTP billing, and credit transactions
           </p>
         </div>
         <div className="flex items-center gap-2">

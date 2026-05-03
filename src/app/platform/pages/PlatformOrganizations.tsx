@@ -160,7 +160,8 @@ export function PlatformOrganizations() {
           <div>
             <h1 className="text-2xl font-semibold text-foreground">Organizations</h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Manage all customer organizations and subscriptions
+              Create and manage organization accounts, plans, verification settings, redirect URIs, API access, and
+              onboarding status
             </p>
           </div>
           <Button onClick={() => setIsCreateDialogOpen(true)} className="shrink-0">

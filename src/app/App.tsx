@@ -33,13 +33,14 @@ export default function App() {
           <div className="flex items-center justify-center mb-6">
             <img src={logoImage} alt="VerifyMe" className="h-20 w-auto" />
           </div>
-          <p className="text-[15px] text-muted-foreground">
-            Select a portal to continue
+          <p className="text-[15px] text-muted-foreground max-w-lg mx-auto">
+            VerifyMe is a privacy-preserving identity verification platform for call-center and messaging flows.
+            Select a portal to explore the admin experience.
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Platform Admin Portal */}
+          {/* VerifyMe Admin Portal */}
           <button
             onClick={() => setSelectedPortal("platform")}
             className="group bg-card border border-border rounded-lg p-8 text-left hover:border-primary hover:shadow-sm transition-all"
@@ -75,28 +76,29 @@ export default function App() {
               </svg>
             </div>
             <h2 className="text-[20px] font-semibold text-foreground mb-2">
-              Platform Admin Portal
+              VerifyMe Admin Portal
             </h2>
             <p className="text-[14px] text-muted-foreground mb-4">
-              Internal operations portal for managing organizations, users, usage, and billing
+              Internal Qrypted / VerifyMe console for organizations, VerifyMe users, identity links, verification
+              sessions, client apps, credits, and audit trails
             </p>
             <div className="flex flex-wrap gap-2">
               <span className="inline-flex items-center px-2 py-1 rounded bg-accent/50 text-[12px] text-accent-foreground">
                 Organizations
               </span>
               <span className="inline-flex items-center px-2 py-1 rounded bg-accent/50 text-[12px] text-accent-foreground">
-                Users
+                Verification
               </span>
               <span className="inline-flex items-center px-2 py-1 rounded bg-accent/50 text-[12px] text-accent-foreground">
-                Usage
+                Credits & billing
               </span>
               <span className="inline-flex items-center px-2 py-1 rounded bg-accent/50 text-[12px] text-accent-foreground">
-                Billing
+                Audit logs
               </span>
             </div>
           </button>
 
-          {/* Enterprise Admin Portal */}
+          {/* Organization Admin Portal */}
           <button
             onClick={() => setSelectedPortal("enterprise")}
             className="group bg-card border border-border rounded-lg p-8 text-left hover:border-primary hover:shadow-sm transition-all"
@@ -132,20 +134,24 @@ export default function App() {
               </svg>
             </div>
             <h2 className="text-[20px] font-semibold text-foreground mb-2">
-              Organization Portal
+              Organization Admin Portal
             </h2>
             <p className="text-[14px] text-muted-foreground mb-4">
-              Customer-facing portal for managing your team, billing, and settings
+              Enterprise console for linked customers, verification history, OIDC-style API setup, QR linking,
+              team access, credits, and billing
             </p>
             <div className="flex flex-wrap gap-2">
               <span className="inline-flex items-center px-2 py-1 rounded bg-accent/50 text-[12px] text-accent-foreground">
-                Team
+                Linked end users
               </span>
               <span className="inline-flex items-center px-2 py-1 rounded bg-accent/50 text-[12px] text-accent-foreground">
-                Billing
+                Verification logs
               </span>
               <span className="inline-flex items-center px-2 py-1 rounded bg-accent/50 text-[12px] text-accent-foreground">
-                Settings
+                API & QR linking
+              </span>
+              <span className="inline-flex items-center px-2 py-1 rounded bg-accent/50 text-[12px] text-accent-foreground">
+                Usage & billing
               </span>
             </div>
           </button>
@@ -153,7 +159,7 @@ export default function App() {
 
         <div className="mt-8 text-center">
           <p className="text-[13px] text-muted-foreground">
-            Both portals share a unified design system with different UX approaches
+            Shared VerifyMe design system — platform vs. organization scopes only
           </p>
           <p className="text-[11px] text-muted-foreground mt-2">
             v{BUILD_VERSION}

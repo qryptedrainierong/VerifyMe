@@ -1,14 +1,28 @@
 import { Outlet } from "react-router";
-import { LayoutDashboard, Users, Settings, CreditCard, BarChart3, Building2, UserCheck } from "lucide-react";
+import {
+  LayoutDashboard,
+  Link2,
+  ScrollText,
+  Plug,
+  QrCode,
+  UsersRound,
+  CircleDollarSign,
+  CreditCard,
+  Settings,
+  Building2,
+} from "lucide-react";
 import { PortalSidebar } from "../../shared/components/PortalSidebar";
 import { TopBar } from "../../shared/components/TopBar";
 
 export function EnterpriseLayout() {
   const navItems = [
-    { label: "Dashboard", href: "/", icon: <LayoutDashboard className="w-5 h-5" /> },
-    { label: "End Users", href: "/end-users", icon: <UserCheck className="w-5 h-5" /> },
-    { label: "Users", href: "/users", icon: <Users className="w-5 h-5" /> },
-    { label: "Usage", href: "/usage", icon: <BarChart3 className="w-5 h-5" /> },
+    { label: "Dashboard", href: "/", icon: <LayoutDashboard className="w-5 h-5" />, end: true },
+    { label: "Linked End Users", href: "/linked-end-users", icon: <Link2 className="w-5 h-5" /> },
+    { label: "Verification Logs", href: "/verification-logs", icon: <ScrollText className="w-5 h-5" /> },
+    { label: "API Integration", href: "/api-integration", icon: <Plug className="w-5 h-5" /> },
+    { label: "QR Linking", href: "/qr-linking", icon: <QrCode className="w-5 h-5" /> },
+    { label: "Team & Roles", href: "/team-roles", icon: <UsersRound className="w-5 h-5" /> },
+    { label: "Usage & Credits", href: "/usage-credits", icon: <CircleDollarSign className="w-5 h-5" /> },
     { label: "Billing", href: "/billing", icon: <CreditCard className="w-5 h-5" /> },
     { label: "Settings", href: "/settings", icon: <Settings className="w-5 h-5" /> },
   ];
@@ -23,7 +37,7 @@ export function EnterpriseLayout() {
     <div className="flex h-screen overflow-hidden">
       <PortalSidebar title="Acme Corp" items={navItems} logo={logo} />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <TopBar title="Organization Portal" />
+        <TopBar title="Organization Admin Portal" />
         <main className="flex-1 overflow-auto bg-background">
           <Outlet />
         </main>

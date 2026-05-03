@@ -25,9 +25,10 @@ export function PlatformSettings() {
   return (
     <div className="p-8 space-y-6 max-w-5xl">
       <div>
-        <h1 className="text-[24px] font-semibold text-foreground">Settings</h1>
+        <h1 className="text-[24px] font-semibold text-foreground">Platform Settings</h1>
         <p className="text-[14px] text-muted-foreground mt-1">
-          Configure platform-wide defaults and operational preferences
+          Platform defaults and limits: token attempts, session timeout, pricing defaults, OTP billing defaults, issuer
+          URL, audit retention, and related controls
         </p>
       </div>
       {saveMessage && (
@@ -91,9 +92,9 @@ export function PlatformSettings() {
           <h3 className="text-[16px] font-semibold text-foreground">Security & Policy</h3>
         </div>
         <div className="p-6 space-y-3 text-sm text-muted-foreground">
-          <p>Super Admin approval required for sensitive actions</p>
+          <p>Platform admin approval required for sensitive actions</p>
           <p>Audit logs retained for 365 days</p>
-          <p>Billing rule updates restricted to Super Admin</p>
+          <p>Billing rule updates restricted to senior platform admins</p>
         </div>
       </Card>
 

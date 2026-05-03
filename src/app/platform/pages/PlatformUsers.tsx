@@ -162,9 +162,10 @@ export function PlatformUsers() {
       <div className="p-8 border-b border-border">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-[24px] font-semibold text-foreground">End Users</h1>
+            <h1 className="text-[24px] font-semibold text-foreground">VerifyMe Users</h1>
             <p className="text-[14px] text-muted-foreground mt-1">
-              Manage VerifyMe accounts linked to one or more organizations
+              Manage global VerifyMe end-user accounts, email and device status, linked organizations, recovery, and
+              verification history (design-time sample data).
             </p>
           </div>
         </div>

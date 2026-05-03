@@ -29,9 +29,9 @@ export function EnterpriseBilling() {
   return (
     <div className="p-8 space-y-6 max-w-7xl mx-auto">
       <div>
-        <h2 className="text-[24px] font-semibold text-foreground">Billing & Subscription</h2>
+        <h2 className="text-[24px] font-semibold text-foreground">Billing</h2>
         <p className="text-[15px] text-muted-foreground mt-1">
-          Manage your subscription, payment method, and billing history
+          Plan, invoices or billing history, credit purchases, top-ups, and payment-related settings
         </p>
       </div>
 
@@ -41,7 +41,7 @@ export function EnterpriseBilling() {
           <div>
             <h3 className="text-[18px] font-semibold text-foreground mb-1">{enterpriseOrganization.plan} Plan</h3>
             <p className="text-[14px] text-muted-foreground">
-              Your current subscription
+              Your current VerifyMe plan and included credits
             </p>
           </div>
           <StatusBadge status="active" />
@@ -151,7 +151,7 @@ export function EnterpriseBilling() {
             <div className="space-y-6">
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-[14px] text-foreground">Verification API Calls</span>
+                  <span className="text-[14px] text-foreground">Identity verification attempts</span>
                   <span className="text-[14px] font-medium">
                     {enterpriseOrganization.usage.toLocaleString()} / {enterpriseUsageLimit.toLocaleString()}
                   </span>
