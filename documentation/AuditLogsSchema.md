@@ -1,5 +1,7 @@
 # Audit Logs Data Schema
 
+> **VerifyMe terminology:** See [`../docs/billing-credits.md`](../docs/billing-credits.md) and [`../docs/product-spec.md`](../docs/product-spec.md). Example payloads may reference **subscription** in `action` strings for historical alignment; product language prefers **plan / credits** for customer-facing and admin UX text.
+
 ## Overview
 This document defines the **actual implemented** data structure for storing audit logs based on the specifications in AuditLogsPlan.md. 
 

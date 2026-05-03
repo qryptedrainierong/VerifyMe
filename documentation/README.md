@@ -1,4 +1,4 @@
-# VerifyMe Admin Portals Documentation
+# VerifyMe — Repository Documentation (`documentation/`)
 
 ## Purpose
 
@@ -6,18 +6,34 @@ This folder contains project-level notes for:
 
 - New developers who need a fast introduction to the codebase
 - Future maintainers who need context before making structural changes
-- Team members who need a quick map of the two portals and shared UI layer
+- Anyone who needs a quick map of the two admin portals and the shared UI layer
+
+## Product & Terminology (Authoritative)
+
+Agreed **VerifyMe** product language, flows, billing, QR linking, and high-level schema intent live under **`/docs`** (repository root):
+
+- [`../docs/product-spec.md`](../docs/product-spec.md) — surfaces, OIDC-style flow, Verification Service boundary
+- [`../docs/client-management.md`](../docs/client-management.md) — client = organization, `client_id` format, setup lifecycle
+- [`../docs/admin-user-management.md`](../docs/admin-user-management.md) — VerifyMe vs organization admin roles
+- [`../docs/end-user-management.md`](../docs/end-user-management.md) — mobile-only onboarding, device rules, invites
+- [`../docs/billing-credits.md`](../docs/billing-credits.md) — credits as money, billable outcomes, OTP billing
+- [`../docs/qr-linking.md`](../docs/qr-linking.md) — asymmetric payloads, keys, deep links
+- [`../docs/api-overview.md`](../docs/api-overview.md) — APIs and documentation expectations
+- [`../docs/schema-notes.md`](../docs/schema-notes.md) — table list only; no migrations in this phase
+
+Prefer **verification**, **credits**, **linked end users**, and **organization admin** language over legacy SaaS terms such as **API quota**, **subscription usage**, or generic **team** where those terms conflict with VerifyMe.
 
 ## Project Snapshot
 
 VerifyMe Admin Portals is a Vite + React + TypeScript frontend project that presents two separate admin experiences from a single entry point:
 
-- `Platform Admin Portal`
-  Internal-facing portal for platform operators
-- `Organization Portal`
-  Customer-facing enterprise portal
+- **VerifyMe Admin Portal** (`src/app/platform/`)  
+  Internal-facing console for Qrypted / VerifyMe operators (organizations, VerifyMe users, verification sessions, client apps, billing & credits, audit logs, platform settings).
 
-The current implementation is primarily a frontend application shell and UI prototype. It contains routed pages, layouts, reusable components, and design-system utilities, but it does not yet appear to be wired to backend APIs or persistent data sources.
+- **Organization Admin Portal** (`src/app/enterprise/`)  
+  Customer-facing console for enterprise tenants (linked end users, verification logs, API integration, QR linking, team & roles, usage & credits, billing, settings).
+
+The current implementation is a **UI/UX and system design** phase shell: routed pages, layouts, reusable components, and design-system utilities. There is **no** production backend, **no** database integration, and **no** real authentication in this repository scope.
 
 ## Tech Stack
 
@@ -50,7 +66,9 @@ This means the project behaves like a single frontend app with two portal modes,
 - `src/`
   Main application source
 - `documentation/`
-  Introductory and maintenance notes
+  Introductory and maintenance notes (this folder)
+- `docs/`
+  VerifyMe product, billing, API, QR linking, and schema **design** specs
 - `README.md`
   Quick start entry document
 - `vite.config.ts`
@@ -77,25 +95,25 @@ This means the project behaves like a single frontend app with two portal modes,
 
 ### `src/app/platform`
 
-Contains the internal/admin-facing portal:
+Contains the **VerifyMe Admin Portal**:
 
 - `PlatformApp.tsx`
   Portal bootstrap with error boundary and router provider
 - `routes.tsx`
   Route configuration for platform pages
 - `pages/`
-  Screens such as dashboard, organizations, usage, billing, and audit logs
+  Screens such as dashboard, organizations, VerifyMe users, identity links, verification sessions, client apps, billing & credits, audit logs, platform settings
 
 ### `src/app/enterprise`
 
-Contains the customer-facing organization portal:
+Contains the **Organization Admin Portal**:
 
 - `EnterpriseApp.tsx`
   Portal bootstrap with error boundary and router provider
 - `routes.tsx`
-  Route configuration for enterprise pages
+  Route configuration for organization pages
 - `pages/`
-  Screens such as dashboard, end users, team, usage, billing, and settings
+  Screens such as dashboard, linked end users, verification logs, API integration, QR linking placeholders, team & roles, usage & credits, billing, and settings
 
 ### `src/app/shared`
 
@@ -293,6 +311,7 @@ These are the main areas future maintainers should pay attention to:
 
 ## Related Notes
 
+- [Product & design specs (`/docs`)](../docs/product-spec.md)
 - [Maintenance Guide](./maintenance.md)
 - [Audit Logs Plan](./AuditLogsPlan.md)
 - [Audit Logs Schema](./AuditLogsSchema.md)

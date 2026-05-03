@@ -1,11 +1,13 @@
 # Audit Logs Plan
 
+> **VerifyMe terminology:** Product copy and new specs use **plans**, **credits**, and **verification billing** (see [`../docs/billing-credits.md`](../docs/billing-credits.md)). This document still uses historical **audit action keys** such as `subscription.*` in several places; treat those names as **stable log identifiers** until a backend migration aliases or renames them.
+
 ## Overview
 This document outlines all audit log types organized by category, with detailed logging requirements for each action.
 
 Action groups:
 
-1. Subscription & Billing
+1. Subscription & Billing *(log namespace: `subscription.*`; product area: plans, credits, and verification-related billing)*
 2. Billing & Payment
 3. User Management
 4. Security & Access Control

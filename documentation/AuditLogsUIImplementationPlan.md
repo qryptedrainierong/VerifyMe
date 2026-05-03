@@ -1,5 +1,7 @@
 # Audit Logs UI Implementation Plan
 
+> **VerifyMe terminology:** UI labels for categories and filters should trend toward **verification**, **credits**, and **organization billing** per [`../docs/billing-credits.md`](../docs/billing-credits.md). Internal color legends that say **Subscription** can be read as **plan / billing category** until mock data and enums are renamed.
+
 ## Overview
 This document outlines the design and implementation approach for the audit logs UI component, including schema-aligned data, modal details view, and action-specific layouts.
 
@@ -209,7 +211,7 @@ interface AuditLogDetailsModalProps {
 
 ### Action Categories Color Scheme (Applied)
 ```
-Subscription: Blue (#3B82F6)
+Plans / credits (subscription.* actions): Blue (#3B82F6)
 Billing: Green (#10B981)
 User Management: Purple (#8B5CF6)
 Security: Red (#EF4444)
@@ -259,7 +261,7 @@ Warning: Orange (#F97316)
 
 2. **Actor Type** (defaultValue: "all-actors")
    - All Actors
-   - Platform Admin
+   - VerifyMe platform admin *(stored enum may still read `Platform Admin` in prototype code)*
    - Organization Owner
    - Organization Admin
    - System
@@ -272,7 +274,7 @@ Warning: Orange (#F97316)
 
 4. **Action Category** (defaultValue: "all-actions")
    - All Actions
-   - Subscription
+   - Plans / credits *(prototype filter label may still read `Subscription` until enums are renamed)*
    - User Management
    - Billing
    - Security
@@ -615,7 +617,7 @@ src/app/platform/pages/audit-logs/
    - Arrow keys to navigate rows
 
 3. **Screen Reader**
-   - Describe action colors: "Blue (Subscription)"
+   - Describe action colors: "Blue (plans / credits category; legacy `subscription.*` actions)"
    - Status context: "Status: Success (green)"
    - Payload fields: Clear labels for all data
 

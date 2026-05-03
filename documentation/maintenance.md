@@ -129,7 +129,7 @@ After meaningful UI or routing changes, verify:
 1. The app boots from `npm run dev`.
 2. The selector screen loads correctly.
 3. Platform portal can be entered and navigated.
-4. Enterprise portal can be entered and navigated.
+4. Organization Admin Portal can be entered and navigated.
 5. Shared components still render correctly in both portals.
 6. No obvious console errors appear during navigation.
 7. Version/caching logs still behave as expected after a rebuild if build tooling changed.
@@ -147,7 +147,7 @@ When upgrading dependencies:
 
 ## Documentation Hygiene
 
-This documentation should be updated when any of the following change:
+Product language and design decisions belong in **`/docs`** (see [`../docs/product-spec.md`](../docs/product-spec.md)). This `documentation/` folder stays aligned for:
 
 - top-level folder structure
 - portal names or responsibilities
@@ -156,4 +156,4 @@ This documentation should be updated when any of the following change:
 - build/cache strategy
 - shared component conventions
 
-If the project evolves from prototype UI to production-integrated app, this should be reflected explicitly in `documentation/README.md`.
+If the project evolves from prototype UI to production-integrated app, reflect that in both `documentation/README.md` and the relevant files under `docs/`.
