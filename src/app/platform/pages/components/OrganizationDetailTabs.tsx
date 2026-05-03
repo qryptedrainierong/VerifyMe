@@ -176,12 +176,6 @@ function buildEnterpriseDummyUsers(org: PlatformOrganization): EnterpriseUser[] 
   });
 }
 
-type OrganizationDetailTabsProps = {
-  organization: PlatformOrganization;
-  profile: OrganizationProfile;
-  organizationEndUsers: PlatformEndUserAssociation[];
-};
-
 export function OrganizationDetailTabs({ organization, profile, organizationEndUsers }: OrganizationDetailTabsProps) {
   const usageSpend = getVerificationSpend(organization);
   const creditRemaining = Math.max(organization.credit - usageSpend, 0);
