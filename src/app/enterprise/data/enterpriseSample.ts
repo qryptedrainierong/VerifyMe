@@ -1,6 +1,6 @@
 import {
   getSampleOrganizationById,
-  getUsageSpend,
+  getVerificationSpend,
   planDefaults,
 } from "../../platform/data/platformOrganizationsSample";
 import { platformEndUserAssociations } from "../../platform/data/platformUsersSample";
@@ -13,7 +13,7 @@ if (!associatedOrganization) {
 
 export const enterpriseOrganization = associatedOrganization;
 export const enterpriseUsageLimit = planDefaults[enterpriseOrganization.plan].usage;
-export const enterpriseUsageSpend = getUsageSpend(enterpriseOrganization.usage);
+export const enterpriseUsageSpend = getVerificationSpend(enterpriseOrganization);
 export const enterpriseCreditRemaining = Math.max(enterpriseOrganization.credit - enterpriseUsageSpend, 0);
 export const enterpriseCreditUtilizationPct =
   enterpriseOrganization.credit > 0 ? (enterpriseUsageSpend / enterpriseOrganization.credit) * 100 : 0;

@@ -20,12 +20,12 @@ import {
   DropdownMenuTrigger,
 } from "../../shared/components/ui/dropdown-menu";
 import { UnifiedBadge } from "../../shared/components/UnifiedBadge";
-import { buildInitialOrganizations, getUsageSpend } from "../data/platformOrganizationsSample";
+import { buildInitialOrganizations, getVerificationSpend } from "../data/platformOrganizationsSample";
 
 export function PlatformBilling() {
   const [searchQuery, setSearchQuery] = useState("");
   const organizations = useMemo(() => buildInitialOrganizations(), []);
-  const mrr = organizations.reduce((sum, org) => sum + getUsageSpend(org.usage), 0);
+  const mrr = organizations.reduce((sum, org) => sum + getVerificationSpend(org), 0);
   const activeSubscriptions = organizations.length;
 
   const plans = [
@@ -34,7 +34,7 @@ export function PlatformBilling() {
       organizations: organizations.filter((org) => org.plan === "Enterprise").length,
       mrr: organizations
         .filter((org) => org.plan === "Enterprise")
-        .reduce((sum, org) => sum + getUsageSpend(org.usage), 0),
+        .reduce((sum, org) => sum + getVerificationSpend(org), 0),
       growth: 18.5,
     },
     {
@@ -42,7 +42,7 @@ export function PlatformBilling() {
       organizations: organizations.filter((org) => org.plan === "Professional").length,
       mrr: organizations
         .filter((org) => org.plan === "Professional")
-        .reduce((sum, org) => sum + getUsageSpend(org.usage), 0),
+        .reduce((sum, org) => sum + getVerificationSpend(org), 0),
       growth: 12.3,
     },
     {
@@ -50,7 +50,7 @@ export function PlatformBilling() {
       organizations: organizations.filter((org) => org.plan === "Starter").length,
       mrr: organizations
         .filter((org) => org.plan === "Starter")
-        .reduce((sum, org) => sum + getUsageSpend(org.usage), 0),
+        .reduce((sum, org) => sum + getVerificationSpend(org), 0),
       growth: 8.7,
     },
   ];
@@ -59,7 +59,7 @@ export function PlatformBilling() {
     id: `INV-2024-${String(412 + index)}`,
     organization: org.name,
     organizationId: org.id,
-    amount: Math.round(getUsageSpend(org.usage)),
+    amount: Math.round(getVerificationSpend(org)),
     date: "2024-04-01",
     dueDate: "2024-04-15",
     status: org.billingStatus === "current" ? "paid" : org.billingStatus,

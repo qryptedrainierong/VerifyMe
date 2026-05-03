@@ -3,14 +3,14 @@ import { useMemo } from "react";
 import { Card } from "../../shared/components/ui/card";
 import { Button } from "../../shared/components/ui/button";
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { buildInitialOrganizations, getUsageSpend } from "../data/platformOrganizationsSample";
+import { buildInitialOrganizations, getVerificationSpend } from "../data/platformOrganizationsSample";
 import { platformEndUserAssociations } from "../data/platformUsersSample";
 
 export function PlatformDashboard() {
   const organizations = useMemo(() => buildInitialOrganizations(), []);
   const totalOrganizations = organizations.length;
   const totalUsage = organizations.reduce((sum, org) => sum + org.usage, 0);
-  const totalRevenue = organizations.reduce((sum, org) => sum + getUsageSpend(org.usage), 0);
+  const totalRevenue = organizations.reduce((sum, org) => sum + getVerificationSpend(org), 0);
   const totalEndUsers = platformEndUserAssociations.length;
 
   const usageData = [
@@ -35,7 +35,7 @@ export function PlatformDashboard() {
     () =>
       organizations
         .map((org, index) => {
-          const usageRatio = org.credit > 0 ? getUsageSpend(org.usage) / org.credit : 0;
+          const usageRatio = org.credit > 0 ? getVerificationSpend(org) / org.credit : 0;
           if (org.billingStatus === "failed") {
             return {
               id: index + 1,

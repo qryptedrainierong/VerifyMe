@@ -21,7 +21,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-import { buildInitialOrganizations, getUsageSpend } from "../data/platformOrganizationsSample";
+import { buildInitialOrganizations, getVerificationSpend } from "../data/platformOrganizationsSample";
 import { platformEndUserAssociations } from "../data/platformUsersSample";
 
 export function PlatformUsage() {
@@ -29,14 +29,18 @@ export function PlatformUsage() {
   const totalUsage = organizations.reduce((sum, org) => sum + org.usage, 0);
   const avgUsagePerOrg = organizations.length > 0 ? totalUsage / organizations.length : 0;
   const activeEndUsers = platformEndUserAssociations.filter((user) => user.status === "active").length;
-  const overQuotaOrgs = organizations.filter((org) => getUsageSpend(org.usage) > org.credit).length;
+  const overQuotaOrgs = organizations.filter((org) => getVerificationSpend(org) > org.credit).length;
   const usageTrendData = [0, 1, 2, 3, 4, 5, 6, 7, 8].map((index) => ({
     date: `Apr ${index + 1}`,
     api: Math.round((totalUsage / 9) * (0.88 + index * 0.03)),
   }));
   const topOrganizations = [...organizations]
     .sort((a, b) => b.usage - a.usage)
-    .map((org) => ({ name: org.name, usage: org.usage, quota: Math.round(org.credit / 0.05) }));
+    .map((org) => ({
+      name: org.name,
+      usage: org.usage,
+      quota: Math.round(org.credit / (org.pricePerVerification || 0.05)),
+    }));
 
   const apiCallsByType = [
     { type: "Successful Verification", value: 8801640, percentage: 92, color: "bg-green-500" },

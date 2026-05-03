@@ -15,23 +15,29 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../../shared/components/ui/dropdown-menu";
 import { UnifiedBadge } from "../../shared/components/UnifiedBadge";
 import { CreateOrganizationDialog, type NewOrganizationInput } from "./components/CreateOrganizationDialog";
 import {
   buildInitialOrganizations,
-  getUsageSpend,
+  formatIntegrationStatus,
+  formatLifecycleStatus,
+  getVerificationSpend,
   planDefaults,
+  type IntegrationStatus,
+  type OrganizationLifecycleStatus,
   type PlatformOrganization,
 } from "../data/platformOrganizationsSample";
+import { registerPlatformOrganizationOverride } from "../data/platformOrganizationSessionOverrides";
 
 export function PlatformOrganizations() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [planFilter, setPlanFilter] = useState<"all" | PlatformOrganization["plan"]>("all");
-  const [statusFilter, setStatusFilter] = useState<"all" | PlatformOrganization["status"]>("all");
-  const [billingFilter, setBillingFilter] = useState<"all" | PlatformOrganization["billingStatus"]>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | OrganizationLifecycleStatus>("all");
+  const [integrationFilter, setIntegrationFilter] = useState<"all" | IntegrationStatus>("all");
   const [organizations, setOrganizations] = useState<PlatformOrganization[]>(buildInitialOrganizations());
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -41,7 +47,7 @@ export function PlatformOrganizations() {
       style: "currency",
       currency: "USD",
       minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
+      maximumFractionDigits: 2,
     }).format(amount);
   };
 
@@ -51,22 +57,33 @@ export function PlatformOrganizations() {
 
   const filteredOrganizations = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
-    return organizations.filter(
-      (org) =>
-        (normalizedQuery.length === 0
-          || org.name.toLowerCase().includes(normalizedQuery)
-          || org.domain.toLowerCase().includes(normalizedQuery))
+    return organizations.filter((org) => {
+      const haystack = [
+        org.name,
+        org.legalName,
+        org.organizationCode,
+        org.primaryClientId,
+        org.domain,
+        org.id,
+        org.country,
+      ]
+        .join(" ")
+        .toLowerCase();
+      const matchesSearch = normalizedQuery.length === 0 || haystack.includes(normalizedQuery);
+      return (
+        matchesSearch
         && (planFilter === "all" || org.plan === planFilter)
         && (statusFilter === "all" || org.status === statusFilter)
-        && (billingFilter === "all" || org.billingStatus === billingFilter),
-    );
-  }, [organizations, searchQuery, planFilter, statusFilter, billingFilter]);
+        && (integrationFilter === "all" || org.integrationStatus === integrationFilter)
+      );
+    });
+  }, [organizations, searchQuery, planFilter, statusFilter, integrationFilter]);
 
   const overviewStats = useMemo(() => {
     const totalOrganizations = organizations.length;
     const activeOrganizations = organizations.filter((org) => org.status === "active").length;
     const totalCredits = organizations.reduce((sum, org) => sum + org.credit, 0);
-    const totalSpent = organizations.reduce((sum, org) => sum + getUsageSpend(org.usage), 0);
+    const totalSpent = organizations.reduce((sum, org) => sum + getVerificationSpend(org), 0);
 
     return {
       totalOrganizations,
@@ -84,44 +101,52 @@ export function PlatformOrganizations() {
     return `ORG-${String(maxId + 1).padStart(3, "0")}`;
   };
 
-  const mapCompanySizeToManagerSeatsUsed = (companySize: string, seats: number) => {
-    const sizeFromText = companySize.match(/\d+/);
-    if (!sizeFromText) {
-      return Math.round(seats * 0.2);
-    }
-    return Math.min(Number(sizeFromText[0]), seats);
-  };
-
   const mapFormToOrganization = (
     input: NewOrganizationInput,
     currentOrganizations: PlatformOrganization[],
   ): PlatformOrganization => {
     const fallbackDomain = input.adminEmail.split("@")[1] ?? "new-org.local";
-    const domain = (input.supportEmail.split("@")[1] ?? fallbackDomain).toLowerCase();
+    const domain = fallbackDomain.toLowerCase();
     const planMetrics = planDefaults[input.plan];
-    const seatsUsed = mapCompanySizeToManagerSeatsUsed(input.companySize, planMetrics.seats);
+    const walletCredits = input.initialCredits + input.topUpCredits;
+    const primaryClientId = `${input.organizationCode}_CALLCENTER_SANDBOX_001`;
 
     return {
       id: getNextOrganizationId(currentOrganizations),
-      name: input.displayName,
+      name: input.organizationName,
+      legalName: input.legalName,
       domain,
+      organizationCode: input.organizationCode,
+      primaryClientId,
+      country: input.country,
+      timezone: input.timezone,
+      currency: input.currency,
       plan: input.plan,
-      seats: planMetrics.seats,
-      seatsUsed,
-      usage: planMetrics.usage,
-      credit: planMetrics.credit,
+      seats: input.seatLimit,
+      seatsUsed: 1,
+      usage: 0,
+      credit: walletCredits,
+      monthlyIncludedCredits: planMetrics.monthlyIncludedCredits,
+      topUpCredits: input.topUpCredits,
+      pricePerVerification: input.pricePerVerification,
+      emailOtpBillingEnabled: input.emailOtpBillingEnabled,
       billingStatus: "current",
-      status: input.status,
-      created: input.trialStartDate,
+      status: "pending_setup",
+      integrationStatus: "not_configured",
+      created: new Date().toISOString().slice(0, 10),
     };
   };
 
   const handleCreateOrganization = (input: NewOrganizationInput) => {
     setOrganizations((prev) => {
       const organization = mapFormToOrganization(input, prev);
+      registerPlatformOrganizationOverride(organization);
       return [organization, ...prev];
     });
-    setSuccessMessage(`${input.displayName} was created successfully.`);
+    setSuccessMessage(
+      `${input.organizationName} was created. Organization status is pending_setup and integration is not_configured. `
+        + "The organization admin completes remaining setup in the Organization Admin Portal.",
+    );
   };
 
   const handleViewDetails = (organizationId: string) => {
@@ -129,7 +154,7 @@ export function PlatformOrganizations() {
   };
 
   const handleViewAsClient = (organizationName: string) => {
-    setSuccessMessage(`Opening ${organizationName} in client view.`);
+    setSuccessMessage(`Opening ${organizationName} in client view (mock).`);
   };
 
   const handleToggleOrganizationStatus = (organizationId: string) => {
@@ -147,21 +172,39 @@ export function PlatformOrganizations() {
       setSuccessMessage(
         target.status === "suspended"
           ? `${target.name} was reactivated.`
-          : `${target.name} was suspended.`,
+          : `${target.name} was suspended. Permanent disable or archive requires Super Admin (mock).`,
       );
     }
   };
 
+  const lifecycleOptions: OrganizationLifecycleStatus[] = [
+    "draft",
+    "pending_setup",
+    "active",
+    "suspended",
+    "disabled",
+    "archived",
+  ];
+
+  const integrationOptions: IntegrationStatus[] = [
+    "not_configured",
+    "missing_redirect_uri",
+    "missing_keys",
+    "ready_for_testing",
+    "sandbox_active",
+    "production_active",
+    "error",
+  ];
+
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
       <div className="p-8 border-b border-border">
         <div className="flex items-center justify-between gap-4 mb-6">
           <div>
             <h1 className="text-2xl font-semibold text-foreground">Organizations</h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Create and manage organization accounts, plans, verification settings, redirect URIs, API access, and
-              onboarding status
+              Create and manage organizations: plans, credits, verification sessions, client apps, redirect URIs, QR
+              linking, and integration readiness
             </p>
           </div>
           <Button onClick={() => setIsCreateDialogOpen(true)} className="shrink-0">
@@ -177,29 +220,28 @@ export function PlatformOrganizations() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 mb-6">
           <Card className="p-4 border border-border/70 shadow-none min-h-[92px]">
-            <p className="text-xs text-muted-foreground">Total Organizations</p>
+            <p className="text-xs text-muted-foreground">Total organizations</p>
             <p className="text-xl font-semibold text-foreground mt-1">{formatNumber(overviewStats.totalOrganizations)}</p>
           </Card>
           <Card className="p-4 border border-border/70 shadow-none min-h-[92px]">
-            <p className="text-xs text-muted-foreground">Active Organizations</p>
+            <p className="text-xs text-muted-foreground">Active organizations</p>
             <p className="text-xl font-semibold text-foreground mt-1">{formatNumber(overviewStats.activeOrganizations)}</p>
           </Card>
           <Card className="p-4 border border-border/70 shadow-none min-h-[92px]">
-            <p className="text-xs text-muted-foreground">Credit Utilization</p>
+            <p className="text-xs text-muted-foreground">Credit utilization (billable sessions)</p>
             <p className="text-xl font-semibold text-foreground mt-1">{overviewStats.utilizationRate.toFixed(1)}%</p>
           </Card>
           <Card className="p-4 border border-border/70 shadow-none min-h-[92px]">
-            <p className="text-xs text-muted-foreground">Credit Remaining</p>
+            <p className="text-xs text-muted-foreground">Credits remaining</p>
             <p className="text-xl font-semibold text-foreground mt-1">{formatCurrency(overviewStats.totalCreditRemaining)}</p>
           </Card>
         </div>
 
-        {/* Filters */}
         <div className="flex flex-wrap items-center gap-2.5">
           <div className="relative flex-1 min-w-[240px] md:max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search by organization name..."
+              placeholder="Search name, code, client_id, domain…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="h-10 rounded-md border-border bg-input-background pl-9 text-sm text-foreground placeholder:text-muted-foreground"
@@ -208,10 +250,10 @@ export function PlatformOrganizations() {
 
           <Select value={planFilter} onValueChange={(value) => setPlanFilter(value as typeof planFilter)}>
             <SelectTrigger className="h-10 w-[170px] rounded-md text-sm">
-              <SelectValue placeholder="All Plans" />
+              <SelectValue placeholder="Plan" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Plans</SelectItem>
+              <SelectItem value="all">All plans</SelectItem>
               <SelectItem value="Enterprise">Enterprise</SelectItem>
               <SelectItem value="Professional">Professional</SelectItem>
               <SelectItem value="Starter">Starter</SelectItem>
@@ -219,26 +261,33 @@ export function PlatformOrganizations() {
           </Select>
 
           <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as typeof statusFilter)}>
-            <SelectTrigger className="h-10 w-[170px] rounded-md text-sm">
-              <SelectValue placeholder="All Status" />
+            <SelectTrigger className="h-10 w-[190px] rounded-md text-sm">
+              <SelectValue placeholder="Organization status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="trial">Trial</SelectItem>
-              <SelectItem value="suspended">Suspended</SelectItem>
+              <SelectItem value="all">All organization status</SelectItem>
+              {lifecycleOptions.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {formatLifecycleStatus(s)}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
 
-          <Select value={billingFilter} onValueChange={(value) => setBillingFilter(value as typeof billingFilter)}>
-            <SelectTrigger className="h-10 w-[190px] rounded-md text-sm">
-              <SelectValue placeholder="All Billing Status" />
+          <Select
+            value={integrationFilter}
+            onValueChange={(value) => setIntegrationFilter(value as typeof integrationFilter)}
+          >
+            <SelectTrigger className="h-10 w-[210px] rounded-md text-sm">
+              <SelectValue placeholder="Integration status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Billing Status</SelectItem>
-              <SelectItem value="current">Current</SelectItem>
-              <SelectItem value="overdue">Overdue</SelectItem>
-              <SelectItem value="failed">Failed</SelectItem>
+              <SelectItem value="all">All integration status</SelectItem>
+              {integrationOptions.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {formatIntegrationStatus(s)}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
 
@@ -250,54 +299,51 @@ export function PlatformOrganizations() {
               setSearchQuery("");
               setPlanFilter("all");
               setStatusFilter("all");
-              setBillingFilter("all");
+              setIntegrationFilter("all");
             }}
+            aria-label="Clear filters"
           >
             <Filter className="w-4 h-4" />
           </Button>
         </div>
       </div>
 
-      {/* Table */}
       <div className="flex-1 overflow-auto">
         <Card className="m-8 border border-border shadow-sm">
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[1100px]">
               <thead className="border-b border-border bg-accent/5 sticky top-0 z-10">
                 <tr>
                   <th className="text-left p-4 text-[12px] font-semibold tracking-wide text-muted-foreground uppercase">
-                    <button className="flex items-center gap-1 hover:text-foreground transition-colors">
-                      Organization Name
+                    <button type="button" className="flex items-center gap-1 hover:text-foreground transition-colors">
+                      Organization
                       <ArrowUpDown className="w-3 h-3" />
                     </button>
                   </th>
                   <th className="text-left p-4 text-[12px] font-semibold tracking-wide text-muted-foreground uppercase">
-                    <button className="flex items-center gap-1 hover:text-foreground transition-colors">
-                      Plan
-                      <ArrowUpDown className="w-3 h-3" />
-                    </button>
+                    Org code
                   </th>
                   <th className="text-left p-4 text-[12px] font-semibold tracking-wide text-muted-foreground uppercase">
-                    <button className="flex items-center gap-1 hover:text-foreground transition-colors">
-                      Seats
-                      <ArrowUpDown className="w-3 h-3" />
-                    </button>
+                    Primary client_id
                   </th>
                   <th className="text-left p-4 text-[12px] font-semibold tracking-wide text-muted-foreground uppercase">
-                    <button className="flex items-center gap-1 hover:text-foreground transition-colors">
-                      Usage & Credit
-                      <ArrowUpDown className="w-3 h-3" />
-                    </button>
+                    Plan
                   </th>
                   <th className="text-left p-4 text-[12px] font-semibold tracking-wide text-muted-foreground uppercase">
-                    Billing Status
+                    Credit balance
                   </th>
                   <th className="text-left p-4 text-[12px] font-semibold tracking-wide text-muted-foreground uppercase">
-                    Status
+                    Org status
                   </th>
                   <th className="text-left p-4 text-[12px] font-semibold tracking-wide text-muted-foreground uppercase">
-                    <button className="flex items-center gap-1 hover:text-foreground transition-colors">
-                      Created Date
+                    Integration
+                  </th>
+                  <th className="text-left p-4 text-[12px] font-semibold tracking-wide text-muted-foreground uppercase">
+                    Country / timezone
+                  </th>
+                  <th className="text-left p-4 text-[12px] font-semibold tracking-wide text-muted-foreground uppercase">
+                    <button type="button" className="flex items-center gap-1 hover:text-foreground transition-colors">
+                      Created
                       <ArrowUpDown className="w-3 h-3" />
                     </button>
                   </th>
@@ -313,63 +359,43 @@ export function PlatformOrganizations() {
                     className="hover:bg-accent/5 transition-colors cursor-pointer"
                     onClick={() => navigate(`/organizations/${org.id}`)}
                   >
-                    <td className="p-4">
+                    <td className="p-4 align-top">
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                           <Building2 className="w-4 h-4 text-primary" />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-[14px] font-medium text-foreground truncate">
-                            {org.name}
-                          </p>
+                          <p className="text-[14px] font-medium text-foreground truncate">{org.name}</p>
                           <p className="text-[12px] text-muted-foreground truncate">
-                            {org.domain} <span className="mx-1">•</span> {org.id}
+                            {org.domain} <span className="mx-1">·</span> {org.id}
                           </p>
                         </div>
                       </div>
                     </td>
-                    <td className="p-4 whitespace-nowrap">
+                    <td className="p-4 align-top whitespace-nowrap">
+                      <code className="text-[12px] bg-muted px-1.5 py-0.5 rounded font-mono">{org.organizationCode}</code>
+                    </td>
+                    <td className="p-4 align-top max-w-[200px]">
+                      <code className="text-[11px] break-all text-foreground">{org.primaryClientId}</code>
+                    </td>
+                    <td className="p-4 align-top whitespace-nowrap">
                       <UnifiedBadge variant="plan" value={org.plan} />
                     </td>
                     <td className="p-4 align-top">
-                      <div>
-                        <p className="text-[14px] text-foreground">
-                          {formatNumber(org.seatsUsed)} / {formatNumber(org.seats)}
-                        </p>
-                        <p className="text-[12px] text-muted-foreground">users</p>
-                        <div className="w-24 h-1.5 bg-muted rounded-full mt-1.5 overflow-hidden">
-                          <div
-                            className={`h-full ${
-                              org.seatsUsed > org.seats
-                                ? "bg-red-500"
-                                : org.seatsUsed / org.seats > 0.9
-                                ? "bg-yellow-500"
-                                : "bg-green-500"
-                            }`}
-                            style={{
-                              width: `${Math.min((org.seatsUsed / org.seats) * 100, 100)}%`,
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </td>
-                    <td className="p-4 align-top">
                       {(() => {
-                        const spent = getUsageSpend(org.usage);
+                        const spent = getVerificationSpend(org);
                         const ratio = org.credit > 0 ? spent / org.credit : 0;
                         const indicatorWidth = `${Math.min(ratio * 100, 100)}%`;
                         const indicatorColor = ratio > 1 ? "bg-red-500" : ratio > 0.8 ? "bg-yellow-500" : "bg-green-500";
                         const remainingCredit = Math.max(org.credit - spent, 0);
 
                         return (
-                          <div className="w-[180px]">
-                            <p className="text-[14px] text-foreground tabular-nums leading-5">
-                              {formatCurrency(spent)} / {formatCurrency(org.credit)}
+                          <div className="w-[190px]">
+                            <p className="text-[13px] text-foreground tabular-nums leading-5">
+                              {formatCurrency(remainingCredit)} <span className="text-muted-foreground">avail</span>
                             </p>
-                            <p className="mt-1 text-[11px] text-muted-foreground tabular-nums leading-4">
-                              {remainingCredit > 0
-                                ? `${formatCurrency(remainingCredit)} credit remaining`
-                                : "Credit exhausted"}
+                            <p className="text-[11px] text-muted-foreground tabular-nums mt-0.5">
+                              {formatNumber(org.usage)} billable verification sessions · {formatCurrency(spent)} spend
                             </p>
                             <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
                               <div className={`h-full ${indicatorColor}`} style={{ width: indicatorWidth }} />
@@ -378,27 +404,19 @@ export function PlatformOrganizations() {
                         );
                       })()}
                     </td>
-                    <td className="p-4 whitespace-nowrap">
-                      <UnifiedBadge
-                        variant="billing"
-                        value={org.billingStatus === "current"
-                          ? "Current"
-                          : org.billingStatus === "overdue"
-                          ? "Overdue"
-                          : "Failed"}
-                      />
+                    <td className="p-4 align-top whitespace-nowrap">
+                      <UnifiedBadge variant="status" value={formatLifecycleStatus(org.status)} />
                     </td>
-                    <td className="p-4 whitespace-nowrap">
-                      <UnifiedBadge
-                        variant="status"
-                        value={org.status === "active"
-                          ? "Active"
-                          : org.status === "trial"
-                          ? "Trial"
-                          : "Suspended"}
-                      />
+                    <td className="p-4 align-top whitespace-nowrap max-w-[160px]">
+                      <UnifiedBadge variant="integration" value={formatIntegrationStatus(org.integrationStatus)} />
                     </td>
-                    <td className="p-4 whitespace-nowrap">
+                    <td className="p-4 align-top text-[13px] text-foreground">
+                      <p>{org.country}</p>
+                      <p className="text-[11px] text-muted-foreground font-mono truncate max-w-[180px]" title={org.timezone}>
+                        {org.timezone}
+                      </p>
+                    </td>
+                    <td className="p-4 align-top whitespace-nowrap">
                       <p className="text-[14px] text-foreground">
                         {new Date(org.created).toLocaleDateString("en-US", {
                           month: "short",
@@ -421,7 +439,7 @@ export function PlatformOrganizations() {
                               handleViewDetails(org.id);
                             }}
                           >
-                            View Details
+                            View details
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={(e) => {
@@ -429,15 +447,22 @@ export function PlatformOrganizations() {
                               handleViewAsClient(org.name);
                             }}
                           >
-                            View as Client
+                            View as organization admin (mock)
                           </DropdownMenuItem>
+                          <DropdownMenuSeparator />
                           <DropdownMenuItem
                             onClick={(e) => {
                               e.stopPropagation();
                               handleToggleOrganizationStatus(org.id);
                             }}
                           >
-                            {org.status === "suspended" ? "Activate" : "Suspend"}
+                            {org.status === "suspended" ? "Activate organization" : "Suspend organization"}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem disabled className="text-muted-foreground">
+                            Disable organization (Super Admin only)
+                          </DropdownMenuItem>
+                          <DropdownMenuItem disabled className="text-muted-foreground">
+                            Archive organization (Super Admin only)
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -446,11 +471,9 @@ export function PlatformOrganizations() {
                 ))}
                 {filteredOrganizations.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="p-10 text-center">
+                    <td colSpan={10} className="p-10 text-center">
                       <p className="text-sm font-medium text-foreground">No organizations found</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Try adjusting search keywords or clearing filters.
-                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">Try adjusting search or filters.</p>
                     </td>
                   </tr>
                 )}
@@ -462,7 +485,7 @@ export function PlatformOrganizations() {
       <CreateOrganizationDialog
         open={isCreateDialogOpen}
         onOpenChange={setIsCreateDialogOpen}
-        existingOrganizationNames={organizations.map((org) => org.name)}
+        existingOrganizationCodes={organizations.map((org) => org.organizationCode)}
         onSubmit={handleCreateOrganization}
       />
     </div>
