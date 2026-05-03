@@ -852,7 +852,9 @@ export function OrganizationDetailTabs({ organization, profile, organizationEndU
           <Card className="border border-border shadow-sm overflow-x-auto">
             <div className="p-4 border-b border-border">
               <h3 className="text-[16px] font-semibold">Linked End Users</h3>
-              <p className="text-[13px] text-muted-foreground">Summary view — full lists connect in a later phase.</p>
+              <p className="text-[13px] text-muted-foreground">
+                Organization-side customer records linked to VerifyMe identities. End-users complete linking in the VerifyMe mobile app. Summary view for platform admins — full invite and lifecycle management lives in the organization admin portal.
+              </p>
             </div>
             <table className="w-full">
               <thead className="border-b border-border bg-accent/5">

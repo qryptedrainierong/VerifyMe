@@ -30,6 +30,12 @@ export function UnifiedBadge({ variant, value, size = "md" }: UnifiedBadgeProps)
       if (s.includes("pending") || s === "draft" || s === "trial" || s === "invited") {
         return "bg-yellow-50 text-yellow-700 border-yellow-200";
       }
+      if (s.includes("conflict")) {
+        return "bg-orange-50 text-orange-800 border-orange-200";
+      }
+      if (s === "revoked" || s === "unlinked" || s === "no invite" || s === "expired" || s === "superseded") {
+        return "bg-slate-50 text-slate-700 border-slate-200";
+      }
       if (s.includes("suspended") || s === "inactive" || s.includes("disabled") || s.includes("archived")) {
         return "bg-red-50 text-red-700 border-red-200";
       }

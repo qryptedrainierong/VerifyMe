@@ -1,235 +1,1037 @@
-import { Search, MoreVertical, Edit, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState, type FormEvent } from "react";
+import {
+  AlertTriangle,
+  BookOpen,
+  Download,
+  Link2,
+  MoreVertical,
+  Plus,
+  Search,
+  Upload,
+  UserPlus,
+} from "lucide-react";
 import { Button } from "../../shared/components/ui/button";
 import { Input } from "../../shared/components/ui/input";
 import { Card } from "../../shared/components/ui/card";
 import { Label } from "../../shared/components/ui/label";
+import { Textarea } from "../../shared/components/ui/textarea";
+import { Separator } from "../../shared/components/ui/separator";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
-  DialogTrigger,
   DialogTitle,
 } from "../../shared/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../../shared/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../shared/components/ui/select";
 import { UnifiedBadge } from "../../shared/components/UnifiedBadge";
-import { enterpriseEndUsers, enterpriseOrganization } from "../data/enterpriseSample";
+import { enterpriseOrganization } from "../data/enterpriseSample";
+import {
+  bulkImportPreviewMock,
+  createMockInvite,
+  csvTemplateContent,
+  getInitialOrganizationUserRecords,
+  inviteApiSampleRequest,
+  inviteApiSampleResponse,
+  inviteStatusLabel,
+  isInviteExpiredByClock,
+  linkStatusLabel,
+  type OrganizationLinkStatus,
+  type OrganizationUserRecord,
+} from "../data/enterpriseLinkedEndUsersMock";
 
-// Interface for enterprise end users
-interface EnterpriseUser {
-  id: string;
-  username: string;
-  verifymeUsername: string;
-  status: "active" | "suspended";
-  apiCalls: number;
-  lastActive: string | null;
-  created: string;
+type RecentFilter = "all" | "invited_recent" | "verified_recent";
+
+type BulkPreviewRow = (typeof bulkImportPreviewMock.previewRows)[number];
+
+function bulkRowStatusLabel(row: BulkPreviewRow) {
+  switch (row.rowStatus) {
+    case "valid":
+      return "Valid";
+    case "duplicate":
+      return "Duplicate client_user_id";
+    case "already_linked":
+      return "Already linked";
+    case "invalid":
+      return "Invalid";
+    default:
+      return row.rowStatus;
+  }
+}
+
+function formatDateTime(iso: string | null) {
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  } catch {
+    return iso;
+  }
+}
+
+function formatDate(iso: string | null) {
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  } catch {
+    return iso;
+  }
+}
+
+function isWithinDays(iso: string | null, days: number) {
+  if (!iso) return false;
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return false;
+  return Date.now() - t < days * 86400000;
 }
 
 export function EnterpriseEndUsers() {
+  const [records, setRecords] = useState<OrganizationUserRecord[]>(() => getInitialOrganizationUserRecords());
   const [searchQuery, setSearchQuery] = useState("");
-  const [editingUser, setEditingUser] = useState<EnterpriseUser | null>(null);
+  const [statusFilter, setStatusFilter] = useState<"all" | OrganizationLinkStatus>("all");
+  const [recentFilter, setRecentFilter] = useState<RecentFilter>("all");
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const enterpriseUsers: EnterpriseUser[] = enterpriseEndUsers.map((user) => ({
-    id: user.id,
-    username: user.enterpriseUsername,
-    verifymeUsername: user.verifymeUsername,
-    status: user.status === "pending" ? "suspended" : user.status,
-    apiCalls: user.apiCalls,
-    lastActive: user.lastActive,
-    created: user.created,
-  }));
+  const [addOpen, setAddOpen] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [apiGuideOpen, setApiGuideOpen] = useState(false);
+  const [detailRecord, setDetailRecord] = useState<OrganizationUserRecord | null>(null);
+  const [inviteRecord, setInviteRecord] = useState<OrganizationUserRecord | null>(null);
+  const [conflictRecord, setConflictRecord] = useState<OrganizationUserRecord | null>(null);
 
-  // Calculate stats
-  const totalUsers = enterpriseUsers.length;
-  const activeUsers = enterpriseUsers.filter(u => u.status === "active").length;
-  const suspendedUsers = enterpriseUsers.filter(u => u.status === "suspended").length;
-  const totalApiCalls = enterpriseUsers.reduce((sum, u) => sum + u.apiCalls, 0);
+  const [addForm, setAddForm] = useState({
+    clientUserId: "",
+    displayName: "",
+    notes: "",
+    contact: "",
+  });
 
-  const formatRelativeTime = (dateString: string | null) => {
-    if (!dateString) return "Never";
+  const filtered = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return records.filter((r) => {
+      const matchSearch =
+        q.length === 0
+        || r.clientUserId.toLowerCase().includes(q)
+        || r.displayName.toLowerCase().includes(q);
+      const matchStatus = statusFilter === "all" || r.linkStatus === statusFilter;
+      let matchRecent = true;
+      if (recentFilter === "invited_recent") {
+        matchRecent = isWithinDays(r.invitedAt, 14);
+      } else if (recentFilter === "verified_recent") {
+        matchRecent = isWithinDays(r.lastVerifiedAt, 30);
+      }
+      return matchSearch && matchStatus && matchRecent;
+    });
+  }, [records, searchQuery, statusFilter, recentFilter]);
 
-    const date = new Date(dateString + 'Z'); // Parse as UTC
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
+  const stats = useMemo(() => {
+    const total = records.length;
+    const linked = records.filter((r) => r.linkStatus === "linked").length;
+    const pendingInvites = records.filter(
+      (r) => r.linkStatus === "pending" || (r.inviteStatus === "pending" && r.linkStatus !== "linked"),
+    ).length;
+    const suspendedDisabled = records.filter((r) => r.linkStatus === "suspended" || r.linkStatus === "disabled").length;
+    const conflicts = records.filter((r) => r.linkStatus === "conflict").length;
+    return { total, linked, pendingInvites, suspendedDisabled, conflicts };
+  }, [records]);
 
-    if (diffMins < 60) {
-      return `${diffMins} min ago (UTC)`;
-    } else if (diffHours < 24) {
-      return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago (UTC)`;
-    } else {
-      return `${diffDays} day${diffDays > 1 ? "s" : ""} ago (UTC)`;
+  const bumpMessage = (msg: string) => {
+    setSuccessMessage(msg);
+    window.setTimeout(() => setSuccessMessage(null), 5000);
+  };
+
+  const updateRecord = (id: string, patch: Partial<OrganizationUserRecord>) => {
+    setRecords((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+  };
+
+  const openInvitePanel = (r: OrganizationUserRecord) => {
+    if (r.invite) {
+      setInviteRecord(r);
+      return;
+    }
+    const inv = createMockInvite(r.clientUserId, `inv_gen_${Date.now().toString(36).slice(-8)}`);
+    const next: OrganizationUserRecord = {
+      ...r,
+      invite: inv,
+      inviteStatus: "pending",
+      linkStatus: r.linkStatus === "unlinked" ? "pending" : r.linkStatus,
+      invitedAt: new Date().toISOString(),
+    };
+    setRecords((prev) => prev.map((x) => (x.id === r.id ? next : x)));
+    setInviteRecord(next);
+    bumpMessage("New invite generated (mock). Share the link or QR from this panel.");
+  };
+
+  const handleAddSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    const clientUserId = addForm.clientUserId.trim();
+    const displayName = addForm.displayName.trim();
+    if (!clientUserId || !displayName) return;
+    const inviteId = `inv_acme_${clientUserId.replace(/[^a-z0-9]/gi, "_")}_${Date.now().toString(36).slice(-5)}`;
+    const row: OrganizationUserRecord = {
+      id: `ou-${Date.now()}`,
+      clientUserId,
+      displayName,
+      linkStatus: "pending",
+      inviteStatus: "pending",
+      maskedVerifymeUserId: null,
+      lastVerifiedAt: null,
+      invitedAt: new Date().toISOString(),
+      createdAt: new Date().toISOString().slice(0, 10),
+      verificationCount: 0,
+      customerNotes: addForm.notes.trim() || null,
+      notificationPlaceholder: addForm.contact.trim() || null,
+      invite: createMockInvite(clientUserId, inviteId),
+      recentOutcomes: [],
+    };
+    setRecords((prev) => [row, ...prev]);
+    setAddOpen(false);
+    setAddForm({ clientUserId: "", displayName: "", notes: "", contact: "" });
+    bumpMessage(
+      `Record created for ${displayName}. Invite URL (mock): ${row.invite?.inviteUrl}. The end-user must complete linking in the VerifyMe mobile app.`,
+    );
+  };
+
+  const handleBulkImport = () => {
+    const now = Date.now();
+    const imported: OrganizationUserRecord[] = [
+      {
+        id: `ou-bulk-${now}-1`,
+        clientUserId: "CUST-CSV-001",
+        displayName: "CSV Import One",
+        linkStatus: "pending",
+        inviteStatus: "pending",
+        maskedVerifymeUserId: null,
+        lastVerifiedAt: null,
+        invitedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString().slice(0, 10),
+        verificationCount: 0,
+        customerNotes: "Bulk import (mock)",
+        notificationPlaceholder: null,
+        invite: createMockInvite("CUST-CSV-001", `inv_bulk_${now}a`),
+        recentOutcomes: [],
+      },
+      {
+        id: `ou-bulk-${now}-2`,
+        clientUserId: "CUST-CSV-002",
+        displayName: "CSV Import Two",
+        linkStatus: "pending",
+        inviteStatus: "pending",
+        maskedVerifymeUserId: null,
+        lastVerifiedAt: null,
+        invitedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString().slice(0, 10),
+        verificationCount: 0,
+        customerNotes: "Bulk import (mock)",
+        notificationPlaceholder: null,
+        invite: createMockInvite("CUST-CSV-002", `inv_bulk_${now}b`),
+        recentOutcomes: [],
+      },
+    ];
+    setRecords((prev) => [...imported, ...prev]);
+    setBulkOpen(false);
+    bumpMessage(
+      `Imported ${imported.length} valid records (mock). Already linked and other skipped rows were not imported. Invite links generated for pending rows.`,
+    );
+  };
+
+  const downloadCsvTemplate = () => {
+    const blob = new Blob([csvTemplateContent], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "verifyme_bulk_invite_template.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+    bumpMessage("CSV template downloaded.");
+  };
+
+  const exportRecordsCsv = () => {
+    const header = "client_user_id,display_name,link_status,invite_status,last_verified_at";
+    const lines = records.map(
+      (r) =>
+        `${r.clientUserId},${JSON.stringify(r.displayName)},${r.linkStatus},${r.inviteStatus},${r.lastVerifiedAt ?? ""}`,
+    );
+    const blob = new Blob([[header, ...lines].join("\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "linked_end_users_export.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+    bumpMessage("Export downloaded (mock snapshot).");
+  };
+
+  const exportInviteLinks = () => {
+    const pending = records.filter((r) => r.invite?.inviteUrl);
+    const header = "client_user_id,invite_id,invite_url,expires_at";
+    const lines = pending.map((r) => `${r.clientUserId},${r.invite!.inviteId},${r.invite!.inviteUrl},${r.invite!.expiresAt}`);
+    const blob = new Blob([[header, ...lines].join("\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "invite_links_export.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+    bumpMessage("Invite links export downloaded (mock).");
+  };
+
+  const applyRowAction = (r: OrganizationUserRecord, action: string) => {
+    switch (action) {
+      case "suspend":
+        if (r.linkStatus === "linked") {
+          updateRecord(r.id, { linkStatus: "suspended" });
+          bumpMessage(`${r.displayName} suspended for this organization.`);
+        }
+        break;
+      case "reactivate":
+        if (r.linkStatus === "suspended") {
+          updateRecord(r.id, { linkStatus: "linked" });
+          bumpMessage(`${r.displayName} reactivated.`);
+        }
+        break;
+      case "revoke":
+        updateRecord(r.id, {
+          linkStatus: "revoked",
+          inviteStatus: "superseded",
+          maskedVerifymeUserId: null,
+          invite: null,
+        });
+        bumpMessage(`Link revoked for ${r.displayName}.`);
+        break;
+      case "disable":
+        updateRecord(r.id, { linkStatus: "disabled" });
+        bumpMessage(`${r.displayName} disabled (requires admin review to re-enable).`);
+        break;
+      case "reinvite":
+        updateRecord(r.id, {
+          linkStatus: "pending",
+          inviteStatus: "pending",
+          invitedAt: new Date().toISOString(),
+          invite: createMockInvite(r.clientUserId, `inv_re_${r.clientUserId}_${Date.now().toString(36).slice(-4)}`),
+        });
+        bumpMessage(`New invite issued for ${r.displayName} (mock).`);
+        break;
+      default:
+        break;
     }
   };
 
+  const markConflictReviewedAndClose = () => {
+    if (!conflictRecord) return;
+    updateRecord(conflictRecord.id, { conflictReviewed: true });
+    setConflictRecord(null);
+    bumpMessage("Conflict marked as reviewed (mock). Link state unchanged — production would route to support workflows.");
+  };
+
   return (
-    <div className="p-8 space-y-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-[24px] font-semibold text-foreground">Linked End Users</h2>
+    <div className="p-8 space-y-6 max-w-[1600px] mx-auto">
+      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+        <div className="max-w-3xl">
+          <h1 className="text-[28px] font-semibold text-foreground">Linked End Users</h1>
           <p className="text-[15px] text-muted-foreground mt-1">
-            Customer records linked to VerifyMe identities via QR linking for {enterpriseOrganization.organizationName}
+            Manage organization customer records linked to VerifyMe identities. Your organization creates and invites
+            records; the end-user completes linking only through the VerifyMe mobile app.
           </p>
+        </div>
+        <div className="flex flex-wrap gap-2 shrink-0">
+          <Button onClick={() => setAddOpen(true)}>
+            <UserPlus className="w-4 h-4 mr-2" />
+            Add End-user
+          </Button>
+          <Button variant="outline" onClick={() => setBulkOpen(true)}>
+            <Upload className="w-4 h-4 mr-2" />
+            Bulk Invite
+          </Button>
+          <Button variant="outline" onClick={() => setApiGuideOpen(true)}>
+            <BookOpen className="w-4 h-4 mr-2" />
+            Invite API Guide
+          </Button>
+          <Button variant="outline" onClick={exportRecordsCsv}>
+            <Download className="w-4 h-4 mr-2" />
+            Export
+          </Button>
         </div>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder="Search by username..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10 h-10 bg-background"
-        />
-      </div>
-      {/* Stats Cards */}
-      <div className="grid grid-cols-4 gap-4">
-        <Card className="p-4 shadow-sm">
-          <p className="text-[13px] text-muted-foreground mb-1">Linked records</p>
-          <p className="text-[24px] font-semibold">{totalUsers}</p>
+      {successMessage && (
+        <div className="rounded-md border border-green-500/40 bg-green-500/10 px-4 py-2 text-sm text-green-800 dark:text-green-300">
+          {successMessage}
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <Card className="p-4 border border-border shadow-sm">
+          <p className="text-[12px] text-muted-foreground uppercase tracking-wide">Total records</p>
+          <p className="text-2xl font-semibold mt-1">{stats.total}</p>
         </Card>
-        <Card className="p-4 shadow-sm">
-          <p className="text-[13px] text-muted-foreground mb-1">Active links</p>
-          <p className="text-[24px] font-semibold text-green-600">{activeUsers}</p>
+        <Card className="p-4 border border-border shadow-sm">
+          <p className="text-[12px] text-muted-foreground uppercase tracking-wide">Linked</p>
+          <p className="text-2xl font-semibold mt-1 text-green-700">{stats.linked}</p>
         </Card>
-        <Card className="p-4 shadow-sm">
-          <p className="text-[13px] text-muted-foreground mb-1">Suspended</p>
-          <p className="text-[24px] font-semibold text-red-600">{suspendedUsers}</p>
+        <Card className="p-4 border border-border shadow-sm">
+          <p className="text-[12px] text-muted-foreground uppercase tracking-wide">Pending invites</p>
+          <p className="text-2xl font-semibold mt-1 text-amber-700">{stats.pendingInvites}</p>
         </Card>
-        <Card className="p-4 shadow-sm">
-          <p className="text-[13px] text-muted-foreground mb-1">Verification attempts (period)</p>
-          <p className="text-[24px] font-semibold">{(totalApiCalls / 1000).toFixed(1)}K</p>
+        <Card className="p-4 border border-border shadow-sm">
+          <p className="text-[12px] text-muted-foreground uppercase tracking-wide">Suspended / disabled</p>
+          <p className="text-2xl font-semibold mt-1 text-red-700">{stats.suspendedDisabled}</p>
+        </Card>
+        <Card className="p-4 border border-border shadow-sm">
+          <p className="text-[12px] text-muted-foreground uppercase tracking-wide">Conflicts</p>
+          <p className="text-2xl font-semibold mt-1 text-orange-700">{stats.conflicts}</p>
         </Card>
       </div>
 
-      {/* Users Table */}
-      <Card className="border border-border shadow-sm">
+      <Card className="p-5 border border-border bg-muted/20">
+        <div className="flex items-start gap-2 mb-2">
+          <Link2 className="w-5 h-5 text-muted-foreground shrink-0 mt-0.5" />
+          <h2 className="text-[15px] font-semibold text-foreground">Link lifecycle</h2>
+        </div>
+        <ul className="text-[13px] text-muted-foreground space-y-1.5 list-disc list-inside">
+          <li>
+            <strong className="text-foreground">Unlinked</strong> — record exists, but no active invite has been issued.
+            Suggested actions: use <strong className="text-foreground">Generate / view invite link</strong> or{" "}
+            <strong className="text-foreground">Re-invite</strong> from the row menu.
+          </li>
+          <li>
+            <strong className="text-foreground">Pending</strong> — invite issued; not yet accepted in the VerifyMe app.
+          </li>
+          <li>
+            <strong className="text-foreground">Linked</strong> — end-user completed linking in the VerifyMe mobile app.
+          </li>
+          <li>
+            <strong className="text-foreground">Suspended</strong> — temporary block for this organization.
+          </li>
+          <li>
+            <strong className="text-foreground">Revoked</strong> — link removed; user must re-link.
+          </li>
+          <li>
+            <strong className="text-foreground">Disabled</strong> — stronger block; requires admin review to re-enable.
+          </li>
+          <li>
+            <strong className="text-foreground">Conflict</strong> — same client_user_id appears linked to a different
+            VerifyMe identity; needs review.
+          </li>
+        </ul>
+      </Card>
+
+      <div className="flex flex-col lg:flex-row gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[220px] max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Search client_user_id or customer name…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 h-10"
+          />
+        </div>
+        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
+          <SelectTrigger className="w-[200px] h-10">
+            <SelectValue placeholder="Link status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All link statuses</SelectItem>
+            <SelectItem value="unlinked">Unlinked</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="linked">Linked</SelectItem>
+            <SelectItem value="suspended">Suspended</SelectItem>
+            <SelectItem value="revoked">Revoked</SelectItem>
+            <SelectItem value="disabled">Disabled</SelectItem>
+            <SelectItem value="conflict">Conflict</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={recentFilter} onValueChange={(v) => setRecentFilter(v as RecentFilter)}>
+          <SelectTrigger className="w-[220px] h-10">
+            <SelectValue placeholder="Activity" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All activity</SelectItem>
+            <SelectItem value="invited_recent">Recently invited (sample)</SelectItem>
+            <SelectItem value="verified_recent">Recently verified (sample)</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <Card className="border border-border shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="border-b border-border bg-accent/5">
+          <table className="w-full min-w-[1100px] text-sm">
+            <thead className="border-b border-border bg-accent/40">
               <tr>
-                <th className="text-left p-4 text-[13px] font-medium text-muted-foreground">
-                  Client user ID
+                <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">client_user_id</th>
+                <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">
+                  Customer name (display)
                 </th>
-                <th className="text-left p-4 text-[13px] font-medium text-muted-foreground">
-                  Display name / VerifyMe handle
-                </th>
-                <th className="text-left p-4 text-[13px] font-medium text-muted-foreground">
-                  Status
-                </th>
-                <th className="text-left p-4 text-[13px] font-medium text-muted-foreground">
-                  Verifications (sample)
-                </th>
-                <th className="text-left p-4 text-[13px] font-medium text-muted-foreground">
-                  Last Active
-                </th>
-                <th className="text-left p-4 text-[13px] font-medium text-muted-foreground w-[60px]">
-                  Actions
-                </th>
+                <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">Link status</th>
+                <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">Invite status</th>
+                <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">VerifyMe identity</th>
+                <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">Last verified</th>
+                <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">Created / invited</th>
+                <th className="text-right p-3 font-semibold text-muted-foreground uppercase text-[11px] w-[72px]">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {enterpriseUsers.map((user) => (
-                <tr key={user.id} className="hover:bg-accent/5 transition-colors">
-                  <td className="p-4">
-                    <p className="text-[14px] font-medium text-foreground font-mono">
-                      {user.username}
-                    </p>
+              {filtered.map((r) => (
+                <tr key={r.id} className="hover:bg-accent/30">
+                  <td className="p-3 font-mono text-[13px]">{r.clientUserId}</td>
+                  <td className="p-3 font-medium">{r.displayName}</td>
+                  <td className="p-3">
+                    <div className="flex flex-col gap-1 items-start">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <UnifiedBadge variant="status" value={linkStatusLabel(r.linkStatus)} />
+                        {r.linkStatus === "conflict" && r.conflictReviewed && (
+                          <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Reviewed</span>
+                        )}
+                      </div>
+                      {r.linkStatus === "unlinked" && (
+                        <span className="text-[11px] text-muted-foreground">
+                          Generate invite or Re-invite from the menu.
+                        </span>
+                      )}
+                    </div>
                   </td>
-                  <td className="p-4">
-                    <p className="text-[14px] text-foreground font-mono">{user.verifymeUsername}</p>
+                  <td className="p-3">
+                    <UnifiedBadge variant="status" value={inviteStatusLabel(r.inviteStatus)} />
                   </td>
-                  <td className="p-4">
-                    <UnifiedBadge
-                      variant="status"
-                      value={user.status === "active" ? "Active" : "Suspended"}
-                    />
+                  <td className="p-3 font-mono text-[12px] text-muted-foreground">{r.maskedVerifymeUserId ?? "—"}</td>
+                  <td className="p-3 text-muted-foreground">{formatDateTime(r.lastVerifiedAt)}</td>
+                  <td className="p-3 text-muted-foreground">
+                    <span className="block">{formatDate(r.createdAt)}</span>
+                    {r.invitedAt && (
+                      <span className="block text-[11px]">Invited {formatDateTime(r.invitedAt)}</span>
+                    )}
                   </td>
-                  <td className="p-4">
-                    <p className="text-[14px] font-medium text-foreground">
-                      {user.apiCalls.toLocaleString()}
-                    </p>
-                    <p className="text-[12px] text-muted-foreground">this month</p>
-                  </td>
-                  <td className="p-4">
-                    <p className="text-[14px] text-foreground">
-                      {formatRelativeTime(user.lastActive)}
-                    </p>
-                  </td>
-                  <td className="p-4">
-                    <Dialog>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreVertical className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DialogTrigger asChild>
-                            <DropdownMenuItem onSelect={() => setEditingUser(user)}>
-                              <Edit className="w-4 h-4 mr-2" />
-                              Edit User
-                            </DropdownMenuItem>
-                          </DialogTrigger>
-                          <DropdownMenuItem>View verification history</DropdownMenuItem>
-                          <DropdownMenuItem>
-                            {user.status === "active" ? "Suspend User" : "Activate User"}
+                  <td className="p-3 text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-52">
+                        <DropdownMenuItem onClick={() => setDetailRecord(r)}>View details</DropdownMenuItem>
+                        {(r.linkStatus === "pending"
+                          || r.linkStatus === "unlinked"
+                          || r.linkStatus === "revoked"
+                          || r.linkStatus === "conflict") && (
+                          <DropdownMenuItem onClick={() => openInvitePanel(r)}>
+                            Generate / view invite link
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="text-red-600">
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Delete User
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                      <DialogContent className="sm:max-w-md">
-                        <DialogHeader>
-                          <DialogTitle>Edit User</DialogTitle>
-                          <DialogDescription>
-                            Update user information
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-4 py-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="edit-username">Client user ID</Label>
-                            <Input
-                              id="edit-username"
-                              defaultValue={editingUser?.username || ""}
-                              placeholder="username"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="edit-verifymeUsername">VerifyMe Username</Label>
-                            <Input
-                              id="edit-verifymeUsername"
-                              defaultValue={editingUser?.verifymeUsername || ""}
-                              placeholder="user.vm"
-                            />
-                          </div>
-                        </div>
-                        <div className="flex justify-end gap-2">
-                          <Button variant="outline">Cancel</Button>
-                          <Button>Update User</Button>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
+                        )}
+                        <DropdownMenuItem
+                          onClick={() => applyRowAction(r, "reinvite")}
+                          disabled={
+                            r.linkStatus === "linked"
+                            || !(
+                              ["revoked", "unlinked", "pending", "conflict"].includes(r.linkStatus)
+                              || r.inviteStatus === "expired"
+                            )
+                          }
+                        >
+                          Re-invite
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => applyRowAction(r, "suspend")}
+                          disabled={r.linkStatus !== "linked"}
+                        >
+                          Suspend
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => applyRowAction(r, "reactivate")}
+                          disabled={r.linkStatus !== "suspended"}
+                        >
+                          Reactivate
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => applyRowAction(r, "revoke")}
+                          disabled={r.linkStatus !== "linked"}
+                        >
+                          Revoke link
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => applyRowAction(r, "disable")} disabled={r.linkStatus === "disabled"}>
+                          Disable
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => setConflictRecord(r)}
+                          disabled={r.linkStatus !== "conflict"}
+                        >
+                          Resolve conflict
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        {filtered.length === 0 && (
+          <p className="p-8 text-center text-muted-foreground text-sm">No records match your filters.</p>
+        )}
       </Card>
+
+      {/* Add End-user */}
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add end-user</DialogTitle>
+            <DialogDescription>
+              Creates an organization-side customer record and a pending invite. This does not create a VerifyMe
+              account.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleAddSubmit} className="space-y-4">
+            <p className="text-[13px] rounded-md border border-amber-200 bg-amber-50/80 px-3 py-2 text-amber-950 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-100">
+              Creating this record does not create a VerifyMe account. The end-user must open the invite link or
+              QR/deep link and complete onboarding and linking in the VerifyMe mobile app.
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="cid">client_user_id *</Label>
+              <Input
+                id="cid"
+                className="font-mono"
+                value={addForm.clientUserId}
+                onChange={(e) => setAddForm((f) => ({ ...f, clientUserId: e.target.value }))}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="dn">Customer name (display) *</Label>
+              <Input
+                id="dn"
+                value={addForm.displayName}
+                onChange={(e) => setAddForm((f) => ({ ...f, displayName: e.target.value }))}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="notes">Customer reference / notes</Label>
+              <Textarea
+                id="notes"
+                rows={2}
+                value={addForm.notes}
+                onChange={(e) => setAddForm((f) => ({ ...f, notes: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="contact">Notification email or phone (optional, design placeholder)</Label>
+              <Input
+                id="contact"
+                placeholder="Not sent in this UI build"
+                value={addForm.contact}
+                onChange={(e) => setAddForm((f) => ({ ...f, contact: e.target.value }))}
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setAddOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit">
+                <Plus className="w-4 h-4 mr-2" />
+                Create record & invite (mock)
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk invite */}
+      <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Bulk invite</DialogTitle>
+            <DialogDescription>
+              For initial deployment when inviting many existing customers. Bulk invite creates organization-side records
+              and invite links. End-users still complete linking in the VerifyMe mobile app.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-lg border border-dashed border-border bg-muted/30 p-8 text-center">
+              <Upload className="w-10 h-10 mx-auto text-muted-foreground mb-2" />
+              <p className="text-sm font-medium text-foreground">Drop CSV here (mock)</p>
+              <p className="text-xs text-muted-foreground mt-1">No file parsing in this build — use preview below.</p>
+            </div>
+            <Button type="button" variant="outline" onClick={downloadCsvTemplate}>
+              <Download className="w-4 h-4 mr-2" />
+              Download CSV template
+            </Button>
+            <div>
+              <p className="text-[12px] font-medium text-muted-foreground uppercase mb-2">Expected columns</p>
+              <code className="text-[12px] bg-muted px-2 py-1 rounded font-mono">client_user_id, display_name, optional_email, optional_phone</code>
+            </div>
+            <Separator />
+            <p className="text-[14px] font-semibold">Mock validation preview</p>
+            <p className="text-[12px] text-muted-foreground">
+              Import skips <strong className="text-foreground">already linked</strong> rows — the client_user_id already
+              has an active VerifyMe link for this organization.
+            </p>
+            <div className="flex flex-wrap gap-3 text-[13px]">
+              <span className="text-green-700 dark:text-green-400">Valid: {bulkImportPreviewMock.valid}</span>
+              <span className="text-amber-700 dark:text-amber-400">Duplicate client_user_id: {bulkImportPreviewMock.duplicateClientUserId}</span>
+              <span className="text-sky-800 dark:text-sky-300 font-medium">Already linked: {bulkImportPreviewMock.alreadyLinked}</span>
+              <span className="text-red-700 dark:text-red-400">Invalid: {bulkImportPreviewMock.invalid}</span>
+            </div>
+            <div className="border border-border rounded-md overflow-hidden">
+              <table className="w-full text-[12px]">
+                <thead className="bg-accent/40">
+                  <tr>
+                    <th className="text-left p-2">client_user_id</th>
+                    <th className="text-left p-2">display_name (CSV)</th>
+                    <th className="text-left p-2">Validation</th>
+                    <th className="text-left p-2">Notes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bulkImportPreviewMock.previewRows.map((row, i) => (
+                    <tr key={i} className="border-t border-border">
+                      <td className="p-2 font-mono">{row.clientUserId || "—"}</td>
+                      <td className="p-2">{row.displayName}</td>
+                      <td className="p-2">
+                        <UnifiedBadge variant="status" value={bulkRowStatusLabel(row)} />
+                      </td>
+                      <td className="p-2 text-muted-foreground text-[11px] leading-snug">
+                        {"note" in row && row.note
+                          ? row.note
+                          : row.rowStatus === "duplicate"
+                            ? "Duplicate rows within this CSV file."
+                            : row.rowStatus === "already_linked"
+                              ? "The client_user_id already has an active VerifyMe link for this organization."
+                              : row.rowStatus === "invalid"
+                                ? "Missing or malformed required fields."
+                                : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <DialogFooter className="gap-2 flex-wrap">
+            <Button type="button" variant="outline" onClick={exportInviteLinks}>
+              Export invite links
+            </Button>
+            <Button type="button" variant="outline" onClick={() => setBulkOpen(false)}>
+              Close
+            </Button>
+            <Button type="button" onClick={handleBulkImport}>
+              Import valid records (mock)
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Invite API guide */}
+      <Dialog open={apiGuideOpen} onOpenChange={setApiGuideOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Automated Invite API</DialogTitle>
+            <DialogDescription>
+              Your enterprise systems can call the invite API when a new customer record is created (design contract —
+              mock only).
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 text-[13px]">
+            <p className="text-muted-foreground leading-relaxed">
+              This endpoint is intended to be triggered by the organization when a new customer is created or becomes
+              eligible to use VerifyMe. The organization creates or invites the customer record; the end-user still
+              completes linking in the VerifyMe mobile app. The API does not create a VerifyMe account silently.
+            </p>
+            <p>
+              <strong className="text-foreground">Endpoint (concept):</strong>{" "}
+              <code className="bg-muted px-1.5 py-0.5 rounded text-[12px]">POST /organization-users/invites</code>
+            </p>
+            <div>
+              <p className="font-medium text-foreground mb-1">Sample request</p>
+              <pre className="bg-muted rounded-md p-3 text-[12px] overflow-x-auto font-mono">{inviteApiSampleRequest}</pre>
+            </div>
+            <div>
+              <p className="font-medium text-foreground mb-1">Sample response</p>
+              <pre className="bg-muted rounded-md p-3 text-[12px] overflow-x-auto font-mono">{inviteApiSampleResponse}</pre>
+            </div>
+            <Separator />
+            <p className="font-medium text-foreground">Behavior cases (reference)</p>
+            <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+              <li>New client_user_id → create record + invite</li>
+              <li>Already pending → return existing invite or regenerate per policy</li>
+              <li>Already linked → return already_linked</li>
+              <li>Linked to different VerifyMe user → conflict</li>
+              <li>Suspended or disabled → blocked unless reactivated by an admin</li>
+            </ul>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setApiGuideOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Invite / QR panel */}
+      <Dialog open={inviteRecord !== null} onOpenChange={(o) => !o && setInviteRecord(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          {inviteRecord?.invite && (() => {
+            const inv = inviteRecord.invite;
+            const inviteExpired =
+              inviteRecord.inviteStatus === "expired" || isInviteExpiredByClock(inv);
+            return (
+            <>
+              <DialogHeader>
+                <DialogTitle>Invite link & QR</DialogTitle>
+                <DialogDescription>
+                  Invite metadata for <span className="text-foreground font-medium">{inviteRecord.displayName}</span>
+                </DialogDescription>
+                <div className="flex flex-wrap items-center gap-2 pt-2">
+                  <span className="text-[11px] text-muted-foreground uppercase">Invite status</span>
+                  <UnifiedBadge variant="status" value={inviteStatusLabel(inviteRecord.inviteStatus)} />
+                  {inviteExpired && inviteRecord.inviteStatus !== "expired" && (
+                    <UnifiedBadge variant="status" value="Past expires_at" />
+                  )}
+                </div>
+              </DialogHeader>
+              <div className="space-y-3 text-[13px]">
+                {inviteExpired && (
+                  <div className="rounded-md border border-amber-200 bg-amber-50/90 px-3 py-2 text-amber-950 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-100 text-[12px] leading-relaxed">
+                    <strong className="text-foreground">Expired invites cannot be accepted.</strong> Generate a new invite
+                    link so the end-user can complete linking in the VerifyMe mobile app.
+                  </div>
+                )}
+                <div>
+                  <p className="text-[11px] font-medium text-muted-foreground uppercase">invite_id</p>
+                  <code className="text-[12px] font-mono break-all">{inv.inviteId}</code>
+                </div>
+                <div>
+                  <p className="text-[11px] font-medium text-muted-foreground uppercase">invite_url</p>
+                  <code className="text-[12px] font-mono break-all block bg-muted p-2 rounded">{inv.inviteUrl}</code>
+                </div>
+                <div>
+                  <p className="text-[11px] font-medium text-muted-foreground uppercase">QR payload status</p>
+                  <p>{inv.qrPayloadStatus}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <p className="text-[11px] font-medium text-muted-foreground uppercase">issued_at</p>
+                    <p>{inv.issuedAt}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-medium text-muted-foreground uppercase">expires_at</p>
+                    <p className="font-mono text-[12px]">{inv.expiresAt}</p>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[11px] font-medium text-muted-foreground uppercase">nonce (preview)</p>
+                  <code className="font-mono">{inv.noncePreview}</code>
+                </div>
+                <div>
+                  <p className="text-[11px] font-medium text-muted-foreground uppercase">client_id</p>
+                  <code className="font-mono text-[12px]">{inv.clientId}</code>
+                </div>
+                <Separator />
+                <p className="text-muted-foreground leading-relaxed">
+                  If the VerifyMe app is installed, the invite opens the app. If not, the user is guided to install, then
+                  continues. If the user has no VerifyMe account, they sign up then link. If already linked to the same
+                  organization and customer, no duplicate link is created. If linked to a different VerifyMe user, status
+                  becomes <strong className="text-foreground">conflict</strong>.
+                </p>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  This panel does not show VerifyMe email, raw one-time tokens, OTP, passcode, biometric data,{" "}
+                  Encrypted_Auth_Cred, Transaction_Code, or raw encrypted QR payload contents — only masked previews and
+                  routing metadata.
+                </p>
+              </div>
+              <DialogFooter className="gap-2 flex-col sm:flex-row">
+                {inviteExpired && (
+                  <Button
+                    type="button"
+                    className="w-full sm:w-auto"
+                    onClick={() => {
+                      if (!inviteRecord) return;
+                      applyRowAction(inviteRecord, "reinvite");
+                      setInviteRecord(null);
+                    }}
+                  >
+                    Re-invite
+                  </Button>
+                )}
+                <Button variant="outline" onClick={() => setInviteRecord(null)}>
+                  Close
+                </Button>
+              </DialogFooter>
+            </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* Detail */}
+      <Dialog open={detailRecord !== null} onOpenChange={(o) => !o && setDetailRecord(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          {detailRecord && (
+            <>
+              <DialogHeader>
+                <DialogTitle>End-user details</DialogTitle>
+                <DialogDescription>Organization-scoped view — no full VerifyMe profile.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-3 text-[13px]">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <p className="text-[11px] text-muted-foreground uppercase">client_user_id</p>
+                    <p className="font-mono">{detailRecord.clientUserId}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-muted-foreground uppercase">Customer name (display)</p>
+                    <p>{detailRecord.displayName}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <p className="text-[11px] text-muted-foreground uppercase">Link status</p>
+                    <UnifiedBadge variant="status" value={linkStatusLabel(detailRecord.linkStatus)} />
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-muted-foreground uppercase">Invite status</p>
+                    <UnifiedBadge variant="status" value={inviteStatusLabel(detailRecord.inviteStatus)} />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[11px] text-muted-foreground uppercase">VerifyMe identity (masked)</p>
+                  <p className="font-mono">{detailRecord.maskedVerifymeUserId ?? "—"}</p>
+                  <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
+                    Not shown: VerifyMe email, full VerifyMe profile, other linked organizations, passcode, OTP, biometric
+                    data, raw one-time token, Encrypted_Auth_Cred, Transaction_Code, or raw encrypted QR payload.
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <p className="text-[11px] text-muted-foreground uppercase">Linked date</p>
+                    <p>{detailRecord.linkStatus === "linked" ? formatDate(detailRecord.invitedAt) : "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-muted-foreground uppercase">Last verified</p>
+                    <p>{formatDateTime(detailRecord.lastVerifiedAt)}</p>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[11px] text-muted-foreground uppercase">Verification count (org)</p>
+                  <p>{detailRecord.verificationCount}</p>
+                </div>
+                {detailRecord.customerNotes && (
+                  <div>
+                    <p className="text-[11px] text-muted-foreground uppercase">Notes</p>
+                    <p>{detailRecord.customerNotes}</p>
+                  </div>
+                )}
+                <Separator />
+                <p className="font-medium text-foreground">Recent verification outcomes (this organization)</p>
+                <ul className="space-y-1">
+                  {detailRecord.recentOutcomes.length === 0 && (
+                    <li className="text-muted-foreground">No recent outcomes.</li>
+                  )}
+                  {detailRecord.recentOutcomes.map((o, i) => (
+                    <li key={i} className="flex justify-between gap-2">
+                      <span>{o.outcome}</span>
+                      <span className="text-muted-foreground text-[12px]">{formatDateTime(o.at)}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  This drawer is organization-scoped only. Other organizations, full VerifyMe account data, and secure
+                  verification values are not shown.
+                </p>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setDetailRecord(null)}>
+                  Close
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Conflict resolve */}
+      <Dialog open={conflictRecord !== null} onOpenChange={(o) => !o && setConflictRecord(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-orange-600" />
+              Resolve conflict
+            </DialogTitle>
+            <DialogDescription>
+              Review-only (mock). Production would require audit trails and VerifyMe support coordination.
+            </DialogDescription>
+          </DialogHeader>
+          {conflictRecord && (
+            <div className="space-y-4 text-[13px]">
+              <div className="rounded-md border border-orange-200 bg-orange-50/80 px-3 py-2 text-orange-950 dark:bg-orange-950/30 dark:border-orange-900 dark:text-orange-100">
+                <strong className="text-foreground">Reason:</strong> This client_user_id appears linked to a different
+                VerifyMe identity.
+              </div>
+              <dl className="grid grid-cols-1 gap-3">
+                <div>
+                  <dt className="text-[11px] font-medium text-muted-foreground uppercase">client_user_id</dt>
+                  <dd className="font-mono">{conflictRecord.clientUserId}</dd>
+                </div>
+                <div>
+                  <dt className="text-[11px] font-medium text-muted-foreground uppercase">Customer name (display)</dt>
+                  <dd>{conflictRecord.displayName}</dd>
+                </div>
+                <div>
+                  <dt className="text-[11px] font-medium text-muted-foreground uppercase">Current masked VerifyMe identity</dt>
+                  <dd className="font-mono">{conflictRecord.maskedVerifymeUserId ?? "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-[11px] font-medium text-muted-foreground uppercase">Conflicting masked VerifyMe identity</dt>
+                  <dd className="font-mono">{conflictRecord.conflictingMaskedVerifymeUserId ?? "vm_**** (mock)"}</dd>
+                </div>
+              </dl>
+              <p className="text-[12px] text-muted-foreground leading-relaxed">
+                Full VerifyMe email, global profile, OTP, passcode, biometric data, tokens, Encrypted_Auth_Cred, and
+                Transaction_Code are never shown in this portal.
+              </p>
+              <div className="space-y-2">
+                <p className="text-[11px] font-medium text-muted-foreground uppercase">Future actions (disabled)</p>
+                <div className="flex flex-col gap-2">
+                  <Button type="button" variant="secondary" className="justify-start" disabled>
+                    Reassign link (future)
+                  </Button>
+                  <Button type="button" variant="secondary" className="justify-start" disabled>
+                    Force re-link after review (future)
+                  </Button>
+                  <Button type="button" variant="secondary" className="justify-start" disabled>
+                    Escalate to VerifyMe support (mock)
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter className="gap-2 flex-col-reverse sm:flex-row sm:justify-end">
+            <Button variant="outline" onClick={() => setConflictRecord(null)}>
+              Cancel
+            </Button>
+            <Button onClick={markConflictReviewedAndClose}>Mark as reviewed / close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
