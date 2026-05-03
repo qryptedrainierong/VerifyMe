@@ -91,7 +91,7 @@ export function PlatformOrganizationDetail() {
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2 mb-2">
-                <h1 className="text-[28px] font-semibold text-foreground">{organization.name}</h1>
+                <h1 className="text-[28px] font-semibold text-foreground">{organization.organizationName}</h1>
                 <UnifiedBadge variant="plan" value={organization.plan} />
                 <UnifiedBadge variant="status" value={formatLifecycleStatus(organization.status)} />
                 <UnifiedBadge variant="integration" value={formatIntegrationStatus(organization.integrationStatus)} />

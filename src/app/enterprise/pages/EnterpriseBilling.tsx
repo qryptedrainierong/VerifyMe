@@ -50,7 +50,7 @@ export function EnterpriseBilling() {
         <div className="grid grid-cols-3 gap-6 mb-6">
           <div>
             <p className="text-[13px] text-muted-foreground mb-1">Monthly Cost</p>
-            <p className="text-[24px] font-semibold text-foreground">{formatCurrency(enterpriseOrganization.credit)}</p>
+            <p className="text-[24px] font-semibold text-foreground">{formatCurrency(enterpriseOrganization.creditBalance)}</p>
             <p className="text-[13px] text-muted-foreground mt-1">Included credit</p>
           </div>
           <div>
@@ -100,7 +100,7 @@ export function EnterpriseBilling() {
               Approaching included credit limit
             </p>
             <p className="text-[13px] text-orange-700 mt-1">
-              You've spent {formatCurrency(enterpriseUsageSpend)} from {formatCurrency(enterpriseOrganization.credit)} included credit
+              You've spent {formatCurrency(enterpriseUsageSpend)} from {formatCurrency(enterpriseOrganization.creditBalance)} included credit
               ({enterpriseCreditUtilizationPct.toFixed(1)}%). Consider upgrading your plan.
             </p>
           </div>

@@ -15,28 +15,34 @@ export type IntegrationStatus =
   | "production_active"
   | "error";
 
+/** Mock payment / invoice standing (separate from organization lifecycle). */
+export type PaymentStanding = "current" | "overdue" | "failed";
+
 export type PlatformOrganization = {
   id: string;
-  name: string;
+  organizationName: string;
   legalName: string;
   domain: string;
   organizationCode: string;
   primaryClientId: string;
+  organizationType: string;
+  industry: string;
+  companySize: string;
   country: string;
   timezone: string;
   currency: string;
   plan: "Starter" | "Professional" | "Enterprise";
-  seats: number;
+  seatLimit: number;
   seatsUsed: number;
-  /** Billable verification sessions in current period (sample) */
+  /** Billable verification sessions in current period (sample). */
   usage: number;
-  /** Wallet balance (USD sample) */
-  credit: number;
+  /** Wallet balance — monetary credits (sample currency per org). */
+  creditBalance: number;
   monthlyIncludedCredits: number;
   topUpCredits: number;
   pricePerVerification: number;
   emailOtpBillingEnabled: boolean;
-  billingStatus: "current" | "overdue" | "failed";
+  paymentStanding: PaymentStanding;
   status: OrganizationLifecycleStatus;
   integrationStatus: IntegrationStatus;
   created: string;
@@ -47,202 +53,226 @@ export const verificationApiCallCost = 0.05;
 
 export const planDefaults: Record<
   PlatformOrganization["plan"],
-  { seats: number; usage: number; credit: number; monthlyIncludedCredits: number }
+  { seatLimit: number; usage: number; creditBalance: number; monthlyIncludedCredits: number }
 > = {
-  Starter: { seats: 25, usage: 8000, credit: 10, monthlyIncludedCredits: 10 },
-  Professional: { seats: 100, usage: 45000, credit: 50, monthlyIncludedCredits: 50 },
-  Enterprise: { seats: 400, usage: 120000, credit: 500, monthlyIncludedCredits: 500 },
+  Starter: { seatLimit: 25, usage: 8000, creditBalance: 10, monthlyIncludedCredits: 10 },
+  Professional: { seatLimit: 100, usage: 45000, creditBalance: 50, monthlyIncludedCredits: 50 },
+  Enterprise: { seatLimit: 400, usage: 120000, creditBalance: 500, monthlyIncludedCredits: 500 },
 };
 
 const rawOrganizations: PlatformOrganization[] = [
   {
     id: "ORG-001",
-    name: "Acme Corporation",
+    organizationName: "Acme Corporation",
     legalName: "Acme Corporation Inc.",
     domain: "acme.com",
     organizationCode: "ACME",
     primaryClientId: "ACME_CALLCENTER_PROD_001",
+    organizationType: "Enterprise",
+    industry: "Financial Services",
+    companySize: "501-1000",
     country: "United States",
     timezone: "America/Los_Angeles",
     currency: "USD",
     plan: "Enterprise",
-    seats: 400,
+    seatLimit: 400,
     seatsUsed: 8,
     usage: 7200,
-    credit: 500,
+    creditBalance: 500,
     monthlyIncludedCredits: 500,
     topUpCredits: 0,
     pricePerVerification: 0.05,
     emailOtpBillingEnabled: true,
-    billingStatus: "current",
+    paymentStanding: "current",
     status: "active",
     integrationStatus: "production_active",
     created: "2024-01-15",
   },
   {
     id: "ORG-002",
-    name: "TechStart Inc.",
+    organizationName: "TechStart Inc.",
     legalName: "TechStart Incorporated",
     domain: "techstart.io",
     organizationCode: "TECHSTART",
     primaryClientId: "TECHSTART_CALLCENTER_SANDBOX_001",
+    organizationType: "SME",
+    industry: "Technology/IT Services",
+    companySize: "51-200",
     country: "Singapore",
     timezone: "Asia/Singapore",
     currency: "USD",
     plan: "Professional",
-    seats: 100,
+    seatLimit: 100,
     seatsUsed: 2,
     usage: 640,
-    credit: 50,
+    creditBalance: 50,
     monthlyIncludedCredits: 50,
     topUpCredits: 10,
     pricePerVerification: 0.06,
     emailOtpBillingEnabled: true,
-    billingStatus: "current",
+    paymentStanding: "current",
     status: "active",
     integrationStatus: "sandbox_active",
     created: "2024-02-03",
   },
   {
     id: "ORG-003",
-    name: "Global Ventures",
+    organizationName: "Global Ventures",
     legalName: "Global Ventures Ltd.",
     domain: "globalventures.com",
     organizationCode: "GLOBAL",
     primaryClientId: "GLOBAL_MESSAGING_PROD_001",
+    organizationType: "Enterprise",
+    industry: "BPO/Call Center",
+    companySize: "1001-5000",
     country: "United Kingdom",
     timezone: "Europe/London",
     currency: "USD",
     plan: "Enterprise",
-    seats: 400,
+    seatLimit: 400,
     seatsUsed: 10,
     usage: 9400,
-    credit: 500,
+    creditBalance: 500,
     monthlyIncludedCredits: 500,
     topUpCredits: 0,
     pricePerVerification: 0.05,
     emailOtpBillingEnabled: false,
-    billingStatus: "overdue",
+    paymentStanding: "overdue",
     status: "active",
     integrationStatus: "missing_redirect_uri",
     created: "2023-12-08",
   },
   {
     id: "ORG-004",
-    name: "Innovation Labs",
+    organizationName: "Innovation Labs",
     legalName: "Innovation Labs LLC",
     domain: "innovationlabs.co",
     organizationCode: "INNO",
     primaryClientId: "INNO_CALLCENTER_PROD_001",
+    organizationType: "Startup",
+    industry: "Technology/IT Services",
+    companySize: "1-50",
     country: "United States",
     timezone: "America/New_York",
     currency: "USD",
     plan: "Starter",
-    seats: 25,
+    seatLimit: 25,
     seatsUsed: 1,
     usage: 120,
-    credit: 10,
+    creditBalance: 10,
     monthlyIncludedCredits: 10,
     topUpCredits: 0,
     pricePerVerification: 0.08,
     emailOtpBillingEnabled: true,
-    billingStatus: "current",
+    paymentStanding: "current",
     status: "pending_setup",
     integrationStatus: "not_configured",
     created: "2024-03-22",
   },
   {
     id: "ORG-005",
-    name: "Design Studio Pro",
+    organizationName: "Design Studio Pro",
     legalName: "Design Studio Pro GmbH",
     domain: "designstudio.io",
     organizationCode: "DESIGN",
     primaryClientId: "DESIGN_CALLCENTER_PROD_001",
+    organizationType: "SME",
+    industry: "Other",
+    companySize: "51-200",
     country: "Germany",
     timezone: "Europe/Berlin",
     currency: "EUR",
     plan: "Professional",
-    seats: 150,
+    seatLimit: 150,
     seatsUsed: 3,
     usage: 920,
-    credit: 50,
+    creditBalance: 50,
     monthlyIncludedCredits: 50,
     topUpCredits: 0,
     pricePerVerification: 0.05,
     emailOtpBillingEnabled: true,
-    billingStatus: "failed",
+    paymentStanding: "failed",
     status: "suspended",
     integrationStatus: "error",
     created: "2024-01-28",
   },
   {
     id: "ORG-006",
-    name: "Finance Corp",
+    organizationName: "Finance Corp",
     legalName: "Finance Corp",
     domain: "financecorp.com",
     organizationCode: "FINANCE",
     primaryClientId: "FINANCE_CALLCENTER_PROD_001",
+    organizationType: "Enterprise",
+    industry: "Financial Services",
+    companySize: "201-500",
     country: "United States",
     timezone: "America/Chicago",
     currency: "USD",
     plan: "Enterprise",
-    seats: 300,
+    seatLimit: 300,
     seatsUsed: 9,
     usage: 8600,
-    credit: 500,
+    creditBalance: 500,
     monthlyIncludedCredits: 500,
     topUpCredits: 250,
     pricePerVerification: 0.04,
     emailOtpBillingEnabled: true,
-    billingStatus: "current",
+    paymentStanding: "current",
     status: "active",
     integrationStatus: "ready_for_testing",
     created: "2023-11-12",
   },
   {
     id: "ORG-007",
-    name: "CloudScale Systems",
+    organizationName: "CloudScale Systems",
     legalName: "CloudScale Systems Inc.",
     domain: "cloudscale.io",
     organizationCode: "CLOUD",
     primaryClientId: "CLOUD_MESSAGING_PROD_001",
+    organizationType: "Enterprise",
+    industry: "Technology/IT Services",
+    companySize: "51-200",
     country: "Australia",
     timezone: "Australia/Sydney",
     currency: "USD",
     plan: "Professional",
-    seats: 75,
+    seatLimit: 75,
     seatsUsed: 2,
     usage: 780,
-    credit: 50,
+    creditBalance: 50,
     monthlyIncludedCredits: 50,
     topUpCredits: 0,
     pricePerVerification: 0.05,
     emailOtpBillingEnabled: true,
-    billingStatus: "current",
+    paymentStanding: "current",
     status: "active",
     integrationStatus: "missing_keys",
     created: "2024-02-14",
   },
   {
     id: "ORG-008",
-    name: "DataFlow Analytics",
+    organizationName: "DataFlow Analytics",
     legalName: "DataFlow Analytics Pte Ltd",
     domain: "dataflow.com",
     organizationCode: "DATAFLOW",
     primaryClientId: "DATAFLOW_CALLCENTER_PROD_001",
+    organizationType: "SME",
+    industry: "Financial Services",
+    companySize: "1-50",
     country: "Singapore",
     timezone: "Asia/Singapore",
     currency: "SGD",
     plan: "Starter",
-    seats: 25,
+    seatLimit: 25,
     seatsUsed: 1,
     usage: 180,
-    credit: 10,
+    creditBalance: 10,
     monthlyIncludedCredits: 10,
     topUpCredits: 0,
     pricePerVerification: 0.05,
     emailOtpBillingEnabled: true,
-    billingStatus: "current",
+    paymentStanding: "current",
     status: "draft",
     integrationStatus: "not_configured",
     created: "2024-03-05",
@@ -253,9 +283,9 @@ export function applyPlanDefaultsToOrganization(organization: PlatformOrganizati
   const planMetrics = planDefaults[organization.plan];
   return {
     ...organization,
-    seats: planMetrics.seats,
-    seatsUsed: Math.min(organization.seatsUsed, planMetrics.seats),
-    credit: planMetrics.credit,
+    seatLimit: planMetrics.seatLimit,
+    seatsUsed: Math.min(organization.seatsUsed, planMetrics.seatLimit),
+    creditBalance: planMetrics.creditBalance,
     monthlyIncludedCredits: planMetrics.monthlyIncludedCredits,
   };
 }
@@ -272,7 +302,9 @@ export function getSampleOrganizationById(id: string | undefined): PlatformOrgan
 }
 
 /** Spend from billable verification volume using org-specific unit price. */
-export function getVerificationSpend(organization: Pick<PlatformOrganization, "usage" | "pricePerVerification">): number {
+export function getVerificationSpend(
+  organization: Pick<PlatformOrganization, "usage" | "pricePerVerification">,
+): number {
   return organization.usage * organization.pricePerVerification;
 }
 

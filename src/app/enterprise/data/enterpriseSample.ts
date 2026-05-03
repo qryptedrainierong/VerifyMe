@@ -14,9 +14,9 @@ if (!associatedOrganization) {
 export const enterpriseOrganization = associatedOrganization;
 export const enterpriseUsageLimit = planDefaults[enterpriseOrganization.plan].usage;
 export const enterpriseUsageSpend = getVerificationSpend(enterpriseOrganization);
-export const enterpriseCreditRemaining = Math.max(enterpriseOrganization.credit - enterpriseUsageSpend, 0);
+export const enterpriseCreditRemaining = Math.max(enterpriseOrganization.creditBalance - enterpriseUsageSpend, 0);
 export const enterpriseCreditUtilizationPct =
-  enterpriseOrganization.credit > 0 ? (enterpriseUsageSpend / enterpriseOrganization.credit) * 100 : 0;
+  enterpriseOrganization.creditBalance > 0 ? (enterpriseUsageSpend / enterpriseOrganization.creditBalance) * 100 : 0;
 export const enterpriseUsagePct =
   enterpriseUsageLimit > 0 ? (enterpriseOrganization.usage / enterpriseUsageLimit) * 100 : 0;
 
@@ -36,9 +36,9 @@ export const enterpriseInvoices = [
     date: "Apr 1, 2024",
     amount: enterpriseUsageSpend,
     status:
-      enterpriseOrganization.billingStatus === "current"
+      enterpriseOrganization.paymentStanding === "current"
         ? "success"
-        : enterpriseOrganization.billingStatus === "overdue"
+        : enterpriseOrganization.paymentStanding === "overdue"
           ? "pending"
           : "failed",
     period: "Apr 2024",

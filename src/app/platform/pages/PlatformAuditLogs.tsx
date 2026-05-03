@@ -103,7 +103,7 @@ const auditLogs: AuditLog[] = [
     action: "subscription.cancelled",
     status: AuditStatus.SUCCESS,
     ipAddress: "203.0.113.15",
-    details: "Cancelled subscription at renewal boundary",
+    details: "Cancelled plan at renewal boundary",
     payload: {
       cancelledPlan: "Starter",
       reason: "Migrated to annual reseller contract",
@@ -120,7 +120,7 @@ const auditLogs: AuditLog[] = [
     action: "subscription.renewed",
     status: AuditStatus.SUCCESS,
     ipAddress: "N/A",
-    details: "Annual enterprise subscription renewed automatically",
+    details: "Annual enterprise plan renewed automatically",
     payload: {
       planType: "Enterprise",
       billingPeriodFrom: "2024-04-12",
@@ -857,7 +857,7 @@ export function PlatformAuditLogs() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all-actions">All Actions</SelectItem>
-              <SelectItem value="subscription">Subscription</SelectItem>
+              <SelectItem value="subscription">Plan</SelectItem>
               <SelectItem value="user">User Management</SelectItem>
               <SelectItem value="billing">Billing</SelectItem>
               <SelectItem value="security">Security</SelectItem>

@@ -90,7 +90,7 @@ export function EnterpriseUsage() {
               </p>
               <p className="text-[13px] text-muted-foreground">
                 You have used {enterpriseCreditUtilizationPct.toFixed(1)}% of your included credit for this period
-                ({formatCurrency(enterpriseUsageSpend)} of {formatCurrency(enterpriseOrganization.credit)}).
+                ({formatCurrency(enterpriseUsageSpend)} of {formatCurrency(enterpriseOrganization.creditBalance)}).
               </p>
             </div>
             <Button size="sm">Upgrade Plan</Button>

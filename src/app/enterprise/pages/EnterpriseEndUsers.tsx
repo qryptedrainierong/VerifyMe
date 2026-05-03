@@ -78,7 +78,7 @@ export function EnterpriseEndUsers() {
         <div>
           <h2 className="text-[24px] font-semibold text-foreground">Linked End Users</h2>
           <p className="text-[15px] text-muted-foreground mt-1">
-            Customer records linked to VerifyMe identities via QR linking for {enterpriseOrganization.name}
+            Customer records linked to VerifyMe identities via QR linking for {enterpriseOrganization.organizationName}
           </p>
         </div>
       </div>

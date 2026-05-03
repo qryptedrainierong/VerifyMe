@@ -35,23 +35,23 @@ export function PlatformDashboard() {
     () =>
       organizations
         .map((org, index) => {
-          const usageRatio = org.credit > 0 ? getVerificationSpend(org) / org.credit : 0;
-          if (org.billingStatus === "failed") {
+          const usageRatio = org.creditBalance > 0 ? getVerificationSpend(org) / org.creditBalance : 0;
+          if (org.paymentStanding === "failed") {
             return {
               id: index + 1,
               type: "payment",
-              org: org.name,
-              message: "Payment failed - needs billing method update",
+              org: org.organizationName,
+              message: "Payment failed — update payment method",
               severity: "critical",
               time: "45 min ago",
             };
           }
-          if (org.billingStatus === "overdue") {
+          if (org.paymentStanding === "overdue") {
             return {
               id: index + 1,
               type: "payment",
-              org: org.name,
-              message: "Invoice overdue - follow-up required",
+              org: org.organizationName,
+              message: "Invoice overdue — follow-up required",
               severity: "high",
               time: "2 hours ago",
             };
@@ -60,8 +60,8 @@ export function PlatformDashboard() {
             return {
               id: index + 1,
               type: "credit",
-              org: org.name,
-              message: `Verification credit utilization at ${(usageRatio * 100).toFixed(0)}%`,
+              org: org.organizationName,
+              message: `Credit utilization at ${(usageRatio * 100).toFixed(0)}%`,
               severity: usageRatio >= 1 ? "high" : "medium",
               time: "1 hour ago",
             };
@@ -81,9 +81,9 @@ export function PlatformDashboard() {
           index % 3 === 0
             ? "Verification volume threshold reviewed"
             : index % 3 === 1
-              ? "Organization billing status synced"
-              : "Plan credits and OTP pricing audited",
-        org: org.name,
+              ? "Organization payment standing reviewed"
+              : "Plan credits and email add-on pricing audited",
+        org: org.organizationName,
         user: `ops@${org.domain}`,
         time: `${5 + index * 12} min ago`,
       })),
@@ -151,7 +151,7 @@ export function PlatformDashboard() {
             <p className="text-[32px] font-semibold text-foreground leading-none">
               ${Math.round(totalRevenue).toLocaleString()}
             </p>
-            <p className="text-[12px] text-muted-foreground mt-2">From verification and OTP-style charges (sample)</p>
+            <p className="text-[12px] text-muted-foreground mt-2">From billable verification sessions (sample)</p>
           </div>
         </Card>
 
@@ -185,7 +185,7 @@ export function PlatformDashboard() {
               </div>
               <div>
                 <h3 className="text-[15px] font-semibold text-foreground">Platform alerts</h3>
-                <p className="text-[13px] text-muted-foreground">Billing, credits, and verification risk signals</p>
+                <p className="text-[13px] text-muted-foreground">Credits, payments, and verification risk signals</p>
               </div>
             </div>
             <Button variant="outline" size="sm">View All Alerts</Button>
@@ -365,7 +365,7 @@ export function PlatformDashboard() {
               </div>
               <div>
                 <h3 className="text-[15px] font-semibold text-foreground">Recent platform activity</h3>
-                <p className="text-[13px] text-muted-foreground">Verification, billing, and admin actions (sample)</p>
+                <p className="text-[13px] text-muted-foreground">Verification, credits, and admin actions (sample)</p>
               </div>
             </div>
             <Button variant="outline" size="sm">View Full Log</Button>

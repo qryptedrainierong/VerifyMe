@@ -59,7 +59,7 @@ export function PlatformOrganizations() {
     const normalizedQuery = searchQuery.trim().toLowerCase();
     return organizations.filter((org) => {
       const haystack = [
-        org.name,
+        org.organizationName,
         org.legalName,
         org.organizationCode,
         org.primaryClientId,
@@ -82,7 +82,7 @@ export function PlatformOrganizations() {
   const overviewStats = useMemo(() => {
     const totalOrganizations = organizations.length;
     const activeOrganizations = organizations.filter((org) => org.status === "active").length;
-    const totalCredits = organizations.reduce((sum, org) => sum + org.credit, 0);
+    const totalCredits = organizations.reduce((sum, org) => sum + org.creditBalance, 0);
     const totalSpent = organizations.reduce((sum, org) => sum + getVerificationSpend(org), 0);
 
     return {
@@ -113,24 +113,27 @@ export function PlatformOrganizations() {
 
     return {
       id: getNextOrganizationId(currentOrganizations),
-      name: input.organizationName,
+      organizationName: input.organizationName,
       legalName: input.legalName,
       domain,
       organizationCode: input.organizationCode,
       primaryClientId,
+      organizationType: input.organizationType,
+      industry: input.industry,
+      companySize: input.companySize,
       country: input.country,
       timezone: input.timezone,
       currency: input.currency,
       plan: input.plan,
-      seats: input.seatLimit,
+      seatLimit: input.seatLimit,
       seatsUsed: 1,
       usage: 0,
-      credit: walletCredits,
+      creditBalance: walletCredits,
       monthlyIncludedCredits: planMetrics.monthlyIncludedCredits,
       topUpCredits: input.topUpCredits,
       pricePerVerification: input.pricePerVerification,
       emailOtpBillingEnabled: input.emailOtpBillingEnabled,
-      billingStatus: "current",
+      paymentStanding: "current",
       status: "pending_setup",
       integrationStatus: "not_configured",
       created: new Date().toISOString().slice(0, 10),
@@ -171,8 +174,8 @@ export function PlatformOrganizations() {
     if (target) {
       setSuccessMessage(
         target.status === "suspended"
-          ? `${target.name} was reactivated.`
-          : `${target.name} was suspended. Permanent disable or archive requires Super Admin (mock).`,
+          ? `${target.organizationName} was reactivated.`
+          : `${target.organizationName} was suspended. Permanent disable or archive requires Super Admin (mock).`,
       );
     }
   };
@@ -316,7 +319,7 @@ export function PlatformOrganizations() {
                 <tr>
                   <th className="text-left p-4 text-[12px] font-semibold tracking-wide text-muted-foreground uppercase">
                     <button type="button" className="flex items-center gap-1 hover:text-foreground transition-colors">
-                      Organization
+                      Organization name
                       <ArrowUpDown className="w-3 h-3" />
                     </button>
                   </th>
@@ -365,7 +368,7 @@ export function PlatformOrganizations() {
                           <Building2 className="w-4 h-4 text-primary" />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-[14px] font-medium text-foreground truncate">{org.name}</p>
+                          <p className="text-[14px] font-medium text-foreground truncate">{org.organizationName}</p>
                           <p className="text-[12px] text-muted-foreground truncate">
                             {org.domain} <span className="mx-1">·</span> {org.id}
                           </p>
@@ -381,28 +384,11 @@ export function PlatformOrganizations() {
                     <td className="p-4 align-top whitespace-nowrap">
                       <UnifiedBadge variant="plan" value={org.plan} />
                     </td>
-                    <td className="p-4 align-top">
-                      {(() => {
-                        const spent = getVerificationSpend(org);
-                        const ratio = org.credit > 0 ? spent / org.credit : 0;
-                        const indicatorWidth = `${Math.min(ratio * 100, 100)}%`;
-                        const indicatorColor = ratio > 1 ? "bg-red-500" : ratio > 0.8 ? "bg-yellow-500" : "bg-green-500";
-                        const remainingCredit = Math.max(org.credit - spent, 0);
-
-                        return (
-                          <div className="w-[190px]">
-                            <p className="text-[13px] text-foreground tabular-nums leading-5">
-                              {formatCurrency(remainingCredit)} <span className="text-muted-foreground">avail</span>
-                            </p>
-                            <p className="text-[11px] text-muted-foreground tabular-nums mt-0.5">
-                              {formatNumber(org.usage)} billable verification sessions · {formatCurrency(spent)} spend
-                            </p>
-                            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                              <div className={`h-full ${indicatorColor}`} style={{ width: indicatorWidth }} />
-                            </div>
-                          </div>
-                        );
-                      })()}
+                    <td className="p-4 align-top whitespace-nowrap">
+                      <p className="text-[14px] text-foreground tabular-nums font-medium">
+                        {formatCurrency(org.creditBalance)}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">Wallet (monetary credits)</p>
                     </td>
                     <td className="p-4 align-top whitespace-nowrap">
                       <UnifiedBadge variant="status" value={formatLifecycleStatus(org.status)} />
@@ -444,7 +430,7 @@ export function PlatformOrganizations() {
                           <DropdownMenuItem
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleViewAsClient(org.name);
+                              handleViewAsClient(org.organizationName);
                             }}
                           >
                             View as organization admin (mock)

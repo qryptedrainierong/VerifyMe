@@ -99,7 +99,7 @@ export function EnterpriseDashboard() {
             <p className="text-[13px] text-muted-foreground mb-1">Plan and credits</p>
             <p className="text-[32px] font-semibold text-foreground leading-none">{enterpriseOrganization.plan}</p>
             <p className="text-[13px] text-muted-foreground mt-2">
-              {formatCurrency(enterpriseOrganization.credit)} included credit
+              {formatCurrency(enterpriseOrganization.creditBalance)} included credit
             </p>
           </div>
         </Card>
@@ -220,7 +220,7 @@ export function EnterpriseDashboard() {
               <div className="flex items-center justify-between mb-2">
                 <p className="text-[13px] font-medium text-foreground">Verification Spend</p>
                 <p className="text-[13px] text-muted-foreground">
-                  {formatCurrency(enterpriseUsageSpend)} / {formatCurrency(enterpriseOrganization.credit)} included credit
+                  {formatCurrency(enterpriseUsageSpend)} / {formatCurrency(enterpriseOrganization.creditBalance)} included credit
                 </p>
               </div>
               <Progress value={Math.min(enterpriseCreditUtilizationPct, 100)} className="h-2" />

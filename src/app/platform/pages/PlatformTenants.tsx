@@ -89,7 +89,7 @@ export function PlatformTenants() {
           <div>
             <h2 className="text-[20px] font-semibold text-foreground">Tenant Management</h2>
             <p className="text-[14px] text-muted-foreground mt-1">
-              Manage all customer organizations and their subscriptions
+              Manage customer organizations, plans, and credits (legacy tenant view — prefer Organizations)
             </p>
           </div>
           <div className="flex gap-2">

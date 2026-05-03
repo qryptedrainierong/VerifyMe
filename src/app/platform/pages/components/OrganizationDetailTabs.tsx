@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "../../../shared/components/ui/button";
 import { Card } from "../../../shared/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../shared/components/ui/tabs";
-import { Checkbox } from "../../../shared/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../shared/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -51,7 +51,7 @@ type EnterpriseUser = {
   email: string;
   status: "active" | "pending";
   lastLogin: string | null;
-  roles: EnterpriseRole[];
+  role: EnterpriseRole;
 };
 
 const enterpriseRoleDefinitions: Array<{
@@ -102,7 +102,7 @@ const enterpriseRoleDefinitions: Array<{
     role: "Technical / API Manager",
     access: "TECHNICAL",
     responsibilities: [
-      "Generate and manage API keys",
+      "Manage client apps, redirect URIs, and integration metadata (no secrets in portal)",
       "Configure webhooks",
       "Monitor API usage and logs",
       "Debug integration issues",
@@ -152,17 +152,11 @@ function buildEnterpriseDummyUsers(org: PlatformOrganization): EnterpriseUser[] 
     "Finance / Billing",
     "Compliance / Auditor",
   ];
-  return Array.from({ length: org.seats }, (_, index) => {
+  return Array.from({ length: org.seatLimit }, (_, index) => {
     const sequence = index + 1;
     const paddedSequence = String(sequence).padStart(2, "0");
     const isActive = sequence <= org.seatsUsed;
-    const baseRole = seedRoles[index % seedRoles.length];
-    const extraRoles: EnterpriseRole[] =
-      baseRole === "Owner"
-        ? ["Compliance / Auditor", "Technical / API Manager"]
-        : baseRole === "Admin"
-          ? ["Operations"]
-          : [];
+    const role = seedRoles[index % seedRoles.length];
     return {
       id: `${org.id}-USR-${paddedSequence}`,
       enterpriseUsername: `user${paddedSequence}`,
@@ -171,30 +165,30 @@ function buildEnterpriseDummyUsers(org: PlatformOrganization): EnterpriseUser[] 
       lastLogin: isActive
         ? `2024-04-${String((index % 9) + 1).padStart(2, "0")}T0${index % 9}:15:00`
         : null,
-      roles: [baseRole, ...extraRoles],
+      role,
     };
   });
 }
 
 export function OrganizationDetailTabs({ organization, profile, organizationEndUsers }: OrganizationDetailTabsProps) {
   const usageSpend = getVerificationSpend(organization);
-  const creditRemaining = Math.max(organization.credit - usageSpend, 0);
+  const creditRemaining = Math.max(organization.creditBalance - usageSpend, 0);
   const creditUtilizationPct =
-    organization.credit > 0 ? (usageSpend / organization.credit) * 100 : 0;
+    organization.creditBalance > 0 ? (usageSpend / organization.creditBalance) * 100 : 0;
 
   const [organizationEnterpriseUsers, setOrganizationEnterpriseUsers] = useState<EnterpriseUser[]>(() =>
     buildEnterpriseDummyUsers(organization),
   );
   const [roleEditorUserId, setRoleEditorUserId] = useState<string | null>(null);
-  const [roleDraft, setRoleDraft] = useState<EnterpriseRole[]>([]);
+  const [roleDraft, setRoleDraft] = useState<EnterpriseRole | null>(null);
   const [roleMessage, setRoleMessage] = useState<string | null>(null);
 
   useEffect(() => {
     setOrganizationEnterpriseUsers(buildEnterpriseDummyUsers(organization));
     setRoleEditorUserId(null);
-    setRoleDraft([]);
+    setRoleDraft(null);
     setRoleMessage(null);
-  }, [organization.id, organization.seats, organization.seatsUsed, organization.domain]);
+  }, [organization.id, organization.seatLimit, organization.seatsUsed, organization.domain]);
 
   const roleEditorUser = organizationEnterpriseUsers.find((user) => user.id === roleEditorUserId) ?? null;
 
@@ -287,11 +281,23 @@ export function OrganizationDetailTabs({ organization, profile, organizationEndU
               <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <p className="text-[13px] text-muted-foreground mb-1">Organization name</p>
-                  <p className="text-[14px] text-foreground font-medium">{organization.name}</p>
+                  <p className="text-[14px] text-foreground font-medium">{organization.organizationName}</p>
                 </div>
                 <div>
                   <p className="text-[13px] text-muted-foreground mb-1">Legal name</p>
                   <p className="text-[14px] text-foreground">{organization.legalName}</p>
+                </div>
+                <div>
+                  <p className="text-[13px] text-muted-foreground mb-1">Organization type</p>
+                  <p className="text-[14px] text-foreground">{organization.organizationType}</p>
+                </div>
+                <div>
+                  <p className="text-[13px] text-muted-foreground mb-1">Industry</p>
+                  <p className="text-[14px] text-foreground">{organization.industry}</p>
+                </div>
+                <div>
+                  <p className="text-[13px] text-muted-foreground mb-1">Company size</p>
+                  <p className="text-[14px] text-foreground">{organization.companySize}</p>
                 </div>
                 <div>
                   <p className="text-[13px] text-muted-foreground mb-1">Organization code</p>
@@ -325,7 +331,7 @@ export function OrganizationDetailTabs({ organization, profile, organizationEndU
                   <p className="text-[12px] text-muted-foreground">{profile.owner.email}</p>
                 </div>
                 <div>
-                  <p className="text-[13px] text-muted-foreground mb-1">Billing email</p>
+                  <p className="text-[13px] text-muted-foreground mb-1">Credits & invoices contact</p>
                   <p className="text-[14px] text-foreground">{profile.billingEmail}</p>
                 </div>
               </div>
@@ -350,7 +356,7 @@ export function OrganizationDetailTabs({ organization, profile, organizationEndU
                 </div>
                 <div>
                   <p className="text-[13px] text-muted-foreground mb-1">Credit balance</p>
-                  <p className="text-[22px] font-semibold text-foreground tabular-nums">{formatCurrency(organization.credit)}</p>
+                  <p className="text-[22px] font-semibold text-foreground tabular-nums">{formatCurrency(organization.creditBalance)}</p>
                 </div>
               </div>
             </Card>
@@ -396,7 +402,7 @@ export function OrganizationDetailTabs({ organization, profile, organizationEndU
               </div>
               <p className="text-[13px] text-muted-foreground mb-1">Verification sessions (period)</p>
               <p className="text-[28px] font-semibold text-foreground tabular-nums">{formatNumber(organization.usage)}</p>
-              <p className="text-[12px] text-muted-foreground mt-1">Billable outcomes per billing-credits policy (sample)</p>
+              <p className="text-[12px] text-muted-foreground mt-1">Billable verification sessions (see Billing & Credits)</p>
             </Card>
             <Card className="p-6 border border-border shadow-sm">
               <div className="flex items-start justify-between mb-3">
@@ -404,7 +410,7 @@ export function OrganizationDetailTabs({ organization, profile, organizationEndU
                   <Users className="w-5 h-5 text-purple-600" />
                 </div>
                 <span className="text-[12px] text-muted-foreground font-medium tabular-nums">
-                  {formatNumber(organization.seats)} seats
+                  {formatNumber(organization.seatLimit)} seat limit
                 </span>
               </div>
               <p className="text-[13px] text-muted-foreground mb-1">Admin seat usage</p>
@@ -439,9 +445,9 @@ export function OrganizationDetailTabs({ organization, profile, organizationEndU
             <div>
               <h3 className="text-[16px] font-semibold text-foreground">Client applications</h3>
               <p className="text-[13px] text-muted-foreground mt-1">
-                Pattern:{" "}
-                <code className="text-[12px] bg-muted px-1.5 py-0.5 rounded">ORG_CODE_APP_TYPE_ENV_SEQ</code> — example:{" "}
-                <code className="text-[12px] bg-muted px-1.5 py-0.5 rounded">DEMO_CALLCENTER_PROD_001</code>
+                Each <span className="font-mono text-[12px]">client_id</span> uses your organization code, app type,
+                environment, and sequence — for example{" "}
+                <code className="text-[12px] bg-muted px-1.5 py-0.5 rounded font-mono">DEMO_CALLCENTER_PROD_001</code>.
               </p>
             </div>
             <div className="flex gap-2">
@@ -605,14 +611,14 @@ export function OrganizationDetailTabs({ organization, profile, organizationEndU
           <Card className="border border-border shadow-sm">
             <div className="p-6 border-b border-border">
               <h3 className="text-[16px] font-semibold text-foreground">Organization verification settings</h3>
-              <p className="text-[13px] text-muted-foreground mt-1">Mock values — must stay within VerifyMe platform limits.</p>
+              <p className="text-[13px] text-muted-foreground mt-1">Values must stay within VerifyMe platform limits (sample).</p>
             </div>
             <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <p className="text-[13px] text-muted-foreground mb-1">Max token attempts</p>
+                <p className="text-[13px] text-muted-foreground mb-1">Maximum attempts per verification</p>
                 <p className="text-[20px] font-semibold">{verificationSettings.maxTokenAttempts}</p>
                 <p className="text-[12px] text-muted-foreground mt-1">
-                  Platform default max: {verificationSettings.platformMaxTokenAttempts} (design default 10 unless overridden)
+                  Platform cap: {verificationSettings.platformMaxTokenAttempts} (default 10 unless overridden)
                 </p>
               </div>
               <div>
@@ -623,11 +629,11 @@ export function OrganizationDetailTabs({ organization, profile, organizationEndU
                 </p>
               </div>
               <div className="flex items-center justify-between rounded-lg border border-border p-4">
-                <span className="text-[14px]">Allow OTP resend</span>
+                <span className="text-[14px]">Allow verification step resend</span>
                 <Switch checked={verificationSettings.allowOtpResend} disabled />
               </div>
               <div>
-                <p className="text-[13px] text-muted-foreground mb-1">Max OTP resends</p>
+                <p className="text-[13px] text-muted-foreground mb-1">Max resends per verification</p>
                 <p className="text-[20px] font-semibold">{verificationSettings.maxOtpResends}</p>
               </div>
             </div>
@@ -651,7 +657,7 @@ export function OrganizationDetailTabs({ organization, profile, organizationEndU
             </Card>
             <Card className="p-5 border border-border shadow-sm">
               <p className="text-[12px] text-muted-foreground">Credit balance</p>
-              <p className="text-lg font-semibold mt-1 tabular-nums">{formatCurrency(organization.credit)}</p>
+              <p className="text-lg font-semibold mt-1 tabular-nums">{formatCurrency(organization.creditBalance)}</p>
             </Card>
             <Card className="p-5 border border-border shadow-sm">
               <p className="text-[12px] text-muted-foreground">Monthly included credits</p>
@@ -663,21 +669,28 @@ export function OrganizationDetailTabs({ organization, profile, organizationEndU
             </Card>
           </div>
           <Card className="p-5 border border-border shadow-sm">
-            <p className="text-[13px] font-medium text-foreground mb-2">Billable outcomes</p>
+            <p className="text-[13px] font-medium text-foreground mb-2">Credits & billable outcomes</p>
+            <p className="text-[13px] text-muted-foreground mb-2">
+              Credits are a monetary wallet balance. Top-up credits roll forward with the account.
+            </p>
             <ul className="text-[13px] text-muted-foreground space-y-1 list-disc list-inside">
               <li>Verified — billable</li>
               <li>Failed — billable</li>
-              <li>Expired, Error, Indeterminate — not billable</li>
+              <li>Expired — not billable</li>
+              <li>Error — not billable</li>
+              <li>Indeterminate — not billable</li>
             </ul>
             <p className="text-[13px] mt-3">
               Price per verification attempt:{" "}
               <span className="font-mono font-medium text-foreground">{formatCurrency(organization.pricePerVerification)}</span>
             </p>
             <p className="text-[13px] mt-2">
-              Email OTP billing:{" "}
-              <strong>{organization.emailOtpBillingEnabled ? "Enabled (configurable)" : "Disabled"}</strong>
+              Email delivery add-on billing:{" "}
+              <strong>{organization.emailOtpBillingEnabled ? "On" : "Off"}</strong> (per-organization setting)
             </p>
-            <p className="text-[12px] text-muted-foreground mt-2">SMS OTP (future): billable per send when offered.</p>
+            <p className="text-[12px] text-muted-foreground mt-2">
+              SMS delivery (future): each send is billed separately when the add-on is available.
+            </p>
           </Card>
           <Card className="border border-border shadow-sm overflow-x-auto">
             <div className="p-4 border-b border-border">
@@ -711,7 +724,7 @@ export function OrganizationDetailTabs({ organization, profile, organizationEndU
             <div>
               <h3 className="text-[16px] font-semibold text-foreground">Organization admin users</h3>
               <p className="text-[13px] text-muted-foreground mt-1">
-                Seats: {organization.seatsUsed} of {organization.seats} used
+                Admin seats: {organization.seatsUsed} of {organization.seatLimit} used
               </p>
             </div>
             <Button size="sm">Invite Admin</Button>
@@ -734,11 +747,7 @@ export function OrganizationDetailTabs({ organization, profile, organizationEndU
                     <td className="p-4 text-[14px]">{user.enterpriseUsername}</td>
                     <td className="p-4 text-[13px]">{user.email}</td>
                     <td className="p-4">
-                      <div className="flex flex-wrap gap-1">
-                        {user.roles.slice(0, 2).map((r) => (
-                          <UnifiedBadge key={r} variant="role" value={r} />
-                        ))}
-                      </div>
+                      <UnifiedBadge variant="role" value={user.role} />
                     </td>
                     <td className="p-4">
                       <UnifiedBadge
@@ -750,7 +759,7 @@ export function OrganizationDetailTabs({ organization, profile, organizationEndU
                       {user.lastLogin ? formatDateTime(user.lastLogin) : "Never"}
                     </td>
                     <td className="p-4 flex gap-2">
-                      <Button variant="outline" size="sm" onClick={() => { setRoleEditorUserId(user.id); setRoleDraft(user.roles); }}>
+                      <Button variant="outline" size="sm" onClick={() => { setRoleEditorUserId(user.id); setRoleDraft(user.role); }}>
                         Change Role
                       </Button>
                       <Button variant="ghost" size="sm">
@@ -762,61 +771,72 @@ export function OrganizationDetailTabs({ organization, profile, organizationEndU
               </tbody>
             </table>
           </Card>
-          <Dialog open={roleEditorUser !== null} onOpenChange={(open) => !open && setRoleEditorUserId(null)}>
+          <Dialog
+            open={roleEditorUser !== null}
+            onOpenChange={(open) => {
+              if (!open) {
+                setRoleEditorUserId(null);
+                setRoleDraft(null);
+              }
+            }}
+          >
             <DialogContent className="sm:max-w-xl">
               <DialogHeader>
-                <DialogTitle>Assign portal roles</DialogTitle>
+                <DialogTitle>Change admin role</DialogTitle>
                 <DialogDescription>
                   {roleEditorUser
-                    ? `Assign one or more roles for ${roleEditorUser.enterpriseUsername}.`
-                    : "Assign one or more organization portal roles."}
+                    ? `Each organization admin has exactly one role. Select a role for ${roleEditorUser.enterpriseUsername}.`
+                    : "Select a single organization admin role."}
                 </DialogDescription>
               </DialogHeader>
-              <div className="space-y-3 max-h-[420px] overflow-auto pr-1">
-                {enterpriseRoleDefinitions.map((definition) => {
-                  const checked = roleDraft.includes(definition.role);
-                  return (
-                    <label
-                      key={definition.role}
-                      className="flex gap-3 rounded-md border border-border p-3 cursor-pointer hover:bg-accent/5"
-                    >
-                      <Checkbox
-                        checked={checked}
-                        onCheckedChange={(value) => {
-                          const isChecked = Boolean(value);
-                          setRoleDraft((prev) => {
-                            if (isChecked) {
-                              return prev.includes(definition.role) ? prev : [...prev, definition.role];
-                            }
-                            return prev.filter((role) => role !== definition.role);
-                          });
-                        }}
-                      />
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium text-foreground">{definition.role}</p>
-                        <p className="text-xs text-muted-foreground">{definition.responsibilities.join(" • ")}</p>
-                      </div>
-                    </label>
-                  );
-                })}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <p className="text-[12px] font-medium text-muted-foreground uppercase tracking-wide">Role</p>
+                  <Select
+                    value={roleDraft ?? undefined}
+                    onValueChange={(value) => setRoleDraft(value as EnterpriseRole)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {enterpriseRoleDefinitions.map((definition) => (
+                        <SelectItem key={definition.role} value={definition.role}>
+                          {definition.role}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {roleDraft
+                  ? (
+                    <div className="rounded-md border border-border p-3 text-[12px] text-muted-foreground space-y-1">
+                      {enterpriseRoleDefinitions
+                        .find((d) => d.role === roleDraft)
+                        ?.responsibilities.map((line) => (
+                          <p key={line}>• {line}</p>
+                        ))}
+                    </div>
+                  )
+                  : null}
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setRoleEditorUserId(null)}>
+                <Button variant="outline" onClick={() => { setRoleEditorUserId(null); setRoleDraft(null); }}>
                   Cancel
                 </Button>
                 <Button
                   onClick={() => {
-                    if (!roleEditorUser) return;
-                    if (roleDraft.length === 0) return;
+                    if (!roleEditorUser || !roleDraft) return;
                     setOrganizationEnterpriseUsers((prev) =>
-                      prev.map((u) => (u.id === roleEditorUser.id ? { ...u, roles: roleDraft } : u)),
+                      prev.map((u) => (u.id === roleEditorUser.id ? { ...u, role: roleDraft } : u)),
                     );
-                    setRoleMessage(`Updated roles for ${roleEditorUser.enterpriseUsername}.`);
+                    setRoleMessage(`Updated role for ${roleEditorUser.enterpriseUsername}.`);
                     setRoleEditorUserId(null);
+                    setRoleDraft(null);
                   }}
-                  disabled={roleDraft.length === 0}
+                  disabled={!roleDraft}
                 >
-                  Save Roles
+                  Save role
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -831,8 +851,8 @@ export function OrganizationDetailTabs({ organization, profile, organizationEndU
         <TabsContent value="linked-end-users" className="flex-1 p-8">
           <Card className="border border-border shadow-sm overflow-x-auto">
             <div className="p-4 border-b border-border">
-              <h3 className="text-[16px] font-semibold">Linked end users</h3>
-              <p className="text-[13px] text-muted-foreground">Summary — full lists will load from backend later.</p>
+              <h3 className="text-[16px] font-semibold">Linked End Users</h3>
+              <p className="text-[13px] text-muted-foreground">Summary view — full lists connect in a later phase.</p>
             </div>
             <table className="w-full">
               <thead className="border-b border-border bg-accent/5">
@@ -859,7 +879,7 @@ export function OrganizationDetailTabs({ organization, profile, organizationEndU
                 {organizationEndUsers.length === 0 && (
                   <tr>
                     <td colSpan={5} className="p-8 text-center text-muted-foreground text-sm">
-                      No linked end users for this organization.
+                      No linked end users for this organization yet.
                     </td>
                   </tr>
                 )}
@@ -891,7 +911,7 @@ export function OrganizationDetailTabs({ organization, profile, organizationEndU
                     <td className="p-3 font-mono text-[13px]">{s.clientUserId}</td>
                     <td className="p-3 text-[13px]">{s.outcome}</td>
                     <td className="p-3">
-                      <UnifiedBadge variant="status" value={s.billable ? "Yes" : "No"} />
+                      <UnifiedBadge variant="status" value={s.billable ? "Billable" : "Not billable"} />
                     </td>
                     <td className="p-3 tabular-nums">{formatCurrency(s.cost)}</td>
                     <td className="p-3 text-[13px] text-muted-foreground">{formatDateTime(s.at)}</td>

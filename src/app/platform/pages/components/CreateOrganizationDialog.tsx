@@ -247,8 +247,8 @@ export function CreateOrganizationDialog({
                 placeholder="e.g. ACME"
               />
               <p className="text-[11px] text-muted-foreground">
-                Used in client_id pattern:{" "}
-                <code className="bg-muted px-1 rounded text-[11px]">ORG_CODE_APP_TYPE_ENV_SEQ</code>
+                Primary <span className="font-mono">client_id</span> will look like{" "}
+                <code className="bg-muted px-1 rounded text-[11px] font-mono">ACME_CALLCENTER_SANDBOX_001</code> once issued.
               </p>
             </div>
             <div className="grid grid-cols-2 gap-3">

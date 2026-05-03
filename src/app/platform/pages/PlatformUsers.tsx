@@ -164,7 +164,7 @@ export function PlatformUsers() {
           <div>
             <h1 className="text-[24px] font-semibold text-foreground">VerifyMe Users</h1>
             <p className="text-[14px] text-muted-foreground mt-1">
-              Manage global VerifyMe end-user accounts, email and device status, linked organizations, recovery, and
+              Manage global VerifyMe user accounts, email and device status, linked organizations, recovery, and
               verification history (design-time sample data).
             </p>
           </div>
@@ -386,7 +386,7 @@ export function PlatformUsers() {
       >
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>End User Details</DialogTitle>
+            <DialogTitle>Linked end user details</DialogTitle>
             <DialogDescription>
               {selectedRowGroup
                 ? `${selectedRowGroup.verifymeUsername} • ${selectedRowGroup.email}`

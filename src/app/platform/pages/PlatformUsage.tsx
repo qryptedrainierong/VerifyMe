@@ -29,17 +29,16 @@ export function PlatformUsage() {
   const totalUsage = organizations.reduce((sum, org) => sum + org.usage, 0);
   const avgUsagePerOrg = organizations.length > 0 ? totalUsage / organizations.length : 0;
   const activeEndUsers = platformEndUserAssociations.filter((user) => user.status === "active").length;
-  const overQuotaOrgs = organizations.filter((org) => getVerificationSpend(org) > org.credit).length;
+  const orgsOverCreditBudget = organizations.filter((org) => getVerificationSpend(org) > org.creditBalance).length;
   const usageTrendData = [0, 1, 2, 3, 4, 5, 6, 7, 8].map((index) => ({
     date: `Apr ${index + 1}`,
-    api: Math.round((totalUsage / 9) * (0.88 + index * 0.03)),
+    sessions: Math.round((totalUsage / 9) * (0.88 + index * 0.03)),
   }));
   const topOrganizations = [...organizations]
     .sort((a, b) => b.usage - a.usage)
     .map((org) => ({
-      name: org.name,
+      name: org.organizationName,
       usage: org.usage,
-      quota: Math.round(org.credit / (org.pricePerVerification || 0.05)),
     }));
 
   const apiCallsByType = [
@@ -67,7 +66,7 @@ export function PlatformUsage() {
         <div>
           <h1 className="text-[24px] font-semibold text-foreground">Usage Analytics</h1>
           <p className="text-[14px] text-muted-foreground mt-1">
-            Monitor platform usage and resource consumption
+            Monitor verification sessions, credits, and linked end users across organizations
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -99,11 +98,11 @@ export function PlatformUsage() {
             </span>
           </div>
           <div>
-            <p className="text-[13px] text-muted-foreground mb-1">Total Usage</p>
+            <p className="text-[13px] text-muted-foreground mb-1">Verification sessions</p>
             <p className="text-[32px] font-semibold text-foreground leading-none">
               {formatNumber(totalUsage)}
             </p>
-            <p className="text-[12px] text-muted-foreground mt-2">API calls this month</p>
+            <p className="text-[12px] text-muted-foreground mt-2">Platform-wide (sample period)</p>
           </div>
         </Card>
 
@@ -118,9 +117,9 @@ export function PlatformUsage() {
             </span>
           </div>
           <div>
-            <p className="text-[13px] text-muted-foreground mb-1">Avg Usage per Org</p>
+            <p className="text-[13px] text-muted-foreground mb-1">Avg sessions per organization</p>
             <p className="text-[32px] font-semibold text-foreground leading-none">{formatNumber(Math.round(avgUsagePerOrg))}</p>
-            <p className="text-[12px] text-muted-foreground mt-2">API calls per day</p>
+            <p className="text-[12px] text-muted-foreground mt-2">Per day (sample)</p>
           </div>
         </Card>
 
@@ -135,7 +134,7 @@ export function PlatformUsage() {
             </span>
           </div>
           <div>
-            <p className="text-[13px] text-muted-foreground mb-1">Active End Users</p>
+            <p className="text-[13px] text-muted-foreground mb-1">Active linked end users</p>
             <p className="text-[32px] font-semibold text-foreground leading-none">{formatNumber(activeEndUsers)}</p>
             <p className="text-[12px] text-muted-foreground mt-2">Across all organizations</p>
           </div>
@@ -149,9 +148,9 @@ export function PlatformUsage() {
             <span className="text-[12px] text-red-600 font-medium">Critical</span>
           </div>
           <div>
-            <p className="text-[13px] text-muted-foreground mb-1">Over-Quota Orgs</p>
-            <p className="text-[32px] font-semibold text-foreground leading-none">{overQuotaOrgs}</p>
-            <p className="text-[12px] text-muted-foreground mt-2">Need immediate attention</p>
+            <p className="text-[13px] text-muted-foreground mb-1">Over credit budget</p>
+            <p className="text-[32px] font-semibold text-foreground leading-none">{orgsOverCreditBudget}</p>
+            <p className="text-[12px] text-muted-foreground mt-2">Spend exceeds wallet credits</p>
           </div>
         </Card>
       </div>
@@ -164,7 +163,7 @@ export function PlatformUsage() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-[15px] font-semibold text-foreground">Usage Over Time</h3>
-                <p className="text-[13px] text-muted-foreground">Daily usage trends</p>
+                <p className="text-[13px] text-muted-foreground">Daily verification session trends</p>
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="ghost" size="sm">7D</Button>
@@ -204,13 +203,13 @@ export function PlatformUsage() {
                   formatter={(value: any) => formatLargeNumber(value)}
                 />
                 <Line
-                  key="api"
+                  key="sessions-line"
                   type="monotone"
-                  dataKey="api"
+                  dataKey="sessions"
                   stroke="hsl(var(--primary))"
                   strokeWidth={3}
                   dot={{ fill: "hsl(var(--primary))", r: 4 }}
-                  name="API Calls"
+                  name="Sessions"
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -223,9 +222,9 @@ export function PlatformUsage() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-[15px] font-semibold text-foreground">
-                  Top Organizations by Usage
+                  Top organizations by verification sessions
                 </h3>
-                <p className="text-[13px] text-muted-foreground">Highest resource consumption</p>
+                <p className="text-[13px] text-muted-foreground">Highest session volume (sample)</p>
               </div>
             </div>
           </div>
@@ -267,7 +266,7 @@ export function PlatformUsage() {
                   dataKey="usage"
                   fill="hsl(var(--primary))"
                   radius={[0, 4, 4, 0]}
-                  name="Usage"
+                  name="Sessions"
                 />
               </BarChart>
             </ResponsiveContainer>
@@ -292,7 +291,7 @@ export function PlatformUsage() {
                   </div>
                   <div className="flex items-center gap-4">
                     <p className="text-[14px] text-muted-foreground">
-                      {formatLargeNumber(item.value)} calls
+                      {formatLargeNumber(item.value)} sessions
                     </p>
                     <p className="text-[13px] font-medium text-foreground w-12 text-right">
                       {item.percentage}%
@@ -328,7 +327,7 @@ export function PlatformUsage() {
               <SelectContent>
                 <SelectItem value="all-orgs">All Organizations</SelectItem>
                 {organizations.map((org) => (
-                  <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
+                  <SelectItem key={org.id} value={org.id}>{org.organizationName}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

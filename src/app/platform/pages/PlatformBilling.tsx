@@ -57,12 +57,12 @@ export function PlatformBilling() {
 
   const invoices = organizations.map((org, index) => ({
     id: `INV-2024-${String(412 + index)}`,
-    organization: org.name,
+    organization: org.organizationName,
     organizationId: org.id,
     amount: Math.round(getVerificationSpend(org)),
     date: "2024-04-01",
     dueDate: "2024-04-15",
-    status: org.billingStatus === "current" ? "paid" : org.billingStatus,
+    status: org.paymentStanding === "current" ? "paid" : org.paymentStanding,
   }));
 
   const billingAlerts = invoices
@@ -211,7 +211,7 @@ export function PlatformBilling() {
       <Card className="border border-border shadow-sm">
         <div className="p-6 border-b border-border">
           <h3 className="text-[15px] font-semibold text-foreground">Plans Overview</h3>
-          <p className="text-[13px] text-muted-foreground">Revenue breakdown by subscription tier</p>
+          <p className="text-[13px] text-muted-foreground">Revenue breakdown by plan tier</p>
         </div>
         <div className="p-6">
           <div className="grid grid-cols-3 gap-6">
