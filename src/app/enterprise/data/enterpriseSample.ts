@@ -143,7 +143,10 @@ export const enterpriseMockClientApplication = {
   environment: "PROD" as const,
   secretStatus: "Secret active" as const,
   lastRotated: "2024-03-01",
-  allowedScopes: ["openid", "profile", "offline_access", "verifyme:verification"],
+  /** MVP: openid only. */
+  allowedScopes: ["openid"],
+  /** Not enabled for MVP — shown separately in the portal UI. */
+  futureScopes: ["profile", "offline_access", "verifyme:verification"],
   integrationStatusLabel: formatIntegrationStatus(enterpriseOrganization.integrationStatus),
 };
 
@@ -191,8 +194,10 @@ export const enterpriseApiDocCards: EnterpriseApiDocCard[] = [
   {
     id: "handle-auth",
     title: "Handle authorization",
-    purpose: "Receive the authorization code at your registered redirect URI and validate state.",
-    parametersSummary: "code, state — exchange server-side only",
+    purpose:
+      "Your organization’s representative enters the one-time verification token on the VerifyMe Verification Page. That page calls Handle Authorization to validate the token. If valid, VerifyMe returns auth_code, state, and redirect_uri. Only after successful validation does the flow continue so your registered redirect_uri receives the auth_code.",
+    parametersSummary:
+      "Invoked from the Verification Page with the verification token; on success returns auth_code, state, redirect_uri — redirect_uri receives auth_code only after validation succeeds.",
     readiness: "Configure redirect URI",
   },
   {

@@ -141,7 +141,8 @@ export function EnterpriseUsage() {
             <div>
               <p className="text-[18px] font-semibold text-foreground">Verification sessions</p>
               <p className="text-[13px] text-muted-foreground">
-                Plan session allowance for the period vs billable verification volume (sample)
+                Billable verification volume for this period (sample). Credits above are monetary wallet value — not a
+                session quota.
               </p>
             </div>
           </div>
@@ -157,7 +158,8 @@ export function EnterpriseUsage() {
                 {formatNumber(enterpriseOrganization.usage)}
               </p>
               <p className="text-[15px] text-muted-foreground mt-2">
-                of {formatNumber(enterpriseUsageLimit)} verification sessions in plan allowance (sample cap)
+                Compared to sample period verification volume ceiling ({formatNumber(enterpriseUsageLimit)} sessions,
+                illustrative)
               </p>
             </div>
             <p className="text-[32px] font-semibold text-orange-600">{enterpriseCreditUtilizationPct.toFixed(1)}%</p>
@@ -165,12 +167,17 @@ export function EnterpriseUsage() {
 
           <Progress value={Math.min(enterpriseCreditUtilizationPct, 100)} className="h-3" />
 
+          <p className="text-[12px] text-muted-foreground border-t border-border pt-3">
+            The bar reflects billable spend vs monetary credit balance. Period verification volume is reported separately
+            from credits.
+          </p>
+
           <div className="flex items-center justify-between pt-2 flex-wrap gap-2">
             <p className="text-[14px] text-muted-foreground">
               <span className="font-medium text-foreground">
                 {formatNumber(Math.max(enterpriseUsageLimit - enterpriseOrganization.usage, 0))} sessions
               </span>{" "}
-              under plan allowance (sample)
+              below sample period volume ceiling (not a credit limit)
             </p>
             <p className="text-[13px] text-muted-foreground">
               Billable spend: <span className="font-medium text-foreground">{formatCurrency(enterpriseUsageSpend)}</span>

@@ -84,14 +84,29 @@ export function EnterpriseApiIntegration() {
           </div>
         </div>
 
-        <div className="mt-6 pt-6 border-t border-border">
-          <p className="text-[12px] font-medium text-muted-foreground uppercase tracking-wide mb-2">Allowed scopes</p>
-          <div className="flex flex-wrap gap-2">
-            {client.allowedScopes.map((s) => (
-              <code key={s} className="text-[12px] bg-muted px-2 py-1 rounded font-mono">
-                {s}
-              </code>
-            ))}
+        <div className="mt-6 pt-6 border-t border-border space-y-4">
+          <div>
+            <p className="text-[12px] font-medium text-muted-foreground uppercase tracking-wide mb-2">MVP scopes (enabled)</p>
+            <div className="flex flex-wrap gap-2">
+              {client.allowedScopes.map((s) => (
+                <code key={s} className="text-[12px] bg-muted px-2 py-1 rounded font-mono">
+                  {s}
+                </code>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="text-[12px] font-medium text-muted-foreground uppercase tracking-wide mb-2">Future scopes (not enabled)</p>
+            <p className="text-[12px] text-muted-foreground mb-2">
+              Reserved for later releases — not part of the current MVP client configuration.
+            </p>
+            <div className="flex flex-wrap gap-2 opacity-70">
+              {client.futureScopes.map((s) => (
+                <code key={s} className="text-[12px] bg-muted/60 px-2 py-1 rounded font-mono text-muted-foreground">
+                  {s}
+                </code>
+              ))}
+            </div>
           </div>
         </div>
       </Card>
