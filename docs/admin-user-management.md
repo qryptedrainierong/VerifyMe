@@ -1,10 +1,12 @@
-# Admin User Management (Design Phase)
+# Admin user management (design phase)
 
-This document covers **human operators** of the two admin portals: who they are, how they authenticate (design intent), and what powers they have over organizations. It is not an implementation spec for auth providers or password policies.
+Human operators of the two admin portals: who they are, how they authenticate (design intent), and what they can do. Not an implementation spec for auth providers or password policies.
 
-## VerifyMe Admin Portal — Platform Roles
+Terms: [`glossary.md`](./glossary.md).
 
-These roles apply to **internal** Qrypted / VerifyMe staff operating the **VerifyMe Admin Portal**:
+## VerifyMe Admin Portal — platform roles
+
+Internal Qrypted / VerifyMe staff operating the **VerifyMe Admin Portal**:
 
 | Role | Typical scope |
 |------|----------------|
@@ -12,36 +14,36 @@ These roles apply to **internal** Qrypted / VerifyMe staff operating the **Verif
 | **Admin** | Broad operations; **cannot** permanently disable or archive organizations. |
 | **Operations** | Day-to-day monitoring, investigations, support escalations; limited configuration. |
 | **Technical / API Manager** | Client applications, redirect URIs, integration health, technical incident response. |
-| **Finance / Billing** | Credit wallets, pricing, invoices, top-ups, revenue recognition inputs. |
-| **Compliance / Auditor** | Read-heavy access to audit trails, verification metadata, export for regulators. |
+| **Finance / Billing** | **Credit** wallets, pricing, invoices, top-ups. |
+| **Compliance / Auditor** | Read-heavy access to audit trails, **verification session** metadata, export for regulators. |
 
-**Suspend vs disable:** Any admin role permitted by policy may **suspend** an organization for operations or risk. **Only Super Admin** may **permanently disable or archive** an organization.
+**Suspend vs disable:** Roles permitted by policy may **suspend** an organization. **Only Super Admin** may **permanently disable or archive** an organization.
 
-## Organization Admin Portal — Tenant Roles
+## Organization Admin Portal — tenant roles
 
-These roles apply to **customer** staff operating the **Organization Admin Portal**:
+Customer staff operating the **Organization Admin Portal**:
 
 | Role | Typical scope |
 |------|----------------|
 | **Owner** | Full control within the tenant; billing delegation; cannot override VerifyMe platform suspension alone. |
-| **Admin** | User and configuration management except where Owner-only locks apply. |
+| **Admin** | User and configuration management except Owner-only locks. |
 | **Operations** | Verification queues, call-center tooling, exception handling. |
-| **Technical / API Manager** | API integration, client IDs, secrets **status** (not secret display), QR linking configuration. |
-| **Finance / Billing** | Credits, usage views, invoices, payment methods. |
-| **Compliance / Auditor** | Read-only verification logs and exports appropriate to the tenant. |
+| **Technical / API Manager** | API integration, client IDs, secret **status** (not secret display), QR linking configuration. |
+| **Finance / Billing** | **Credits**, usage views, invoices, payment methods. |
+| **Compliance / Auditor** | Read-only **verification** logs and exports appropriate to the tenant. |
 
-Each **organization portal user** has **one primary role** at a time in the MVP design (no multi-role assignments).
+Each organization portal user has **one primary role** at a time in the MVP design.
 
-## Authentication (Design Intent)
+## Authentication (design intent)
 
-- **Mechanism:** Admin login uses **email + password + email OTP** (second factor on each sign-in or per policy).
-- **Not in scope for this repo today:** No real IdP, no SMS OTP for admins in MVP design (SMS may appear later for other channels per [`billing-credits.md`](./billing-credits.md)).
+- **Mechanism:** Admin login uses **email + password + email OTP** (second factor per policy).
+- **Not in MVP design for this repo:** SMS OTP for admins (SMS for other channels may appear later per [`billing-credits.md`](./billing-credits.md)).
 
-## Relationship To End-Users
+## Relationship to VerifyMe Users
 
-- **Admin users** are **not** VerifyMe end-users. They use web portals.
-- **VerifyMe end-users** use the **mobile app** only for onboarding and verification identity; see [`end-user-management.md`](./end-user-management.md).
+- **Organization portal admins** are **not** **VerifyMe Users**. They use web portals.
+- **VerifyMe Users** use the **mobile app** only for onboarding and verification identity; see [`end-user-management.md`](./end-user-management.md).
 
-## UI / Codebase Note
+## UI / codebase note
 
-The React prototype may use sample labels (e.g. “Acme Corp”) for the Organization Admin Portal. Role names in the UI should converge on the tables above as screens are refined.
+The React prototype may use sample labels. Role names in the UI should converge on the tables above as screens are refined.

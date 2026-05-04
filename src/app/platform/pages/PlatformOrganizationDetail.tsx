@@ -1,9 +1,13 @@
-import { ArrowLeft, Building2, Eye, Pause, TrendingUp } from "lucide-react";
-import { useMemo } from "react";
+import { ArrowLeft, Building2 } from "lucide-react";
+import { useMemo, useSyncExternalStore } from "react";
 import { useNavigate, useParams } from "react-router";
 import { Button } from "../../shared/components/ui/button";
 import { UnifiedBadge } from "../../shared/components/UnifiedBadge";
-import { getPlatformOrganizationForDetail } from "../data/platformOrganizationSessionOverrides";
+import {
+  getPlatformOrganizationForDetail,
+  getPlatformOrganizationStoreVersion,
+  subscribePlatformOrganizationListeners,
+} from "../data/platformOrganizationSessionOverrides";
 import {
   formatIntegrationStatus,
   formatLifecycleStatus,
@@ -48,7 +52,16 @@ export function PlatformOrganizationDetail() {
   const navigate = useNavigate();
   const { id } = useParams();
 
-  const organization = useMemo(() => getPlatformOrganizationForDetail(id), [id]);
+  const organizationStoreVersion = useSyncExternalStore(
+    subscribePlatformOrganizationListeners,
+    getPlatformOrganizationStoreVersion,
+    getPlatformOrganizationStoreVersion,
+  );
+
+  const organization = useMemo(
+    () => getPlatformOrganizationForDetail(id),
+    [id, organizationStoreVersion],
+  );
   const profile = organization ? profileForOrganization(organization) : null;
 
   const organizationEndUsers = organization
@@ -105,24 +118,9 @@ export function PlatformOrganizationDetail() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Button variant="outline">
-              <Eye className="w-4 h-4 mr-2" />
-              View as Client
-            </Button>
-            <Button variant="outline">
-              <TrendingUp className="w-4 h-4 mr-2" />
-              Upgrade Plan
-            </Button>
-            <Button variant="outline">
-              <Pause className="w-4 h-4 mr-2" />
-              Suspend
-            </Button>
-          </div>
         </div>
         <p className="text-[12px] text-muted-foreground mt-4 max-w-3xl">
-          Suspend is available to scoped VerifyMe admins. Permanent disable or archive requires a Super Admin (design
-          policy).
+          Only VerifyMe Super Admin can permanently disable or archive.
         </p>
       </div>
 

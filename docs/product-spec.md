@@ -1,25 +1,27 @@
-# VerifyMe — Product Specification (Design Phase)
+# VerifyMe — Product specification (design phase)
 
 This document captures agreed product scope and terminology. It does **not** specify production implementation, database migrations, or live API contracts. The project is in **UI/UX and system design** phase.
 
-## Product Vision
+Shared definitions: [`glossary.md`](./glossary.md). End-to-end verification: [`verification-flow.md`](./verification-flow.md).
 
-**VerifyMe** is a privacy-preserving **identity verification** platform for **call-center** and **messaging** transactions. Organizations integrate VerifyMe through an **OIDC-style** flow. End-users onboard in the **VerifyMe mobile app**, generate a **one-time verification token** (passcode + OTP + biometrics), and an organization representative enters that token on the **VerifyMe verification page**. VerifyMe validates the token via the **Verification Service** (already exists; will be integrated later), returns an OIDC-style **auth_code**, and the organization exchanges it for an **id_token**.
+## Product vision
+
+**VerifyMe** is a privacy-preserving **identity verification** platform for **call-center** and **messaging** workflows. Organizations integrate through an **OIDC-style** flow. **VerifyMe Users** onboard only in the **VerifyMe mobile app**, complete passcode + OTP + biometric steps, and the app yields a **one-time verification token** for the live session. An organization representative enters that token on the **VerifyMe Verification Page**. VerifyMe validates via the **Verification Service** (existing component; not wired in this repo yet), then returns an **auth_code**; the organization exchanges it for tokens per [`verification-flow.md`](./verification-flow.md).
 
 No backend logic is implied by this document; it frames what the admin portals and public surfaces are **for**.
 
 ## OIDC client scopes (MVP)
 
-MVP integrations enable **`openid`** only on client applications. Additional scopes are **future** (clearly labeled as such in UI and docs when shown); see [`api-overview.md`](./api-overview.md).
+MVP integrations enable **`openid`** only. Additional scopes are **future** and must be labeled **future** wherever they appear in UI or docs; see [`api-overview.md`](./api-overview.md).
 
-## Major Product Surfaces
+## Major product surfaces
 
 | Surface | Audience | Purpose (high level) |
 |--------|----------|----------------------|
-| **VerifyMe Admin Portal** | Internal Qrypted / VerifyMe operators | Organizations, VerifyMe users, identity links, verification sessions, client apps / API, billing & credits, audit logs, platform settings |
-| **Organization Admin Portal** | Enterprise customers using VerifyMe | Linked end users, verification logs, API integration, QR linking, team & roles, usage & credits, billing, settings |
-| **VerifyMe Mobile App** | End-users | Onboarding, account recovery, device binding, token generation for verification |
-| **Verification Page** | Organization reps (e.g. call center) | Collect one-time token, drive OIDC-style authorize → token exchange with org backends |
+| **VerifyMe Admin Portal** | Internal Qrypted / VerifyMe operators | Organizations, **VerifyMe Users**, identity links, **verification sessions**, client apps / API, billing & credits, audit logs, platform settings |
+| **Organization Admin Portal** | Enterprise customers using VerifyMe | **Linked End Users**, verification logs, API integration, QR linking, team & roles, usage & credits, billing, settings |
+| **VerifyMe Mobile App** | **VerifyMe Users** | Onboarding, account recovery, device binding, token generation for verification |
+| **Verification Page** | Organization reps (e.g. call center) | Collect one-time token; **validation completes before** `redirect_uri` receives **auth_code** (see [`verification-flow.md`](./verification-flow.md)) |
 | **APIs & API documentation** | Technical integrators | Client registration, redirect URIs, scopes, demo flows, token exchange guidance |
 
 ## Demo Enterprise Flow
@@ -28,23 +30,34 @@ A **Demo Enterprise Flow** is part of product design: scripted or sandbox-friend
 
 ## Verification Service
 
-The **Verification Service** is a real system component that **already exists** in the wider VerifyMe architecture. This repository’s admin portals will **not** call it during the design phase. Later integration will:
+The **Verification Service** already exists in the wider VerifyMe architecture. This repository’s admin portals will **not** call it during the design phase. Later integration will:
 
 - Validate one-time tokens and device-bound signals
 - Emit structured outcomes for **verification sessions** and **billing**
 - Remain opaque to admin UIs regarding sensitive cryptographic details
 
-## Relationship To This Repository
+Documentation must **not** imply storage or display of raw passcode, OTP, biometrics, generated token, raw **Encrypted_Auth_Cred**, raw **Transaction_Code**, raw **client_secret**, private keys, or raw QR ciphertext in admin portals (see [`glossary.md`](./glossary.md), [`schema-notes.md`](./schema-notes.md)).
 
-This repo currently hosts:
+## Verification sessions (UI / design alignment)
+
+Admin prototypes distinguish **session lifecycle** (in-flight states such as `initiated`, **`challenge_dispatched`** (not `otp_sent`), `awaiting_token`, `verifying`, …) from **final outcome** (verified, failed, expired, etc.).
+
+- **Channel** (UI): `call`, `message`, or `web`.
+- **Timeline** copy uses **safe event names** only (e.g. “Email challenge sent”, “Token submitted on Verification Page”); no OTP values, no raw **auth_code** or **id_token**, no raw device secrets.
+- **Billing:** only **Verified** and **Failed** outcomes are billable; see [`billing-credits.md`](./billing-credits.md).
+
+## Relationship to this repository
+
+This repo hosts:
 
 - React + Vite **frontend shells** for both admin portals
 - Shared layout, routing, and design-system components
 - **No** production authentication, **no** database, **no** Verification Service HTTP clients in scope for the design phase
 
-For terminology alignment across product, client lifecycle, billing, and data shape, see also:
+## Related documents
 
-- [`client-management.md`](./client-management.md)
-- [`billing-credits.md`](./billing-credits.md)
-- [`api-overview.md`](./api-overview.md)
-- [`schema-notes.md`](./schema-notes.md)
+- [`client-management.md`](./client-management.md) — organization model, `client_id`, setup checklist
+- [`end-user-management.md`](./end-user-management.md) — **Linked End Users**, invites
+- [`billing-credits.md`](./billing-credits.md) — credits, plans, billable outcomes
+- [`api-overview.md`](./api-overview.md) — HTTP / OIDC overview
+- [`schema-notes.md`](./schema-notes.md) — relational concepts

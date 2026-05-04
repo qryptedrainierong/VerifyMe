@@ -238,8 +238,8 @@ export function VerificationSessionDetailBody({
 
       {variant === "organization" && (
         <p className="text-[11px] text-muted-foreground">
-          Organization view is scoped to this tenant only. Full VerifyMe user email, global profile, and other
-          organizations are not shown.
+          This view is scoped to the current Organization only. Full VerifyMe user email, global profile, and data for
+          other Organizations are not shown.
         </p>
       )}
     </div>

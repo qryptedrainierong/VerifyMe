@@ -46,6 +46,8 @@ export type PlatformOrganization = {
   status: OrganizationLifecycleStatus;
   integrationStatus: IntegrationStatus;
   created: string;
+  /** Optional: set when mock session overrides or governance actions update this row (ISO 8601). */
+  sessionUpdatedAt?: string;
 };
 
 /** Legacy default cost per billable verification when org has no custom price. */

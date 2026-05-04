@@ -1,72 +1,84 @@
-# Client & Organization Management (Design Phase)
+# Client & organization management (design phase)
 
-## Core Mapping
+Terms: [`glossary.md`](./glossary.md). Verification flow: [`verification-flow.md`](./verification-flow.md). Billing: [`billing-credits.md`](./billing-credits.md).
 
-- **Client = Organization** in product language. “Client” is how integrators often think about API credentials; “organization” is how admins manage tenancy, billing, and policies. Both refer to the same business entity.
+## Core mapping
+
+- **Client = organization** in product language. “Client” is how integrators think about API credentials; **organization** is how admins manage tenancy, **plans**, and policies. Both refer to the same business entity.
 
 ## Identifiers
 
 | Concept | Description |
 |--------|-------------|
-| **organization_id** | Internal immutable **UUID** for the organization record. Never exposed as the primary customer-facing API identifier. |
-| **client_id** | External **API identifier** for a **client application** (OIDC-style integration). One organization can have **many** client applications. |
+| **organization_id** | Internal immutable identifier for the organization record (e.g. UUID). |
+| **organization_code** | Short stable **ORG_CODE** (shown as **organizationCode** in UI mocks). |
+| **client_id** | External API identifier for a **client application**. One organization can have **many** client applications. |
 
-## client_id Format
-
-External `client_id` values are structured as four underscore-separated segments. Placeholder names below describe each segment (they are not HTML).
-
-**Pattern** (read left to right, underscores between segments):
+## `client_id` format (design anchor)
 
 ```text
 <ORG_CODE>_<APP_TYPE>_<ENV>_<SEQ>
 ```
 
-**Example:**
+**Example:** `ACME_CALLCENTER_PROD_001`
 
-```text
-DEMO_CALLCENTER_PROD_001
-```
-
-Segment meanings:
-
-- **ORG_CODE** — Short, stable code for the organization (not the UUID).
+- **ORG_CODE** — Matches **organization_code**.
 - **APP_TYPE** — Logical application class (e.g. `CALLCENTER`, `MESSAGING`, `BACKOFFICE`).
 - **ENV** — `PROD`, `STAGING`, `SANDBOX`, etc.
 - **SEQ** — Zero-padded sequence when multiple apps share type + env.
 
-Exact validation rules (length, charset, reserved words) are TBD at implementation time; this format is the **design anchor**.
+Exact validation rules (length, charset) are TBD at implementation time.
 
-## Organization Profile (VerifyMe Admin)
+## Organization record (UI alignment)
 
-Organization profile is expected to include at least:
+Platform organization mocks and detail screens surface at least:
 
-- Organization **type** and **industry**
-- **Company size** band
-- **Full address** (structured fields for invoicing and compliance)
-- **Timezone** and **currency** (for credits, invoices, and reporting)
+| Field / concept | Meaning |
+|-----------------|--------|
+| **organizationName** | Primary display name (not a generic `name` field in mocks). |
+| **organizationCode** | Short code; visible on overview and tables. |
+| **primaryClientId** | Primary integration client identifier shown beside the org code. |
+| **creditBalance** | Monetary **credits** wallet balance. |
+| **seatLimit** / seats used | **Organization Admin Portal** seat capacity (admin users), not verification volume. |
+| **paymentStanding** | Invoice / payment health (`current`, `overdue`, `failed`) — **separate** from org lifecycle. |
+| **plan** | Commercial **plan** tier (Starter / Professional / Enterprise). |
+| **integrationStatus** | Integration readiness (see below). |
+| **status** | Organization **lifecycle** (see below). |
 
-## Lifecycle: VerifyMe Admin Creates Organization
+### Organization lifecycle (`status`)
 
-VerifyMe Admin Portal flow (design intent):
+`draft` → `pending_setup` → `active`; may become `suspended`, `disabled`, or `archived` per policy.
 
-1. **Profile** — Legal name, codes, industry, address, timezone, currency.
-2. **Initial organization admin** — First Organization Admin Portal user (Owner-equivalent access to complete setup).
-3. **Plan & credits** — Starter / Professional / Enterprise tier, initial credit wallet, per-organization verification pricing hooks (see [`billing-credits.md`](./billing-credits.md)).
+### Integration status (`integrationStatus`)
 
-## Lifecycle: Organization Admin Completes Setup
+`not_configured` → `missing_redirect_uri` / `missing_keys` → `ready_for_testing` → `sandbox_active` or `production_active`; `error` when integration health fails.
 
-In the **Organization Admin Portal**, the customer completes remaining configuration:
+## Organization setup checklist (six steps)
 
-1. **Complete profile** — Any optional fields, branding, contacts.
-2. **Configure API integration** — Client applications, redirect URIs, environments (see [`api-overview.md`](./api-overview.md)).
-3. **Add redirect URI** — Allowed callbacks for OIDC-style return paths.
-4. **Configure QR linking keys** — Asymmetric keys for payloads (see [`qr-linking.md`](./qr-linking.md)).
-5. **Configure verification settings** — Limits, session timeouts, OTP policy flags (design-time; no enforcement in this repo yet).
-6. **Test integration** — Demo flow or sandbox verification against Verification Service (when wired).
+Aligned with the **VerifyMe Admin Portal** organization overview checklist in the UI prototype:
 
-## Administrative Controls (Product Rules)
+1. **Complete organization profile** — legal name, codes, industry, address, timezone, currency; move out of `draft` as appropriate.
+2. **Configure API integration** — client applications, environments (see [`api-overview.md`](./api-overview.md)).
+3. **Add redirect URI** — allowed callbacks for OIDC-style return paths.
+4. **Configure QR linking keys** — asymmetric keys for payloads (see [`qr-linking.md`](./qr-linking.md)).
+5. **Configure verification settings** — limits, session timeouts, OTP policy flags (design-time).
+6. **Test integration** — demo or sandbox path against the Verification Service when wired.
 
-- **Suspend** — VerifyMe admins (and appropriately scoped roles) may **suspend** an organization (temporary, reversible operational state).
-- **Permanent disable / archive** — Only **Super Admin** (VerifyMe platform role) may permanently disable or archive an organization. Regular admins cannot irreversibly remove a tenant.
+**Handle authorization:** the end-user token is entered on the **VerifyMe Verification Page**; validation completes **before** the **`redirect_uri`** receives **`auth_code`** (see [`verification-flow.md`](./verification-flow.md)).
+
+## Lifecycle: VerifyMe Admin creates organization
+
+1. **Profile** — legal name, **organizationCode**, industry, address, timezone, currency.
+2. **Initial organization admin** — first **Organization Admin Portal** user (Owner-equivalent).
+3. **Plan & credits** — tier, initial **credit** wallet, per-organization verification pricing hooks (see [`billing-credits.md`](./billing-credits.md)).
+
+## Lifecycle: Organization Admin completes setup
+
+In the **Organization Admin Portal**, the customer completes remaining configuration (profile polish, API, redirect URIs, QR keys, verification settings, testing) as in the checklist above.
+
+## Administrative controls (product rules)
+
+- **Suspend** — VerifyMe admins (and appropriately scoped roles) may **suspend** an organization (reversible).
+- **Permanent disable / archive** — Only **Super Admin** may permanently disable or archive an organization.
 
 See [`admin-user-management.md`](./admin-user-management.md) for role matrices.

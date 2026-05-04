@@ -141,8 +141,8 @@ export function EnterpriseUsage() {
             <div>
               <p className="text-[18px] font-semibold text-foreground">Verification sessions</p>
               <p className="text-[13px] text-muted-foreground">
-                Billable verification volume for this period (sample). Credits above are monetary wallet value — not a
-                session quota.
+                Billable verification volume for this period (sample). Credits above are monetary wallet value —
+                verification volume (period) is tracked separately from credits.
               </p>
             </div>
           </div>

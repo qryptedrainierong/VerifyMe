@@ -1,9 +1,9 @@
 # Audit Logs Data Schema
 
-> **VerifyMe terminology:** See [`../docs/billing-credits.md`](../docs/billing-credits.md) and [`../docs/product-spec.md`](../docs/product-spec.md). Example payloads may reference **subscription** in `action` strings for historical alignment; product language prefers **plan / credits** for customer-facing and admin UX text.
+> **VerifyMe terminology:** See [`billing-credits.md`](./billing-credits.md) and [`product-spec.md`](./product-spec.md). Example payloads may reference **subscription** in `action` strings for historical alignment; product language prefers **plan / credits** for customer-facing and admin UX text.
 
 ## Overview
-This document defines the **actual implemented** data structure for storing audit logs based on the specifications in AuditLogsPlan.md. 
+This document defines the **actual implemented** data structure for storing audit logs based on the specifications in [`audit-logs-plan.md`](./audit-logs-plan.md). 
 
 **Implementation Status:** ✅ Frontend prototype complete
 - Prototypes relating to Audit Logs primarily in `src/app/shared/types/auditLog.ts`
@@ -238,7 +238,7 @@ ORDER BY timestamp DESC;
 
 | Log Category | Retention | Reason |
 |--------------|-----------|--------|
-| Subscription/Billing | 12 months | Standard operational logs |
+| Plans / billing | 12 months | Standard operational logs |
 | User Management | 12 months | Standard operational logs |
 | API Keys/SSO/MFA | 36 months | Security events & compliance |
 | Organization/Seats | 12 months | Standard operational logs |

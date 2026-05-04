@@ -9,7 +9,7 @@ export function HomePage() {
       <div className="max-w-4xl w-full">
         <div className="text-center mb-12">
           <h1 className="text-[48px] font-bold text-foreground mb-4">
-            Multi-Tenant SaaS Platform
+            VerifyMe Admin Portals
           </h1>
           <p className="text-[18px] text-muted-foreground">
             Choose your portal to get started
@@ -25,7 +25,7 @@ export function HomePage() {
               Platform Admin Portal
             </h2>
             <p className="text-[15px] text-muted-foreground mb-6 leading-relaxed">
-              Manage all tenants, monitor system health, and configure platform-wide settings. 
+              Manage all Organizations, monitor system health, and configure platform-wide settings.
               Full operational control for internal administrators.
             </p>
             <Link to="/platform">
@@ -36,7 +36,7 @@ export function HomePage() {
             </Link>
             <div className="mt-4 pt-4 border-t border-border">
               <p className="text-[13px] text-muted-foreground">
-                <strong>Features:</strong> Tenant management, system monitoring, analytics
+                <strong>Features:</strong> Organization management, system monitoring, analytics
               </p>
             </div>
           </Card>
@@ -49,7 +49,7 @@ export function HomePage() {
               Enterprise Admin Portal
             </h2>
             <p className="text-[15px] text-muted-foreground mb-6 leading-relaxed">
-              Manage your organization's team, projects, and settings. 
+              Manage your Organization’s team, projects, and settings.
               Simple and intuitive interface for customer administrators.
             </p>
             <Link to="/enterprise">

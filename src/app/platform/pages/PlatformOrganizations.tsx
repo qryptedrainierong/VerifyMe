@@ -1,5 +1,5 @@
-import { Building2, Plus, Search, Filter, MoreVertical, ArrowUpDown } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Building2, Plus, Search, Filter, ArrowUpDown } from "lucide-react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import { useNavigate } from "react-router";
 import { Button } from "../../shared/components/ui/button";
 import { Input } from "../../shared/components/ui/input";
@@ -11,13 +11,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../../shared/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "../../shared/components/ui/dropdown-menu";
 import { UnifiedBadge } from "../../shared/components/UnifiedBadge";
 import { CreateOrganizationDialog, type NewOrganizationInput } from "./components/CreateOrganizationDialog";
 import {
@@ -30,7 +23,12 @@ import {
   type OrganizationLifecycleStatus,
   type PlatformOrganization,
 } from "../data/platformOrganizationsSample";
-import { registerPlatformOrganizationOverride } from "../data/platformOrganizationSessionOverrides";
+import {
+  getPlatformOrganizationStoreVersion,
+  mergeOrganizationWithSessionOverride,
+  registerPlatformOrganizationOverride,
+  subscribePlatformOrganizationListeners,
+} from "../data/platformOrganizationSessionOverrides";
 
 export function PlatformOrganizations() {
   const navigate = useNavigate();
@@ -41,6 +39,17 @@ export function PlatformOrganizations() {
   const [organizations, setOrganizations] = useState<PlatformOrganization[]>(buildInitialOrganizations());
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const organizationStoreVersion = useSyncExternalStore(
+    subscribePlatformOrganizationListeners,
+    getPlatformOrganizationStoreVersion,
+    getPlatformOrganizationStoreVersion,
+  );
+
+  const organizationsDisplay = useMemo(
+    () => organizations.map((org) => mergeOrganizationWithSessionOverride(org)),
+    [organizations, organizationStoreVersion],
+  );
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
@@ -57,7 +66,7 @@ export function PlatformOrganizations() {
 
   const filteredOrganizations = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
-    return organizations.filter((org) => {
+    return organizationsDisplay.filter((org) => {
       const haystack = [
         org.organizationName,
         org.legalName,
@@ -77,13 +86,13 @@ export function PlatformOrganizations() {
         && (integrationFilter === "all" || org.integrationStatus === integrationFilter)
       );
     });
-  }, [organizations, searchQuery, planFilter, statusFilter, integrationFilter]);
+  }, [organizationsDisplay, searchQuery, planFilter, statusFilter, integrationFilter]);
 
   const overviewStats = useMemo(() => {
-    const totalOrganizations = organizations.length;
-    const activeOrganizations = organizations.filter((org) => org.status === "active").length;
-    const totalCredits = organizations.reduce((sum, org) => sum + org.creditBalance, 0);
-    const totalSpent = organizations.reduce((sum, org) => sum + getVerificationSpend(org), 0);
+    const totalOrganizations = organizationsDisplay.length;
+    const activeOrganizations = organizationsDisplay.filter((org) => org.status === "active").length;
+    const totalCredits = organizationsDisplay.reduce((sum, org) => sum + org.creditBalance, 0);
+    const totalSpent = organizationsDisplay.reduce((sum, org) => sum + getVerificationSpend(org), 0);
 
     return {
       totalOrganizations,
@@ -91,7 +100,7 @@ export function PlatformOrganizations() {
       utilizationRate: totalCredits > 0 ? (totalSpent / totalCredits) * 100 : 0,
       totalCreditRemaining: Math.max(totalCredits - totalSpent, 0),
     };
-  }, [organizations]);
+  }, [organizationsDisplay]);
 
   const getNextOrganizationId = (currentOrganizations: PlatformOrganization[]) => {
     const maxId = currentOrganizations.reduce((max, org) => {
@@ -150,34 +159,6 @@ export function PlatformOrganizations() {
       `${input.organizationName} was created. Organization status is pending_setup and integration is not_configured. `
         + "The organization admin completes remaining setup in the Organization Admin Portal.",
     );
-  };
-
-  const handleViewDetails = (organizationId: string) => {
-    navigate(`/organizations/${organizationId}`);
-  };
-
-  const handleViewAsClient = (organizationName: string) => {
-    setSuccessMessage(`Opening ${organizationName} in client view (mock).`);
-  };
-
-  const handleToggleOrganizationStatus = (organizationId: string) => {
-    setOrganizations((prev) =>
-      prev.map((organization) => {
-        if (organization.id !== organizationId) {
-          return organization;
-        }
-        const nextStatus = organization.status === "suspended" ? "active" : "suspended";
-        return { ...organization, status: nextStatus };
-      }),
-    );
-    const target = organizations.find((organization) => organization.id === organizationId);
-    if (target) {
-      setSuccessMessage(
-        target.status === "suspended"
-          ? `${target.organizationName} was reactivated.`
-          : `${target.organizationName} was suspended. Permanent disable or archive requires Super Admin (mock).`,
-      );
-    }
   };
 
   const lifecycleOptions: OrganizationLifecycleStatus[] = [
@@ -268,7 +249,7 @@ export function PlatformOrganizations() {
               <SelectValue placeholder="Organization status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All organization status</SelectItem>
+              <SelectItem value="all">All Organization statuses</SelectItem>
               {lifecycleOptions.map((s) => (
                 <SelectItem key={s} value={s}>
                   {formatLifecycleStatus(s)}
@@ -314,7 +295,7 @@ export function PlatformOrganizations() {
       <div className="flex-1 overflow-auto">
         <Card className="m-8 border border-border shadow-sm">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1100px]">
+            <table className="w-full min-w-[1040px]">
               <thead className="border-b border-border bg-accent/5 sticky top-0 z-10">
                 <tr>
                   <th className="text-left p-4 text-[12px] font-semibold tracking-wide text-muted-foreground uppercase">
@@ -324,7 +305,7 @@ export function PlatformOrganizations() {
                     </button>
                   </th>
                   <th className="text-left p-4 text-[12px] font-semibold tracking-wide text-muted-foreground uppercase">
-                    Org code
+                    Organization code
                   </th>
                   <th className="text-left p-4 text-[12px] font-semibold tracking-wide text-muted-foreground uppercase">
                     Primary client_id
@@ -336,7 +317,7 @@ export function PlatformOrganizations() {
                     Credit balance
                   </th>
                   <th className="text-left p-4 text-[12px] font-semibold tracking-wide text-muted-foreground uppercase">
-                    Org status
+                    Organization status
                   </th>
                   <th className="text-left p-4 text-[12px] font-semibold tracking-wide text-muted-foreground uppercase">
                     Integration
@@ -350,9 +331,6 @@ export function PlatformOrganizations() {
                       <ArrowUpDown className="w-3 h-3" />
                     </button>
                   </th>
-                  <th className="text-left p-4 text-[12px] font-semibold tracking-wide text-muted-foreground uppercase w-[60px]">
-                    Actions
-                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -360,7 +338,19 @@ export function PlatformOrganizations() {
                   <tr
                     key={org.id}
                     className="hover:bg-accent/5 transition-colors cursor-pointer"
-                    onClick={() => navigate(`/organizations/${org.id}`)}
+                    onClick={(event) => {
+                      const target = event.target;
+                      if (target instanceof HTMLElement) {
+                        if (
+                          target.closest(
+                            "button, a, input, textarea, select, label, [role='button'], [role='checkbox'], [role='switch'], [role='combobox']",
+                          )
+                        ) {
+                          return;
+                        }
+                      }
+                      navigate(`/organizations/${org.id}`);
+                    }}
                   >
                     <td className="p-4 align-top">
                       <div className="flex items-center gap-3">
@@ -411,53 +401,11 @@ export function PlatformOrganizations() {
                         })}
                       </p>
                     </td>
-                    <td className="p-4 align-top">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreVertical className="w-4 h-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleViewDetails(org.id);
-                            }}
-                          >
-                            View details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleViewAsClient(org.organizationName);
-                            }}
-                          >
-                            View as organization admin (mock)
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleToggleOrganizationStatus(org.id);
-                            }}
-                          >
-                            {org.status === "suspended" ? "Activate organization" : "Suspend organization"}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem disabled className="text-muted-foreground">
-                            Disable organization (Super Admin only)
-                          </DropdownMenuItem>
-                          <DropdownMenuItem disabled className="text-muted-foreground">
-                            Archive organization (Super Admin only)
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </td>
                   </tr>
                 ))}
                 {filteredOrganizations.length === 0 && (
                   <tr>
-                    <td colSpan={10} className="p-10 text-center">
+                    <td colSpan={9} className="p-10 text-center">
                       <p className="text-sm font-medium text-foreground">No organizations found</p>
                       <p className="text-xs text-muted-foreground mt-1">Try adjusting search or filters.</p>
                     </td>
@@ -471,7 +419,7 @@ export function PlatformOrganizations() {
       <CreateOrganizationDialog
         open={isCreateDialogOpen}
         onOpenChange={setIsCreateDialogOpen}
-        existingOrganizationCodes={organizations.map((org) => org.organizationCode)}
+        existingOrganizationCodes={organizationsDisplay.map((org) => org.organizationCode)}
         onSubmit={handleCreateOrganization}
       />
     </div>

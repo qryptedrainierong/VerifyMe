@@ -1,6 +1,6 @@
 # Audit Logs UI Implementation Plan
 
-> **VerifyMe terminology:** UI labels for categories and filters should trend toward **verification**, **credits**, and **organization billing** per [`../docs/billing-credits.md`](../docs/billing-credits.md). Internal color legends that say **Subscription** can be read as **plan / billing category** until mock data and enums are renamed.
+> **VerifyMe terminology:** UI labels for categories and filters should trend toward **verification**, **credits**, and **organization billing** per [`billing-credits.md`](./billing-credits.md). Internal color legends that say **Subscription** can be read as **plan / billing category** until mock data and enums are renamed.
 
 ## Overview
 This document outlines the design and implementation approach for the audit logs UI component, including schema-aligned data, modal details view, and action-specific layouts.
@@ -12,7 +12,7 @@ This document outlines the design and implementation approach for the audit logs
 ### 1.1 TypeScript Types File
 **File:** `src/app/shared/types/auditLog.ts`
 
-Create comprehensive type definitions that align with `AuditLogsSchema.md`:
+Create comprehensive type definitions that align with [`audit-logs-schema.md`](./audit-logs-schema.md):
 - Base audit log interface with common fields
 - Action-specific payload interfaces (20+ types)
 - Union type for strict typing

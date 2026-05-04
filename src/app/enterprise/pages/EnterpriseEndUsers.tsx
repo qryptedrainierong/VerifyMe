@@ -345,15 +345,15 @@ export function EnterpriseEndUsers() {
 
   return (
     <div className="p-8 space-y-6 max-w-[1600px] mx-auto">
-      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-        <div className="max-w-3xl">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between min-w-0">
+        <div className="min-w-0 flex-1 lg:max-w-3xl lg:pr-4">
           <h1 className="text-[28px] font-semibold text-foreground">Linked End Users</h1>
           <p className="text-[15px] text-muted-foreground mt-1">
-            Manage organization customer records linked to VerifyMe identities. Your organization creates and invites
+            Manage your Organization’s customer records linked to VerifyMe identities. Your Organization creates and invites
             records; the end-user completes linking only through the VerifyMe mobile app.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2 shrink-0">
+        <div className="flex flex-wrap gap-2 shrink-0 items-center lg:justify-end">
           <Button onClick={() => setAddOpen(true)}>
             <UserPlus className="w-4 h-4 mr-2" />
             Add End-user

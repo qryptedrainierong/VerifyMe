@@ -261,7 +261,7 @@ export function EnterpriseVerificationLogs() {
               <ScrollText className="w-5 h-5 text-primary" />
               Session details
             </DialogTitle>
-            <DialogDescription>Organization-scoped — no cross-tenant data.</DialogDescription>
+            <DialogDescription>Organization-scoped — no cross-Organization data.</DialogDescription>
           </DialogHeader>
           {detail && (
             <>

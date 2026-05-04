@@ -87,9 +87,9 @@ export function PlatformTenants() {
       <div className="p-6 border-b border-border">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-[20px] font-semibold text-foreground">Tenant Management</h2>
+            <h2 className="text-[20px] font-semibold text-foreground">Organizations (legacy)</h2>
             <p className="text-[14px] text-muted-foreground mt-1">
-              Manage customer organizations, plans, and credits (legacy tenant view — prefer Organizations)
+              Manage customer Organizations, plans, and credits — prefer the main Organizations experience for new work.
             </p>
           </div>
           <div className="flex gap-2">
@@ -99,14 +99,14 @@ export function PlatformTenants() {
             </Button>
             <Button>
               <Plus className="w-4 h-4 mr-2" />
-              Add Tenant
+              Add Organization
             </Button>
           </div>
         </div>
 
         <div className="grid grid-cols-4 gap-4">
           <Card className="p-4 shadow-sm">
-            <p className="text-[13px] text-muted-foreground mb-1">Total Tenants</p>
+            <p className="text-[13px] text-muted-foreground mb-1">Total Organizations</p>
             <p className="text-[24px] font-semibold">1,247</p>
           </Card>
           <Card className="p-4 shadow-sm">
@@ -158,7 +158,7 @@ export function PlatformTenants() {
           columns={[
             {
               key: "id",
-              label: "Tenant ID",
+              label: "Organization ID",
               render: (row) => (
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">

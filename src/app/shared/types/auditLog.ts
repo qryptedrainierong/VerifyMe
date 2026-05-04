@@ -46,7 +46,7 @@ export enum ActionCategory {
 // ============================================================================
 
 export type AuditAction =
-  // Subscription
+  // Plan (legacy audit namespace `subscription.*`)
   | "subscription.upgraded"
   | "subscription.downgraded"
   | "subscription.cancelled"
@@ -120,7 +120,7 @@ export interface BaseAuditLog {
 }
 
 // ============================================================================
-// SUBSCRIPTION LOG INTERFACES
+// Plan log interfaces (legacy `subscription.*` action strings)
 // ============================================================================
 
 export interface SubscriptionUpgradedLog extends BaseAuditLog {
@@ -417,10 +417,10 @@ export function getActionCategory(action: AuditAction): ActionCategory {
  */
 export function getActionLabel(action: AuditAction): string {
   const labels: Record<AuditAction, string> = {
-    "subscription.upgraded": "Subscription Upgraded",
-    "subscription.downgraded": "Subscription Downgraded",
-    "subscription.cancelled": "Subscription Cancelled",
-    "subscription.renewed": "Subscription Renewed",
+    "subscription.upgraded": "Plan Upgraded",
+    "subscription.downgraded": "Plan Downgraded",
+    "subscription.cancelled": "Plan Cancelled",
+    "subscription.renewed": "Plan Renewed",
     "billing.invoice_generated": "Invoice Generated",
     "billing.invoice_sent": "Invoice Sent",
     "billing.payment_received": "Payment Received",

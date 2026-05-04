@@ -1,37 +1,47 @@
-# VerifyMe End-User Management (Design Phase)
+# VerifyMe end-user management (design phase)
 
-**VerifyMe end-users** are people who install the **VerifyMe mobile app** and hold a verified identity used when organizations run **OIDC-style verification** flows. They are **not** the same as **organization portal admins** (who use the Organization Admin Portal).
+**VerifyMe Users** are people who install the **VerifyMe mobile app** and hold a verified identity used when organizations run OIDC-style **verification sessions**. They are **not** the same as **Organization Admin Portal** users.
 
-## Onboarding Channel
+Terms: [`glossary.md`](./glossary.md). QR and invites: [`qr-linking.md`](./qr-linking.md).
 
-- End-users **onboard only through the VerifyMe mobile app** (no self-serve web signup path for MVP in this design).
+## Onboarding channel
 
-## Signup & Device Binding (MVP)
+- **VerifyMe Users** onboard **only through the VerifyMe mobile app** (no self-serve web signup path for MVP in this design).
+
+## Signup & device binding (MVP)
 
 1. **Email + full name** registration.
 2. **Email OTP** to verify mailbox ownership.
 3. **Passcode** setup (app PIN).
 4. **Biometric** setup where the device supports it.
 
-### Single Active Device (MVP)
+Documentation must not imply storing or displaying raw passcode, **OTP** values, or raw biometric samples in admin portals.
 
-- MVP allows **only one active device** per VerifyMe user.
-- **Setting up a new device revokes** the previous device’s sessions and keys (design intent: reduce account sharing and simplify support).
+### Single active device (MVP)
 
-## Account Recovery
+- MVP allows **one active device** per **VerifyMe User**.
+- Setting up a new device **revokes** the previous device’s sessions and keys (design intent).
+
+## Account recovery
 
 - **Email-based recovery** is the primary path (OTP and/or secure link policy TBD at implementation).
 
-## Organization ↔ End-User Relationship
+## Organization ↔ VerifyMe User relationship
 
-Organizations do **not** “own” VerifyMe accounts. They link to them.
+Organizations do **not** own VerifyMe accounts. They link to them.
 
-- Organizations may **invite** end-users via:
-  - **Single invite**
-  - **Bulk invite** (CSV or campaign tooling — product TBD)
-  - **Automated invite API** (server-to-server; rate limits and consent UX TBD)
-- Organizations may **create or invite records** in their systems (e.g. CRM `client_user_id`), but **only the end-user** can complete **cryptographic linking** in the VerifyMe app (see [`qr-linking.md`](./qr-linking.md)).
+- Organizations may **invite** **VerifyMe Users** via **single invite**, **bulk invite**, or **automated Invite API** (server-to-server; rate limits and consent UX TBD).
+- Organizations **create or invite records** (e.g. CRM **`client_user_id`**), but **only the end-user** completes **cryptographic linking** in the **VerifyMe app**.
+- **No silent account creation:** a **VerifyMe User** must complete app onboarding and linking; the org cannot silently instantiate a VerifyMe identity.
+
+## Linked End Users — link status (UI alignment)
+
+Organization Admin **Linked End Users** mocks use **linkStatus** values:
+
+`unlinked` · `pending` · `linked` · `suspended` · `revoked` · `disabled` · `conflict`
+
+Invite envelope state (separate from link) may include `none`, `pending`, `accepted`, `expired`, `superseded` for invite lifecycle.
 
 ## Terminology
 
-Prefer **VerifyMe user** or **end-user** over generic “customer user” when the subject is the mobile identity. Prefer **linked end user** or **organization user record** when the subject is the enterprise’s view of that relationship.
+Prefer **VerifyMe User** when the subject is the mobile identity. Prefer **Linked End User** (or organization user record) when the subject is the enterprise’s view of that relationship.

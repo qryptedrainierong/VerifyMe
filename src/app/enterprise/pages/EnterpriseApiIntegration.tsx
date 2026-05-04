@@ -165,7 +165,7 @@ export function EnterpriseApiIntegration() {
       <Card className="p-5 border border-border shadow-sm bg-muted/20">
         <h2 className="text-[16px] font-semibold text-foreground mb-2">Handle authorization (MVP)</h2>
         <p className="text-[13px] text-muted-foreground leading-relaxed max-w-3xl">
-          Your organization’s representative enters the <strong className="text-foreground">one-time verification token</strong> on the{" "}
+          Your Organization’s representative enters the <strong className="text-foreground">one-time verification token</strong> on the{" "}
           <strong className="text-foreground">VerifyMe Verification Page</strong>.{" "}
           <strong className="text-foreground">Handle Authorization</strong> validates that token; when valid, it returns{" "}
           <code className="text-[12px] bg-muted px-1 rounded">auth_code</code>,{" "}
@@ -179,7 +179,7 @@ export function EnterpriseApiIntegration() {
       <div>
         <h2 className="text-[18px] font-semibold text-foreground mb-2">OIDC endpoints (reference)</h2>
         <p className="text-[13px] text-muted-foreground mb-4 max-w-3xl">
-          Sample cards for documentation alignment. Replace base URLs with your VerifyMe tenant endpoints when integrating.
+          Sample cards for documentation alignment. Replace base URLs with your VerifyMe Organization API endpoints when integrating.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {enterpriseApiDocCards.map((card) => (

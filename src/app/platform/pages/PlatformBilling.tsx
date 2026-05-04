@@ -26,7 +26,7 @@ export function PlatformBilling() {
   const [searchQuery, setSearchQuery] = useState("");
   const organizations = useMemo(() => buildInitialOrganizations(), []);
   const mrr = organizations.reduce((sum, org) => sum + getVerificationSpend(org), 0);
-  const activeSubscriptions = organizations.length;
+  const activeOrganizations = organizations.length;
 
   const plans = [
     {
@@ -172,8 +172,8 @@ export function PlatformBilling() {
             </span>
           </div>
           <div>
-            <p className="text-[13px] text-muted-foreground mb-1">Active Subscriptions</p>
-            <p className="text-[32px] font-semibold text-foreground leading-none">{formatNumber(activeSubscriptions)}</p>
+            <p className="text-[13px] text-muted-foreground mb-1">Active Organizations</p>
+            <p className="text-[32px] font-semibold text-foreground leading-none">{formatNumber(activeOrganizations)}</p>
             <p className="text-[12px] text-muted-foreground mt-2">Across all plans</p>
           </div>
         </Card>

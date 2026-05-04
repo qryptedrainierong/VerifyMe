@@ -1,13 +1,13 @@
 # Audit Logs Plan
 
-> **VerifyMe terminology:** Product copy and new specs use **plans**, **credits**, and **verification billing** (see [`../docs/billing-credits.md`](../docs/billing-credits.md)). This document still uses historical **audit action keys** such as `subscription.*` in several places; treat those names as **stable log identifiers** until a backend migration aliases or renames them.
+> **VerifyMe terminology:** Product copy and new specs use **plans**, **credits**, and **verification billing** (see [`billing-credits.md`](./billing-credits.md)). This document still uses historical **audit action keys** such as `subscription.*` in several places; treat those names as **stable log identifiers** until a backend migration aliases or renames them.
 
 ## Overview
 This document outlines all audit log types organized by category, with detailed logging requirements for each action.
 
 Action groups:
 
-1. Subscription & Billing *(log namespace: `subscription.*`; product area: plans, credits, and verification-related billing)*
+1. Plans & billing *(log namespace: `subscription.*`; product area: plans, credits, and verification-related billing)*
 2. Billing & Payment
 3. User Management
 4. Security & Access Control
@@ -18,10 +18,10 @@ Action groups:
 
 ---
 
-## 1. Subscription & Billing
+## 1. Plans & billing (log namespace `subscription.*`)
 
 ### 1.1 subscription.upgraded
-**Purpose:** Track when an organization upgrades their subscription plan
+**Purpose:** Track when an organization upgrades their plan
 
 **Trigger:** Organization owner/admin selects a higher tier plan and payment is successfully processed
 
@@ -36,7 +36,7 @@ Action groups:
 - Status (success/failed)
 
 ### 1.2 subscription.downgraded
-**Purpose:** Track when an organization downgrades their subscription plan
+**Purpose:** Track when an organization downgrades their plan
 
 **Trigger:** Organization owner/admin selects a lower tier plan and change is applied
 
@@ -51,7 +51,7 @@ Action groups:
 - Status (success/failed)
 
 ### 1.3 subscription.cancelled
-**Purpose:** Track when a subscription is cancelled
+**Purpose:** Track when a plan is cancelled
 
 **Trigger:** Organization owner/admin initiates cancellation or system cancels due to non-payment
 
@@ -66,7 +66,7 @@ Action groups:
 - Status (success/failed)
 
 ### 1.4 subscription.renewed
-**Purpose:** Track automatic subscription renewals
+**Purpose:** Track automatic plan renewals
 
 **Trigger:** Subscription renewal date is reached and payment is automatically charged
 
@@ -95,7 +95,7 @@ Action groups:
 - Billing period (from - to)
 - Generation date & time
 - Invoice status (draft/sent)
-- Line items (subscription, add-ons, etc.)
+- Line items (plan, add-ons, etc.)
 
 ### 2.2 billing.invoice_sent
 **Purpose:** Track when invoices are sent to customers
@@ -733,4 +733,13 @@ These fields should be present in every audit log entry:
 - **Timezone**: UTC
 - **Redaction**: Sensitive data (passwords, full API keys) must be masked
 - **Encryption**: Export files should support AES-256 encryption
+
+---
+
+## Related VerifyMe docs
+
+- [`audit-logs-schema.md`](./audit-logs-schema.md) — storage shape and examples
+- [`audit-logs-ui.md`](./audit-logs-ui.md) — UI prototype notes
+- [`billing-credits.md`](./billing-credits.md) — plans, credits, billable **verification session** outcomes
+- [`glossary.md`](./glossary.md) — canonical terminology
 

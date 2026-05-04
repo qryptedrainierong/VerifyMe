@@ -1,10 +1,12 @@
-# Billing & Credits (Design Phase)
+# Billing & credits (design phase)
 
-VerifyMe commercial model centers on **monetary credits** consumed by **billable verification outcomes** and configurable **OTP** charges—not on abstract “API quotas” or generic SaaS “subscription usage” language.
+VerifyMe commercial model centers on **monetary credits** consumed by **billable verification outcomes** and configurable **OTP** charges—not on abstract “API quotas” or generic “subscription usage” wording.
+
+Definitions: [`glossary.md`](./glossary.md). Audit log keys may still use legacy namespaces (e.g. `subscription.*`); see [`audit-logs-plan.md`](./audit-logs-plan.md).
 
 ## Credits
 
-- **Credit** is a **monetary value** (e.g. USD) held in an organization **credit wallet**.
+- **Credits** are a **monetary value** (e.g. USD) held in an organization **credit wallet** (`creditBalance` in platform UI mocks).
 - **Top-up credits** **carry over** across billing periods until consumed (design intent; implementation details TBD).
 
 ## Plans
@@ -14,33 +16,36 @@ VerifyMe commercial model centers on **monetary credits** consumed by **billable
 
 ## Billable outcomes (final)
 
-Billing is driven by the **final verification outcome** of a verification session. The rules are:
+Billing is driven by the **final verification outcome** of a **verification session** (not generic “API usage”). The rules are:
 
 | Outcome | Billable? |
 |---------|-----------|
-| **Verified** | **Yes** — billable |
-| **Failed** | **Yes** — billable |
-| **Expired** | **No** — not billable |
-| **Error** | **No** — not billable |
-| **Indeterminate** | **No** — not billable |
+| **Verified** | **Yes** |
+| **Failed** | **Yes** |
+| **Expired** | **No** |
+| **Error** | **No** |
+| **Indeterminate** | **No** |
+| **Cancelled** | **No** |
+| **Pending** | **No** |
 
-Organizations are charged only when work resolves to **Verified** or **Failed**. They are **not** charged for abandoned sessions (**Expired**), platform or integration faults (**Error**), or outcomes that cannot be classified (**Indeterminate**).
+Organizations are charged only when a session settles as **Verified** or **Failed**.
 
 ## Verification pricing (per organization)
 
-- Each organization has a **per-unit price** (and optional tier or contract modifiers) applied when posting **billable** usage—that is, when sessions settle as **Verified** or **Failed** as above.
+- Each organization has a **per-unit price** (and optional tier or contract modifiers) applied when posting **billable** usage for **verification sessions**.
 - Pricing configuration is owned in the **VerifyMe Admin Portal** / finance workflows; this document does not fix currency minor units or invoice line-item layout.
 
 ## OTP billing
 
 - **Email OTP** billing is **configurable** (per org or per plan): may be included, per-message, or bundled.
-- **SMS OTP** (future) is **billable per send** once the product offers it.
+- **SMS OTP** (**future**) is **billable per send** once the product offers it.
 
 ## Relationship to verification logs and usage & credits in UI
 
-Admin screens may still show charts for **design exploration**. Product copy should refer to **verification logs**, **verification volume**, **usage & credits**, and **OTP charges**—not “subscription usage” or “API quota” unless explicitly referring to a **legacy audit log action key** (see `documentation/README.md`: product wording uses **plans** and **credits**; internal keys such as `subscription.*` may stay for backward compatibility).
+Admin screens may show charts for **design exploration**. Product copy should refer to **verification logs**, **verification session** volume, **usage & credits**, and **OTP charges**—not “subscription usage” or “API quota.” If text must reference stored audit identifiers, note that log **action keys** may still use legacy names (e.g. `subscription.*`) while UI labels use **plans** and **credits**.
 
-## Related Documents
+## Related documents
 
 - [`client-management.md`](./client-management.md) — who sets plans and initial credits.
 - [`schema-notes.md`](./schema-notes.md) — `credit_wallets`, `credit_transactions`, `usage_events`.
+- [`audit-logs-plan.md`](./audit-logs-plan.md) — audit events touching billing configuration.
