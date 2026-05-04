@@ -2,6 +2,8 @@
 
 **`/docs` is the single source of truth** for VerifyMe product, UX, API, schema, audit, maintenance, and implementation notes for this repository.
 
+If you arrived from a legacy **`/documentation`** path in another system, use this **`docs/`** tree instead; a stub [`../documentation/README.md`](../documentation/README.md) in the repo points here.
+
 ## How to use this folder
 
 1. Start with **[`product-spec.md`](./product-spec.md)** for surfaces and scope, then **[`glossary.md`](./glossary.md)** for shared terms.
@@ -36,11 +38,20 @@ All paths below are under `./` (this `docs/` directory).
 
 ---
 
-## Data & audit
+## Data & schema
 
 | Document | Purpose |
 |----------|---------|
 | [`schema-notes.md`](./schema-notes.md) | High-level relational concepts (no migrations in this repo) |
+
+---
+
+## Audit (compliance & logging)
+
+These stay grouped as the **audit** set; they are part of `/docs` but are the canonical audit specifications.
+
+| Document | Purpose |
+|----------|---------|
 | [`audit-logs-plan.md`](./audit-logs-plan.md) | Audit event catalog by category (includes legacy `subscription.*` action keys) |
 | [`audit-logs-schema.md`](./audit-logs-schema.md) | Storage shape, SQL/Mongo sketches, retention, export examples |
 | [`audit-logs-ui.md`](./audit-logs-ui.md) | Audit logs UI prototype structure, status, and follow-ups |
@@ -80,5 +91,6 @@ All paths below are under `./` (this `docs/` directory).
 ## Related
 
 - Root **[`../README.md`](../README.md)** — clone, install, run, and pointer into `/docs`.
+- Legacy path stub: **[`../documentation/README.md`](../documentation/README.md)** — points here; do not add new docs under `documentation/`.
 
-There is **no** separate `documentation/` folder; everything lives here.
+Authoritative content lives only under **`docs/`**. The repo root `documentation/README.md` is a short redirect stub, not a second doc tree.

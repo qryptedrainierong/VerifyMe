@@ -26,6 +26,7 @@ Two portal modes share one deployable SPA, not two separate apps.
 | `src/app/shared/` | Shared components, hooks, utils |
 | `src/styles/` | Theme tokens, Tailwind entry, fonts |
 | `docs/` | Product, schema, audit, maintenance (this tree) |
+| `documentation/` | Stub [`README.md`](../documentation/README.md) only — redirects to `docs/` |
 
 ## Routing model
 

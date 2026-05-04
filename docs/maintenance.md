@@ -94,4 +94,4 @@ Treat React, React Router, Vite, Tailwind, and Radix upgrades carefully; re-chec
 
 ## Documentation
 
-Product and design decisions live in **`/docs`** — start at [`README.md`](./README.md). Engineering notes that do not belong in product specs are in [`implementation-notes.md`](./implementation-notes.md).
+Product and design decisions live in **`/docs`** — start at [`README.md`](./README.md). Engineering notes that do not belong in product specs are in [`implementation-notes.md`](./implementation-notes.md). A repo-root [`documentation/README.md`](../documentation/README.md) stub redirects legacy `/documentation` bookmarks to this tree.

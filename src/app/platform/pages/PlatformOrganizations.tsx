@@ -343,7 +343,24 @@ export function PlatformOrganizations() {
                       if (target instanceof HTMLElement) {
                         if (
                           target.closest(
-                            "button, a, input, textarea, select, label, [role='button'], [role='checkbox'], [role='switch'], [role='combobox']",
+                            [
+                              "button",
+                              "a",
+                              "input",
+                              "textarea",
+                              "select",
+                              "label",
+                              "[role='button']",
+                              "[role='checkbox']",
+                              "[role='switch']",
+                              "[role='combobox']",
+                              "[role='menu']",
+                              "[role='menuitem']",
+                              "[role='listbox']",
+                              "[role='option']",
+                              "[role='tab']",
+                              "[data-no-row-nav]",
+                            ].join(", "),
                           )
                         ) {
                           return;

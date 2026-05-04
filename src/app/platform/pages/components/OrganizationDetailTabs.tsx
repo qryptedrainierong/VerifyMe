@@ -595,6 +595,9 @@ export function OrganizationDetailTabs({
               (mock UI only).
             </DialogDescription>
           </DialogHeader>
+          <p className="text-[12px] text-muted-foreground border border-border/80 rounded-md bg-muted/30 px-3 py-2">
+            This action will be recorded in audit logs.
+          </p>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button type="button" variant="outline" onClick={() => setReactivateDialogOpen(false)}>
               Cancel

@@ -117,11 +117,7 @@ export function PlatformOrganizationDetail() {
               </p>
             </div>
           </div>
-
         </div>
-        <p className="text-[12px] text-muted-foreground mt-4 max-w-3xl">
-          Only VerifyMe Super Admin can permanently disable or archive.
-        </p>
       </div>
 
       <OrganizationDetailTabs organization={organization} profile={profile} organizationEndUsers={organizationEndUsers} />
