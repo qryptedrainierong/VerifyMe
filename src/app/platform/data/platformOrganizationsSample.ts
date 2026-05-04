@@ -57,7 +57,7 @@ export const planDefaults: Record<
 > = {
   Starter: { seatLimit: 25, usage: 8000, creditBalance: 10, monthlyIncludedCredits: 10 },
   Professional: { seatLimit: 100, usage: 45000, creditBalance: 50, monthlyIncludedCredits: 50 },
-  Enterprise: { seatLimit: 400, usage: 120000, creditBalance: 500, monthlyIncludedCredits: 500 },
+  Enterprise: { seatLimit: 400, usage: 120000, creditBalance: 250, monthlyIncludedCredits: 250 },
 };
 
 const rawOrganizations: PlatformOrganization[] = [
@@ -78,8 +78,8 @@ const rawOrganizations: PlatformOrganization[] = [
     seatLimit: 400,
     seatsUsed: 8,
     usage: 7200,
-    creditBalance: 500,
-    monthlyIncludedCredits: 500,
+    creditBalance: 250,
+    monthlyIncludedCredits: 250,
     topUpCredits: 0,
     pricePerVerification: 0.05,
     emailOtpBillingEnabled: true,
@@ -132,8 +132,8 @@ const rawOrganizations: PlatformOrganization[] = [
     seatLimit: 400,
     seatsUsed: 10,
     usage: 9400,
-    creditBalance: 500,
-    monthlyIncludedCredits: 500,
+    creditBalance: 250,
+    monthlyIncludedCredits: 250,
     topUpCredits: 0,
     pricePerVerification: 0.05,
     emailOtpBillingEnabled: false,
@@ -213,8 +213,8 @@ const rawOrganizations: PlatformOrganization[] = [
     seatLimit: 300,
     seatsUsed: 9,
     usage: 8600,
-    creditBalance: 500,
-    monthlyIncludedCredits: 500,
+    creditBalance: 250,
+    monthlyIncludedCredits: 250,
     topUpCredits: 250,
     pricePerVerification: 0.04,
     emailOtpBillingEnabled: true,

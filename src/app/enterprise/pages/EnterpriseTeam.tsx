@@ -110,7 +110,7 @@ export function EnterpriseTeam() {
           <h2 className="text-[24px] font-semibold text-foreground">Team & Roles</h2>
           <p className="text-[15px] text-muted-foreground mt-1">
             Organization portal users: Owner, Admin, Operations, Technical / API Manager, Finance / Billing, Compliance
-            / Auditor
+            / Auditor. Each member has one role at a time (MVP — no multi-role assignments).
           </p>
         </div>
         <Dialog>

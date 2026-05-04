@@ -264,11 +264,11 @@ export function EnterpriseSettings() {
           <Card className="p-6 shadow-sm border-red-200 bg-red-50 dark:bg-red-950/30">
             <h3 className="text-[16px] font-semibold text-red-900 dark:text-red-200 mb-2">Danger zone</h3>
             <p className="text-[13px] text-red-800 dark:text-red-300/90 mb-2">
-              Destructive or irreversible actions require elevated approval. Organization portal admins cannot
-              permanently disable or archive an organization.
+              Organization admins can request a deactivation review below. Permanent disable or archive requires a
+              VerifyMe Super Admin — portal admins cannot complete those actions themselves.
             </p>
             <p className="text-[12px] text-muted-foreground mb-4">
-              Permanent disable or archive can only be performed by a VerifyMe Super Admin.
+              Only a VerifyMe Super Admin can permanently disable or archive an organization.
             </p>
             <Button variant="outline" type="button" className="border-red-300 text-red-700 hover:bg-red-100 dark:hover:bg-red-950">
               Request organization deactivation review (mock)

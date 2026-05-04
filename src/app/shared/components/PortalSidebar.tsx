@@ -19,9 +19,10 @@ interface PortalSidebarProps {
 export function PortalSidebar({ title, items, logo }: PortalSidebarProps) {
   return (
     <aside className="w-64 border-r border-border bg-card flex flex-col h-screen sticky top-0">
-      <div className="h-24 flex items-center px-4 border-b border-border">
-        <div className="flex flex-col gap-2 w-full items-center">
-          <img src={logoImage} alt="VerifyMe" className="h-10 w-auto max-w-full object-contain" />
+      <div className="min-h-24 shrink-0 flex items-center px-4 py-3 border-b border-border">
+        <div className="flex flex-col gap-1.5 w-full items-center">
+          {logo && <div className="flex h-7 w-full items-center justify-center text-primary">{logo}</div>}
+          <img src={logoImage} alt="VerifyMe" className="h-9 w-auto max-w-full object-contain" />
           <p className="text-[11px] text-muted-foreground leading-none text-center">
             {title}
           </p>

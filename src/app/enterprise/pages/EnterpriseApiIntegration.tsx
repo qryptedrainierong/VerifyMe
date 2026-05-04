@@ -162,6 +162,20 @@ export function EnterpriseApiIntegration() {
         </Card>
       </div>
 
+      <Card className="p-5 border border-border shadow-sm bg-muted/20">
+        <h2 className="text-[16px] font-semibold text-foreground mb-2">Handle authorization (MVP)</h2>
+        <p className="text-[13px] text-muted-foreground leading-relaxed max-w-3xl">
+          Your organization’s representative enters the <strong className="text-foreground">one-time verification token</strong> on the{" "}
+          <strong className="text-foreground">VerifyMe Verification Page</strong>.{" "}
+          <strong className="text-foreground">Handle Authorization</strong> validates that token; when valid, it returns{" "}
+          <code className="text-[12px] bg-muted px-1 rounded">auth_code</code>,{" "}
+          <code className="text-[12px] bg-muted px-1 rounded">state</code>, and{" "}
+          <code className="text-[12px] bg-muted px-1 rounded">redirect_uri</code> so your backend can continue the OIDC-style
+          code flow. The registered <code className="text-[12px] bg-muted px-1 rounded">redirect_uri</code> receives the
+          authorization code only after validation succeeds.
+        </p>
+      </Card>
+
       <div>
         <h2 className="text-[18px] font-semibold text-foreground mb-2">OIDC endpoints (reference)</h2>
         <p className="text-[13px] text-muted-foreground mb-4 max-w-3xl">

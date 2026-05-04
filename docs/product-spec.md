@@ -8,6 +8,10 @@ This document captures agreed product scope and terminology. It does **not** spe
 
 No backend logic is implied by this document; it frames what the admin portals and public surfaces are **for**.
 
+## OIDC client scopes (MVP)
+
+MVP integrations enable **`openid`** only on client applications. Additional scopes are **future** (clearly labeled as such in UI and docs when shown); see [`api-overview.md`](./api-overview.md).
+
 ## Major Product Surfaces
 
 | Surface | Audience | Purpose (high level) |

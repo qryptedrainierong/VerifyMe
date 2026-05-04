@@ -381,6 +381,11 @@ export function CreateOrganizationDialog({
                 </SelectContent>
               </Select>
             </div>
+            <p className="text-[12px] text-muted-foreground">
+              Illustrative tier defaults: Starter <strong className="text-foreground">$10</strong>, Professional{" "}
+              <strong className="text-foreground">$50</strong>, Enterprise <strong className="text-foreground">$250</strong>{" "}
+              (adjust to match contract).
+            </p>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="init-credit">Initial credit allocation ($)</Label>

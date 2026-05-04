@@ -12,6 +12,11 @@ VerifyMe exposes **HTTP APIs** and **OIDC-style patterns** so organizations can 
 
 No request/response schemas are frozen in this repo during the design phase.
 
+## MVP scopes
+
+- **Enabled in MVP:** `openid` only.
+- **Future (not enabled in MVP):** e.g. `profile`, `offline_access`, or product-specific scopes — rollout and labeling TBD.
+
 ## Client Applications
 
 - One **organization** may register **multiple client applications** (different `client_id`s, redirect URIs, environments).
@@ -24,7 +29,7 @@ No request/response schemas are frozen in this repo during the design phase.
 
 ## Security Posture (Design)
 
-- **client_secret** (or mTLS, or private_key_jwt — TBD) is never shown in full in admin UIs after creation; only **status** (active, rotation due, not set).
+- **client_secret** (or mTLS, or private_key_jwt — TBD) is never shown in full in admin UIs after creation; only **status** (active, rotation due, not set). Design does **not** store raw **client_secret**, **private keys**, or **raw encrypted QR payload contents** for casual admin browsing or plaintext-at-rest export.
 - Redirect URIs must match registered values exactly (path + query rules TBD).
 
 ## Verification Service Boundary

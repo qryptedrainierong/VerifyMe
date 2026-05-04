@@ -195,9 +195,9 @@ export const enterpriseApiDocCards: EnterpriseApiDocCard[] = [
     id: "handle-auth",
     title: "Handle authorization",
     purpose:
-      "Your organization’s representative enters the one-time verification token on the VerifyMe Verification Page. That page calls Handle Authorization to validate the token. If valid, VerifyMe returns auth_code, state, and redirect_uri. Only after successful validation does the flow continue so your registered redirect_uri receives the auth_code.",
+      "Your organization’s representative enters the one-time verification token on the VerifyMe Verification Page. Handle Authorization validates the token; on success it returns auth_code, state, and redirect_uri so the flow can continue and your registered redirect_uri receives the authorization code only after validation succeeds.",
     parametersSummary:
-      "Invoked from the Verification Page with the verification token; on success returns auth_code, state, redirect_uri — redirect_uri receives auth_code only after validation succeeds.",
+      "Invoked from the Verification Page with the verification token; on success returns auth_code, state, redirect_uri.",
     readiness: "Configure redirect URI",
   },
   {

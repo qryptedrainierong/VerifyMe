@@ -40,5 +40,5 @@ Exact serialization (JSON vs CBOR), signing vs encrypting order, and binary vs U
 
 ## Admin Surfaces
 
-- **Organization Admin Portal** — QR linking configuration, key exchange status, payload format reference, sample structure (no live secrets in UI).
+- **Organization Admin Portal** — QR linking configuration, key exchange status, payload format reference, sample structure (no live secrets in UI; **no raw encrypted QR payload contents** surfaced for copy or download).
 - **VerifyMe Admin Portal** — Global oversight of linking abuse, key rotation, and support tooling (design phase).

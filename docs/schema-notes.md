@@ -9,7 +9,7 @@ These names are **working** relational concepts for engineering alignment. Colum
 | Table | Purpose |
 |-------|---------|
 | **organizations** | Tenant: profile, plan tier, status (active / suspended / archived), timezone, currency, address. |
-| **client_applications** | OIDC-style client apps: `client_id`, env, redirect URIs, scopes, secret metadata, org FK. |
+| **client_applications** | OIDC-style client apps: `client_id`, env, redirect URIs, scopes, **secret hashes / metadata** (not raw `client_secret` in plaintext at rest), org FK. |
 
 ## Admin Users
 
@@ -39,7 +39,7 @@ It stores device-bound **Encrypted_Auth_Cred** and **Transaction_Code** (and rel
 - No **biometric** template or raw biometric data
 - No **generated one-time verification token** (the token is generated and consumed in the flow; storage is limited to what the Verification Service needs for validation, not a copy of the token shown to the org rep)
 
-Wording intent: **privacy-preserving** — only the minimum device-bound cryptographic material needed for the service to function.
+Wording intent: **privacy-preserving** — only the minimum device-bound cryptographic material needed for the service to function. This row is **not** the place for raw **client_secret**, organization **private keys**, or **raw encrypted QR payload blobs** intended for admin download.
 
 ## Organization ↔ End-User Linking
 

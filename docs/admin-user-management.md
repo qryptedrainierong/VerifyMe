@@ -30,6 +30,8 @@ These roles apply to **customer** staff operating the **Organization Admin Porta
 | **Finance / Billing** | Credits, usage views, invoices, payment methods. |
 | **Compliance / Auditor** | Read-only verification logs and exports appropriate to the tenant. |
 
+Each **organization portal user** has **one primary role** at a time in the MVP design (no multi-role assignments).
+
 ## Authentication (Design Intent)
 
 - **Mechanism:** Admin login uses **email + password + email OTP** (second factor on each sign-in or per policy).
