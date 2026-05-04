@@ -49,15 +49,6 @@ export type MockCreditTransaction = {
   at: string;
 };
 
-export type MockVerificationSessionRow = {
-  id: string;
-  clientUserId: string;
-  outcome: "Verified" | "Failed" | "Expired" | "Error" | "Indeterminate";
-  billable: boolean;
-  cost: number;
-  at: string;
-};
-
 export type MockAuditRow = {
   id: string;
   event: string;
@@ -176,35 +167,6 @@ export function getMockCreditTransactions(organizationId: string): MockCreditTra
     { id: "tx-1", type: "Top-up", amount: 250, balanceAfter: 750, at: "2024-04-01T10:00:00Z" },
     { id: "tx-2", type: "Verification debit (billable)", amount: -12.5, balanceAfter: 737.5, at: "2024-04-05T16:30:00Z" },
     { id: "tx-3", type: "Email OTP (configurable)", amount: -0.5, balanceAfter: 737, at: "2024-04-06T11:12:00Z" },
-  ];
-}
-
-export function getMockVerificationSessions(organizationId: string): MockVerificationSessionRow[] {
-  return [
-    {
-      id: "VS-10021",
-      clientUserId: "crm_user_8821",
-      outcome: "Verified",
-      billable: true,
-      cost: 0.35,
-      at: "2024-04-09T12:01:00Z",
-    },
-    {
-      id: "VS-10022",
-      clientUserId: "crm_user_9012",
-      outcome: "Failed",
-      billable: true,
-      cost: 0.35,
-      at: "2024-04-09T11:40:00Z",
-    },
-    {
-      id: "VS-10023",
-      clientUserId: "crm_user_7731",
-      outcome: "Expired",
-      billable: false,
-      cost: 0,
-      at: "2024-04-09T10:05:00Z",
-    },
   ];
 }
 

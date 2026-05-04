@@ -1,8 +1,11 @@
-import { CheckCircle2, Circle, CreditCard, Users, AlertCircle, BarChart3 } from "lucide-react";
+import { useMemo } from "react";
+import { CheckCircle2, Circle, CreditCard, Users, AlertCircle, BarChart3, ScrollText } from "lucide-react";
 import { Link } from "react-router";
 import { Card } from "../../shared/components/ui/card";
 import { Button } from "../../shared/components/ui/button";
 import { Progress } from "../../shared/components/ui/progress";
+import { UnifiedBadge } from "../../shared/components/UnifiedBadge";
+import { getOrgVerificationSessions } from "../../shared/data/verificationSessionsMock";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import {
   enterpriseActiveEndUsers,
@@ -18,6 +21,15 @@ import {
 
 export function EnterpriseDashboard() {
   const usageData = enterpriseUsageTrend;
+  const orgSessionSnap = useMemo(() => {
+    const sessions = getOrgVerificationSessions(enterpriseOrganization.id);
+    const settled = sessions.filter((s) => s.outcome !== "pending");
+    const failed = settled.filter((s) => s.outcome === "failed").length;
+    const failRate = settled.length > 0 ? (failed / settled.length) * 100 : 0;
+    const billable = sessions.filter((s) => s.billable).length;
+    const nonBill = sessions.filter((s) => !s.billable).length;
+    return { total: sessions.length, failRate, billable, nonBill };
+  }, []);
 
   const recentActivity = enterpriseEndUsers.slice(0, 4).map((user, index) => ({
     id: index + 1,
@@ -175,6 +187,36 @@ export function EnterpriseDashboard() {
             <p className="text-[13px] text-muted-foreground mt-2">
               {formatCurrency(enterpriseUsageSpend)} billable spend (sample)
             </p>
+          </div>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="p-4 border border-border shadow-sm">
+          <div className="flex items-center gap-2 mb-2">
+            <ScrollText className="w-4 h-4 text-primary" />
+            <p className="text-[13px] font-semibold text-foreground">Verification logs (sample)</p>
+          </div>
+          <p className="text-[26px] font-semibold">{orgSessionSnap.total}</p>
+          <p className="text-[12px] text-muted-foreground mt-1">Sessions for this organization in mock data</p>
+          <Button variant="link" className="px-0 h-auto mt-2" asChild>
+            <Link to="/verification-logs">Open verification logs</Link>
+          </Button>
+        </Card>
+        <Card className="p-4 border border-border shadow-sm">
+          <p className="text-[13px] font-semibold text-foreground mb-2">Failed rate (settled)</p>
+          <p className="text-[26px] font-semibold text-orange-700">{orgSessionSnap.failRate.toFixed(1)}%</p>
+          <p className="text-[12px] text-muted-foreground mt-1">Failed ÷ non-pending outcomes</p>
+        </Card>
+        <Card className="p-4 border border-border shadow-sm">
+          <p className="text-[13px] font-semibold text-foreground mb-2">Billable vs not</p>
+          <p className="text-[22px] font-semibold">
+            {orgSessionSnap.billable}{" "}
+            <span className="text-muted-foreground text-[14px] font-normal">/ {orgSessionSnap.nonBill}</span>
+          </p>
+          <p className="text-[12px] text-muted-foreground mt-2">By final outcome (sample)</p>
+          <div className="mt-2">
+            <UnifiedBadge variant="integration" value="Operational (design)" />
           </div>
         </Card>
       </div>

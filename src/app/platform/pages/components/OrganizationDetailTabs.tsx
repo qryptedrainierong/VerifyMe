@@ -26,9 +26,13 @@ import {
   getMockCreditTransactions,
   getMockQrKeys,
   getMockRedirectUris,
-  getMockVerificationSessions,
   getMockVerificationSettings,
 } from "../../data/organizationDetailMock";
+import {
+  channelLabel,
+  getOrgVerificationSessions,
+  outcomeLabel,
+} from "../../../shared/data/verificationSessionsMock";
 import { BarChart3, CreditCard, Users } from "lucide-react";
 
 type OrganizationProfile = {
@@ -197,7 +201,7 @@ export function OrganizationDetailTabs({ organization, profile, organizationEndU
   const qrKeys = useMemo(() => getMockQrKeys(organization.id), [organization.id]);
   const verificationSettings = useMemo(() => getMockVerificationSettings(organization.id), [organization.id]);
   const creditTx = useMemo(() => getMockCreditTransactions(organization.id), [organization.id]);
-  const sessions = useMemo(() => getMockVerificationSessions(organization.id), [organization.id]);
+  const sessions = useMemo(() => getOrgVerificationSessions(organization.id), [organization.id]);
   const auditRows = useMemo(() => getMockAuditRows(organization.id), [organization.id]);
 
   const formatCurrency = (amount: number) =>
@@ -900,6 +904,7 @@ export function OrganizationDetailTabs({ organization, profile, organizationEndU
                 <tr>
                   <th className="text-left p-3 text-[12px] font-semibold text-muted-foreground uppercase">Session ID</th>
                   <th className="text-left p-3 text-[12px] font-semibold text-muted-foreground uppercase">client_user_id</th>
+                  <th className="text-left p-3 text-[12px] font-semibold text-muted-foreground uppercase">Channel</th>
                   <th className="text-left p-3 text-[12px] font-semibold text-muted-foreground uppercase">Outcome</th>
                   <th className="text-left p-3 text-[12px] font-semibold text-muted-foreground uppercase">Billable</th>
                   <th className="text-left p-3 text-[12px] font-semibold text-muted-foreground uppercase">Cost</th>
@@ -908,15 +913,16 @@ export function OrganizationDetailTabs({ organization, profile, organizationEndU
               </thead>
               <tbody className="divide-y divide-border">
                 {sessions.map((s) => (
-                  <tr key={s.id}>
-                    <td className="p-3 font-mono text-[13px]">{s.id}</td>
+                  <tr key={s.sessionId}>
+                    <td className="p-3 font-mono text-[13px]">{s.sessionId}</td>
                     <td className="p-3 font-mono text-[13px]">{s.clientUserId}</td>
-                    <td className="p-3 text-[13px]">{s.outcome}</td>
+                    <td className="p-3 text-[13px]">{channelLabel(s.channel)}</td>
+                    <td className="p-3 text-[13px]">{outcomeLabel(s.outcome)}</td>
                     <td className="p-3">
                       <UnifiedBadge variant="status" value={s.billable ? "Billable" : "Not billable"} />
                     </td>
                     <td className="p-3 tabular-nums">{formatCurrency(s.cost)}</td>
-                    <td className="p-3 text-[13px] text-muted-foreground">{formatDateTime(s.at)}</td>
+                    <td className="p-3 text-[13px] text-muted-foreground">{formatDateTime(s.createdAt)}</td>
                   </tr>
                 ))}
               </tbody>

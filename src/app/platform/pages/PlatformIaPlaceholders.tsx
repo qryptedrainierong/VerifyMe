@@ -27,33 +27,6 @@ export function PlatformIdentityLinks() {
   );
 }
 
-export function PlatformVerificationSessions() {
-  return (
-    <PortalPagePlaceholder
-      title="Verification Sessions"
-      description="Monitor verification attempts, outcomes, attempts used, billable status, OTP events, and session lifecycle."
-      sections={[
-        {
-          title: "Live & recent sessions",
-          description: "Timeline of OIDC-style verification flows from authorize through id_token issuance.",
-        },
-        {
-          title: "Attempts & outcomes",
-          description: "Per-session attempt counts, success/failure reasons, and token consumption.",
-        },
-        {
-          title: "Billable events",
-          description: "Which sessions counted toward credits, OTP surcharges, and organization pricing.",
-        },
-        {
-          title: "OTP & device signals",
-          description: "High-level OTP milestones only — no secret values or end-user credentials in the portal.",
-        },
-      ]}
-    />
-  );
-}
-
 export function PlatformClientApps() {
   return (
     <PortalPagePlaceholder

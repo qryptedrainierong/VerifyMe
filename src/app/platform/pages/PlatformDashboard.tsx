@@ -1,13 +1,37 @@
-import { Users, Building2, DollarSign, Database, AlertTriangle, TrendingUp, TrendingDown, Clock, AlertCircle, CreditCard, Activity } from "lucide-react";
+import {
+  Users,
+  Building2,
+  DollarSign,
+  Database,
+  AlertTriangle,
+  TrendingUp,
+  Clock,
+  AlertCircle,
+  CreditCard,
+  Activity,
+  ListChecks,
+} from "lucide-react";
 import { useMemo } from "react";
+import { Link } from "react-router";
 import { Card } from "../../shared/components/ui/card";
 import { Button } from "../../shared/components/ui/button";
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { buildInitialOrganizations, getVerificationSpend } from "../data/platformOrganizationsSample";
 import { platformEndUserAssociations } from "../data/platformUsersSample";
+import { getVerificationSessionsMock } from "../../shared/data/verificationSessionsMock";
+import { UnifiedBadge } from "../../shared/components/UnifiedBadge";
 
 export function PlatformDashboard() {
   const organizations = useMemo(() => buildInitialOrganizations(), []);
+  const sessionSnapshot = useMemo(() => {
+    const sessions = getVerificationSessionsMock();
+    const settled = sessions.filter((s) => s.outcome !== "pending");
+    const failed = settled.filter((s) => s.outcome === "failed").length;
+    const failRate = settled.length > 0 ? (failed / settled.length) * 100 : 0;
+    const billable = sessions.filter((s) => s.billable).length;
+    const nonBillable = sessions.filter((s) => !s.billable).length;
+    return { total: sessions.length, failRate, billable, nonBillable };
+  }, []);
   const totalOrganizations = organizations.length;
   const totalUsage = organizations.reduce((sum, org) => sum + org.usage, 0);
   const totalRevenue = organizations.reduce((sum, org) => sum + getVerificationSpend(org), 0);
@@ -172,6 +196,38 @@ export function PlatformDashboard() {
             </p>
             <p className="text-[12px] text-muted-foreground mt-2">Billable-style events this month (sample)</p>
           </div>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="p-4 border border-border shadow-sm">
+          <div className="flex items-center gap-2 mb-2">
+            <ListChecks className="w-4 h-4 text-primary" />
+            <p className="text-[13px] font-semibold text-foreground">Verification sessions (sample)</p>
+          </div>
+          <p className="text-[28px] font-semibold">{sessionSnapshot.total}</p>
+          <p className="text-[12px] text-muted-foreground mt-1">Mock sessions in design dataset</p>
+          <Button variant="link" className="px-0 h-auto mt-2" asChild>
+            <Link to="/verification-sessions">Open verification sessions</Link>
+          </Button>
+        </Card>
+        <Card className="p-4 border border-border shadow-sm">
+          <p className="text-[13px] font-semibold text-foreground mb-2">Failed rate (settled)</p>
+          <p className="text-[28px] font-semibold text-orange-700">{sessionSnapshot.failRate.toFixed(1)}%</p>
+          <p className="text-[12px] text-muted-foreground mt-1">Failed ÷ non-pending outcomes</p>
+        </Card>
+        <Card className="p-4 border border-border shadow-sm">
+          <p className="text-[13px] font-semibold text-foreground mb-2">Billable vs not</p>
+          <p className="text-[22px] font-semibold">
+            {sessionSnapshot.billable}{" "}
+            <span className="text-muted-foreground text-[14px] font-normal">/ {sessionSnapshot.nonBillable}</span>
+          </p>
+          <p className="text-[12px] text-muted-foreground mt-1">By final outcome (sample)</p>
+        </Card>
+        <Card className="p-4 border border-border shadow-sm">
+          <p className="text-[13px] font-semibold text-foreground mb-2">Verification Service</p>
+          <UnifiedBadge variant="integration" value="Operational (design)" />
+          <p className="text-[12px] text-muted-foreground mt-2">No live health check in this UI build</p>
         </Card>
       </div>
 

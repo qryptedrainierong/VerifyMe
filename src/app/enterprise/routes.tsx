@@ -6,7 +6,7 @@ import { EnterpriseTeam } from "./pages/EnterpriseTeam";
 import { EnterpriseUsage } from "./pages/EnterpriseUsage";
 import { EnterpriseBilling } from "./pages/EnterpriseBilling";
 import { EnterpriseSettings } from "./pages/EnterpriseSettings";
-import { EnterpriseVerificationLogs } from "./pages/EnterpriseIaPlaceholders";
+import { EnterpriseVerificationLogs } from "./pages/EnterpriseVerificationLogs";
 import { EnterpriseApiIntegration } from "./pages/EnterpriseApiIntegration";
 import { EnterpriseQrLinking } from "./pages/EnterpriseQrLinking";
 

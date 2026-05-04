@@ -280,13 +280,9 @@ const rawOrganizations: PlatformOrganization[] = [
 ];
 
 export function applyPlanDefaultsToOrganization(organization: PlatformOrganization): PlatformOrganization {
-  const planMetrics = planDefaults[organization.plan];
   return {
     ...organization,
-    seatLimit: planMetrics.seatLimit,
-    seatsUsed: Math.min(organization.seatsUsed, planMetrics.seatLimit),
-    creditBalance: planMetrics.creditBalance,
-    monthlyIncludedCredits: planMetrics.monthlyIncludedCredits,
+    seatsUsed: Math.min(organization.seatsUsed, organization.seatLimit),
   };
 }
 
