@@ -34,6 +34,12 @@ Two portal modes share one deployable SPA, not two separate apps.
 
 Routers are created through functions (e.g. `getPlatformRouter()`) rather than a single shared singleton, to reduce stale router state when switching portals or during HMR.
 
+### UX — Organization Detail vs platform-wide pages
+
+Organization Detail shows organization-specific summary (info, status), usage highlights, an integration readiness checklist, and governance controls. Deep operational tables—verification sessions, audit logs, billing activity, client apps / API, identity links, and similar—live on platform-wide VerifyMe Admin routes; Organization Detail links to those views with an `organizationId` query param when filters are supported (design-phase until pages read the param).
+
+VerifyMe Users (`/verifyme-users`), Identity Links (`/identity-links`), and Client Apps / API (`/client-apps`) read `organizationId` from the query string when it matches a sample organization id and pre-select the organization filter; otherwise they show a short design-phase note without breaking navigation. The same pattern should extend to Verification Sessions, Billing, and Audit Logs when those screens add query-aware filtering.
+
 ## Design system
 
 Tokens live in `src/styles/theme.css` with Tailwind mapping. Prefer token changes over per-page color overrides.

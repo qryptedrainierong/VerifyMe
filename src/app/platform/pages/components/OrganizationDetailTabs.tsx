@@ -21,7 +21,8 @@ import {
 } from "../../data/platformOrganizationsSample";
 import type { PlatformEndUserAssociation } from "../../data/platformUsersSample";
 import { patchPlatformOrganization } from "../../data/platformOrganizationSessionOverrides";
-import { BarChart3, CreditCard, DollarSign, TrendingUp, Users } from "lucide-react";
+import { Link } from "react-router";
+import { BarChart3, CreditCard, DollarSign, ExternalLink, TrendingUp, Users } from "lucide-react";
 
 type OrganizationProfile = {
   owner: { name: string; email: string; phone: string };
@@ -41,11 +42,12 @@ export function OrganizationDetailTabs({
   profile,
   organizationEndUsers: _organizationEndUsers,
 }: OrganizationDetailTabsProps) {
-  const usageSpend = getVerificationSpend(organization);
-  const creditPosition = organization.creditBalance - usageSpend;
+  const orgId = organization.id;
+  const billableSpend = getVerificationSpend(organization);
+  const creditPosition = organization.creditBalance - billableSpend;
   const walletAppliedToBillablePct =
-    organization.creditBalance > 0 && usageSpend <= organization.creditBalance
-      ? Math.min(100, (usageSpend / organization.creditBalance) * 100)
+    organization.creditBalance > 0 && billableSpend <= organization.creditBalance
+      ? Math.min(100, (billableSpend / organization.creditBalance) * 100)
       : null;
 
   const [orgControlMessage, setOrgControlMessage] = useState<string | null>(null);
@@ -72,23 +74,39 @@ export function OrganizationDetailTabs({
 
   const formatNumber = (num: number) => new Intl.NumberFormat("en-US").format(num);
 
-  const setupSteps = [
+  const setupSteps: Array<{
+    id: string;
+    label: string;
+    done: boolean;
+    cta?: { to: string; label: string };
+  }> = [
     { id: "profile", label: "Complete profile", done: organization.status !== "draft" },
-    { id: "api", label: "Configure API integration", done: organization.integrationStatus !== "not_configured" },
+    {
+      id: "api",
+      label: "Configure API integration",
+      done: organization.integrationStatus !== "not_configured",
+      cta: { to: `/client-apps?organizationId=${encodeURIComponent(orgId)}`, label: "Client Apps / API" },
+    },
     {
       id: "redirect",
       label: "Add redirect URI",
       done: !["not_configured", "missing_redirect_uri"].includes(organization.integrationStatus),
+      cta: {
+        to: `/client-apps?organizationId=${encodeURIComponent(orgId)}#redirect-uris`,
+        label: "Redirect URIs",
+      },
     },
     {
       id: "qr",
       label: "Configure QR linking keys",
       done: !["not_configured", "missing_keys"].includes(organization.integrationStatus),
+      cta: { to: `/identity-links?organizationId=${encodeURIComponent(orgId)}`, label: "Identity Links" },
     },
     {
       id: "verify",
       label: "Configure verification settings",
       done: organization.integrationStatus === "production_active" || organization.integrationStatus === "sandbox_active",
+      cta: { to: `/settings?organizationId=${encodeURIComponent(orgId)}`, label: "Platform settings" },
     },
     { id: "test", label: "Test integration", done: organization.integrationStatus === "production_active" },
   ];
@@ -204,6 +222,60 @@ export function OrganizationDetailTabs({
               </div>
             </Card>
           </div>
+
+          <Card className="border border-border shadow-sm">
+            <div className="p-6 border-b border-border">
+              <h3 className="text-[16px] font-semibold text-foreground">Related Views</h3>
+              <p className="text-[12px] text-muted-foreground mt-1 leading-relaxed">
+                These links open platform-wide views with an organization filter. Filtered view behavior is design-phase
+                until target screens read the organizationId query param.
+              </p>
+            </div>
+            <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+              <Link
+                to={`/client-apps?organizationId=${encodeURIComponent(orgId)}`}
+                className="flex items-center gap-2 rounded-lg border border-border px-3 py-2.5 text-[13px] text-primary hover:bg-accent/60 transition-colors"
+              >
+                <ExternalLink className="w-3.5 h-3.5 shrink-0 opacity-70" />
+                Client Apps / API
+              </Link>
+              <Link
+                to={`/verification-sessions?organizationId=${encodeURIComponent(orgId)}`}
+                className="flex items-center gap-2 rounded-lg border border-border px-3 py-2.5 text-[13px] text-primary hover:bg-accent/60 transition-colors"
+              >
+                <ExternalLink className="w-3.5 h-3.5 shrink-0 opacity-70" />
+                Verification Sessions
+              </Link>
+              <Link
+                to={`/billing?organizationId=${encodeURIComponent(orgId)}`}
+                className="flex items-center gap-2 rounded-lg border border-border px-3 py-2.5 text-[13px] text-primary hover:bg-accent/60 transition-colors"
+              >
+                <ExternalLink className="w-3.5 h-3.5 shrink-0 opacity-70" />
+                Billing & Credits
+              </Link>
+              <Link
+                to={`/audit-logs?organizationId=${encodeURIComponent(orgId)}`}
+                className="flex items-center gap-2 rounded-lg border border-border px-3 py-2.5 text-[13px] text-primary hover:bg-accent/60 transition-colors"
+              >
+                <ExternalLink className="w-3.5 h-3.5 shrink-0 opacity-70" />
+                Audit Logs
+              </Link>
+              <Link
+                to={`/identity-links?organizationId=${encodeURIComponent(orgId)}`}
+                className="flex items-center gap-2 rounded-lg border border-border px-3 py-2.5 text-[13px] text-primary hover:bg-accent/60 transition-colors"
+              >
+                <ExternalLink className="w-3.5 h-3.5 shrink-0 opacity-70" />
+                Identity Links / Linked End Users
+              </Link>
+              <Link
+                to={`/verifyme-users?organizationId=${encodeURIComponent(orgId)}`}
+                className="flex items-center gap-2 rounded-lg border border-border px-3 py-2.5 text-[13px] text-primary hover:bg-accent/60 transition-colors"
+              >
+                <ExternalLink className="w-3.5 h-3.5 shrink-0 opacity-70" />
+                VerifyMe Users
+              </Link>
+            </div>
+          </Card>
         </TabsContent>
 
         <TabsContent value="usage" className="flex-1 overflow-auto p-8 space-y-6 m-0 mt-0">
@@ -217,7 +289,7 @@ export function OrganizationDetailTabs({
                   </div>
                 </div>
                 <p className="text-[13px] text-muted-foreground mb-1">Billable spend this period</p>
-                <p className="text-[28px] font-semibold text-foreground tabular-nums">{formatCurrency(usageSpend)}</p>
+                <p className="text-[28px] font-semibold text-foreground tabular-nums">{formatCurrency(billableSpend)}</p>
                 <p className="text-[12px] text-muted-foreground mt-1">From billable verification outcomes (sample)</p>
               </Card>
               <Card className="p-6 border border-border shadow-sm">
@@ -281,6 +353,21 @@ export function OrganizationDetailTabs({
               Credits are monetary wallet value. Verification session volume and billable spend are tracked separately.
             </p>
           </Card>
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-[12px] text-muted-foreground">Open filtered platform views:</span>
+            <Button variant="outline" size="sm" asChild>
+              <Link to={`/verification-sessions?organizationId=${encodeURIComponent(orgId)}`}>
+                View verification sessions
+                <ExternalLink className="w-3.5 h-3.5 ml-1 opacity-70" />
+              </Link>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <Link to={`/billing?organizationId=${encodeURIComponent(orgId)}`}>
+                View billing activity
+                <ExternalLink className="w-3.5 h-3.5 ml-1 opacity-70" />
+              </Link>
+            </Button>
+          </div>
         </TabsContent>
 
         <TabsContent value="integration" className="flex-1 overflow-auto p-8 space-y-6 m-0 mt-0">
@@ -290,23 +377,39 @@ export function OrganizationDetailTabs({
               <p className="text-[13px] text-muted-foreground mt-1">
                 Remaining steps are completed in the Organization Admin Portal unless noted.
               </p>
+              <p className="text-[12px] text-muted-foreground mt-2 leading-relaxed">
+                This checklist is a readiness guide. Links open VerifyMe Admin pages for deeper API, redirect, identity,
+                and settings work—they do not replace full integration management.
+              </p>
             </div>
             <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-3">
               {setupSteps.map((step) => (
                 <div
                   key={step.id}
-                  className={`flex items-center gap-3 rounded-lg border px-4 py-3 ${
+                  className={`flex flex-col gap-2 rounded-lg border px-4 py-3 sm:flex-row sm:items-start sm:justify-between ${
                     step.done ? "border-green-200 bg-green-50/40" : "border-border bg-muted/20"
                   }`}
                 >
-                  <span
-                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold ${
-                      step.done ? "bg-green-600 text-white" : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    {step.done ? "✓" : ""}
-                  </span>
-                  <p className={`text-[13px] ${step.done ? "text-foreground" : "text-muted-foreground"}`}>{step.label}</p>
+                  <div className="flex items-start gap-3 min-w-0 flex-1">
+                    <span
+                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold mt-0.5 ${
+                        step.done ? "bg-green-600 text-white" : "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {step.done ? "✓" : ""}
+                    </span>
+                    <p className={`text-[13px] leading-snug ${step.done ? "text-foreground" : "text-muted-foreground"}`}>
+                      {step.label}
+                    </p>
+                  </div>
+                  {step.cta ? (
+                    <Button variant="link" size="sm" className="h-auto py-0 px-0 sm:shrink-0 self-start sm:self-center" asChild>
+                      <Link to={step.cta.to}>
+                        {step.cta.label}
+                        <ExternalLink className="w-3.5 h-3.5 opacity-70" />
+                      </Link>
+                    </Button>
+                  ) : null}
                 </div>
               ))}
             </div>
@@ -412,6 +515,15 @@ export function OrganizationDetailTabs({
               </div>
               <p className="text-[12px] text-muted-foreground leading-relaxed">
                 Only VerifyMe Super Admin can permanently disable or archive an organization.
+              </p>
+            </div>
+          </Card>
+
+          <Card className="border border-border bg-muted/15 shadow-sm">
+            <div className="p-4">
+              <p className="text-[12px] text-muted-foreground leading-relaxed">
+                Operational details such as sessions, billing activity, and audit history are reviewed in platform-wide
+                filtered views.
               </p>
             </div>
           </Card>

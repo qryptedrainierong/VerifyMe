@@ -1,19 +1,19 @@
 import type { PlatformEndUserAssociation } from "./platformUsersSample";
 
+export type GroupedEndUserRowStatus = "active" | "pending" | "suspended" | "disabled";
+
 export type GroupedEndUser = {
   verifymeUsername: string;
   email: string;
   memberships: PlatformEndUserAssociation[];
-  /** Worst-wins across memberships: Suspended > Pending > Active */
-  rowStatus: "active" | "pending" | "suspended";
-  totalApiCalls: number;
+  /** Worst-wins across memberships: Disabled > Suspended > Pending > Active */
+  rowStatus: GroupedEndUserRowStatus;
+  totalVerificationSessions: number;
   lastActiveMax: string | null;
 };
 
-function aggregateRowStatus(
-  memberships: PlatformEndUserAssociation[],
-): "active" | "pending" | "suspended" {
-  // Row badge: any suspended → Suspended; else any pending → Pending; else Active
+function aggregateRowStatus(memberships: PlatformEndUserAssociation[]): GroupedEndUserRowStatus {
+  if (memberships.some((m) => m.status === "disabled")) return "disabled";
   if (memberships.some((m) => m.status === "suspended")) return "suspended";
   if (memberships.some((m) => m.status === "pending")) return "pending";
   return "active";
@@ -54,7 +54,7 @@ export function groupAssociationsByVerifymeUsername(
       email,
       memberships: sorted,
       rowStatus: aggregateRowStatus(sorted),
-      totalApiCalls: sorted.reduce((s, m) => s + m.apiCalls, 0),
+      totalVerificationSessions: sorted.reduce((s, m) => s + m.verificationSessions, 0),
       lastActiveMax: maxLastActive(sorted),
     });
   }

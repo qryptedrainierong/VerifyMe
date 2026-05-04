@@ -7,7 +7,8 @@ import { PlatformUsers } from "./pages/PlatformUsers";
 import { PlatformBilling } from "./pages/PlatformBilling";
 import { PlatformAuditLogs } from "./pages/PlatformAuditLogs";
 import { PlatformSettings } from "./pages/PlatformSettings";
-import { PlatformClientApps, PlatformIdentityLinks } from "./pages/PlatformIaPlaceholders";
+import { PlatformClientApps } from "./pages/PlatformClientApps";
+import { PlatformIdentityLinks } from "./pages/PlatformIdentityLinks";
 import { PlatformVerificationSessions } from "./pages/PlatformVerificationSessions";
 
 // Lazy router creation to prevent HMR connection errors

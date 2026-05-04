@@ -1,5 +1,6 @@
 import { Search, Filter, MoreVertical, ArrowUpDown, ChevronDown, ChevronRight } from "lucide-react";
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router";
 import { Button } from "../../shared/components/ui/button";
 import { Input } from "../../shared/components/ui/input";
 import { Card } from "../../shared/components/ui/card";
@@ -24,30 +25,66 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../../shared/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../shared/components/ui/tabs";
 import { UnifiedBadge } from "../../shared/components/UnifiedBadge";
-import { platformEndUserAssociations } from "../data/platformUsersSample";
-import {
-  groupAssociationsByVerifymeUsername,
-} from "../data/groupEndUsers";
+import { platformEndUserAssociations, type PlatformEndUserAssociation } from "../data/platformUsersSample";
+import { groupAssociationsByVerifymeUsername, type GroupedEndUserRowStatus } from "../data/groupEndUsers";
+import { buildInitialOrganizations } from "../data/platformOrganizationsSample";
+
+function maskVerifymeIdentity(username: string): string {
+  const u = username.trim();
+  if (u.length <= 4) return "vmid••••";
+  return `vmid••••${u.slice(-4)}`;
+}
+
+function mockDeviceSecureState(username: string): { enrolledDevices: number; summary: string; trustLabel: string } {
+  const n = (username.length % 3) + 2;
+  return {
+    enrolledDevices: n,
+    summary: `${n} device(s) enrolled for step-up and session binding (sample).`,
+    trustLabel: username.length % 2 === 0 ? "Healthy" : "Review suggested",
+  };
+}
 
 export function PlatformUsers() {
+  const [searchParams] = useSearchParams();
+  const urlOrganizationId = searchParams.get("organizationId");
+
   const [searchQuery, setSearchQuery] = useState("");
   const [organizationFilter, setOrganizationFilter] = useState("all-orgs");
   const [statusFilter, setStatusFilter] = useState("all-status");
   const [usersData, setUsersData] = useState(platformEndUserAssociations);
   const [message, setMessage] = useState<string | null>(null);
-  const [selectedVerifymeUsername, setSelectedVerifymeUsername] = useState<string | null>(null);
+  const [detailUsername, setDetailUsername] = useState<string | null>(null);
+  const [detailTab, setDetailTab] = useState("profile");
   const [expandedUsers, setExpandedUsers] = useState<Record<string, boolean>>({});
+
+  const [suspendOpen, setSuspendOpen] = useState(false);
+  const [reactivateOpen, setReactivateOpen] = useState(false);
+  const [disableOpen, setDisableOpen] = useState(false);
+  const [disableTyped, setDisableTyped] = useState("");
+  const [resetOpen, setResetOpen] = useState(false);
+  const [restoreOpen, setRestoreOpen] = useState(false);
+
+  const knownOrgIds = useMemo(() => new Set(buildInitialOrganizations().map((o) => o.id)), []);
+
+  useEffect(() => {
+    if (urlOrganizationId && knownOrgIds.has(urlOrganizationId)) {
+      setOrganizationFilter(urlOrganizationId);
+    }
+  }, [urlOrganizationId, knownOrgIds]);
 
   const qualifyingAssociations = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     return usersData.filter((user) => {
       const matchesQuery =
-        query.length === 0
-        || user.verifymeUsername.toLowerCase().includes(query)
-        || user.enterpriseUsername.toLowerCase().includes(query)
-        || user.email.toLowerCase().includes(query)
-        || user.organization.toLowerCase().includes(query);
+        query.length === 0 ||
+        user.verifymeUsername.toLowerCase().includes(query) ||
+        user.enterpriseUsername.toLowerCase().includes(query) ||
+        user.email.toLowerCase().includes(query) ||
+        user.organization.toLowerCase().includes(query) ||
+        user.organizationId.toLowerCase().includes(query) ||
+        maskVerifymeIdentity(user.verifymeUsername).toLowerCase().includes(query);
       const matchesOrg =
         organizationFilter === "all-orgs" || user.organizationId === organizationFilter;
       const matchesStatus = statusFilter === "all-status" || user.status === statusFilter;
@@ -62,9 +99,9 @@ export function PlatformUsers() {
   }, [usersData, qualifyingAssociations]);
 
   const selectedUserLinks = useMemo(() => {
-    if (!selectedVerifymeUsername) return [];
-    return usersData.filter((u) => u.verifymeUsername === selectedVerifymeUsername);
-  }, [usersData, selectedVerifymeUsername]);
+    if (!detailUsername) return [];
+    return usersData.filter((u) => u.verifymeUsername === detailUsername);
+  }, [usersData, detailUsername]);
 
   const selectedRowGroup = useMemo(() => {
     if (selectedUserLinks.length === 0) return null;
@@ -77,72 +114,33 @@ export function PlatformUsers() {
     return Array.from(unique.entries()).map(([id, name]) => ({ id, name }));
   }, [usersData]);
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString + 'Z').toLocaleDateString("en-US", {
+  const formatDate = (dateString: string) =>
+    new Date(dateString + "Z").toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
       year: "numeric",
       timeZone: "UTC",
     });
-  };
 
   const formatRelativeTime = (dateString: string | null) => {
     if (!dateString) return "Never";
-
-    const date = new Date(dateString + 'Z'); // Parse as UTC
+    const date = new Date(dateString + "Z");
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 60) {
-      return `${diffMins} min ago (UTC)`;
-    } else if (diffHours < 24) {
-      return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago (UTC)`;
-    } else {
-      return `${diffDays} day${diffDays > 1 ? "s" : ""} ago (UTC)`;
-    }
+    if (diffMins < 60) return `${diffMins} min ago (UTC)`;
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago (UTC)`;
+    return `${diffDays} day${diffDays > 1 ? "s" : ""} ago (UTC)`;
   };
 
-  const toggleUserStatus = (verifymeUsername: string) => {
-    const links = usersData.filter((user) => user.verifymeUsername === verifymeUsername);
-    if (links.length === 0) return;
-    const group = groupAssociationsByVerifymeUsername(links)[0];
-    if (!group) return;
-    const linkedCount = links.length;
-    const nextStatus = group.rowStatus === "suspended" ? "active" : "suspended";
-    setUsersData((prev) =>
-      prev.map((user) =>
-        user.verifymeUsername === verifymeUsername ? { ...user, status: nextStatus } : user,
-      ),
-    );
-    setMessage(`${verifymeUsername} is now ${nextStatus} across ${linkedCount} linked organization${linkedCount > 1 ? "s" : ""}.`);
+  const rowStatusLabel = (status: GroupedEndUserRowStatus | PlatformEndUserAssociation["status"]) => {
+    if (status === "active") return "Active";
+    if (status === "pending") return "Pending";
+    if (status === "suspended") return "Suspended";
+    return "Disabled";
   };
-
-  const resetCredentials = (verifymeUsername: string) => {
-    const target = usersData.find((user) => user.verifymeUsername === verifymeUsername);
-    if (!target) return;
-    const linkedCount = usersData.filter((user) => user.verifymeUsername === verifymeUsername).length;
-    setUsersData((prev) =>
-      prev.map((user) =>
-        user.verifymeUsername === verifymeUsername
-          ? { ...user, status: "pending", lastActive: null }
-          : user,
-      ),
-    );
-    setMessage(`Credentials reset for ${verifymeUsername} across ${linkedCount} linked organization${linkedCount > 1 ? "s" : ""}.`);
-  };
-
-  const removeUser = (verifymeUsername: string) => {
-    const linkedCount = usersData.filter((item) => item.verifymeUsername === verifymeUsername).length;
-    setUsersData((prev) => prev.filter((item) => item.verifymeUsername !== verifymeUsername));
-    setSelectedVerifymeUsername((prev) => (prev === verifymeUsername ? null : prev));
-    setMessage(`${verifymeUsername} removed from ${linkedCount} linked organization${linkedCount > 1 ? "s" : ""}.`);
-  };
-
-  const rowStatusLabel = (status: "active" | "pending" | "suspended") =>
-    status === "active" ? "Active" : status === "pending" ? "Pending" : "Suspended";
 
   const getEnterpriseUsername = (enterpriseUsername: string, organizationId: string) => {
     const value = enterpriseUsername.trim();
@@ -150,15 +148,49 @@ export function PlatformUsers() {
   };
 
   const toggleExpanded = (verifymeUsername: string) => {
-    setExpandedUsers((prev) => ({
-      ...prev,
-      [verifymeUsername]: !prev[verifymeUsername],
-    }));
+    setExpandedUsers((prev) => ({ ...prev, [verifymeUsername]: !prev[verifymeUsername] }));
   };
+
+  const openDetail = (username: string, tab: string) => {
+    setDetailUsername(username);
+    setDetailTab(tab);
+  };
+
+  const closeDetail = () => {
+    setDetailUsername(null);
+    setDetailTab("profile");
+    setSuspendOpen(false);
+    setReactivateOpen(false);
+    setDisableOpen(false);
+    setDisableTyped("");
+    setResetOpen(false);
+    setRestoreOpen(false);
+  };
+
+  const applyStatusToUser = (verifymeUsername: string, status: PlatformEndUserAssociation["status"]) => {
+    setUsersData((prev) =>
+      prev.map((user) => (user.verifymeUsername === verifymeUsername ? { ...user, status } : user)),
+    );
+  };
+
+  const applyPendingReset = (verifymeUsername: string) => {
+    setUsersData((prev) =>
+      prev.map((user) =>
+        user.verifymeUsername === verifymeUsername
+          ? { ...user, status: "pending" as const, lastActive: null }
+          : user,
+      ),
+    );
+  };
+
+  const detailOpen = detailUsername !== null;
+  const controlsTarget = detailUsername;
+
+  const disableMatches =
+    controlsTarget && disableTyped.trim().toLowerCase() === controlsTarget.toLowerCase();
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
       <div className="p-8 border-b border-border">
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -169,18 +201,27 @@ export function PlatformUsers() {
             </p>
           </div>
         </div>
-        {message && (
+        {urlOrganizationId ? (
+          <p className="text-[12px] text-muted-foreground mb-3 leading-relaxed">
+            URL filter: <span className="font-mono text-foreground">{urlOrganizationId}</span>
+            {!knownOrgIds.has(urlOrganizationId) ? (
+              <> — not found in sample organizations; showing all until you pick a valid org.</>
+            ) : (
+              <> — list filtered to this organization when present in sample data.</>
+            )}
+          </p>
+        ) : null}
+        {message ? (
           <div className="mb-4 rounded-md border border-green-500/40 bg-green-500/10 px-4 py-2 text-sm text-green-700 dark:text-green-300">
             {message}
           </div>
-        )}
+        ) : null}
 
-        {/* Filters */}
-        <div className="flex items-center gap-3">
-          <div className="relative flex-1 max-w-md">
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="relative flex-1 max-w-md min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Search by username..."
+              placeholder="Search username, email, org, masked VerifyMe ID…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 h-10 bg-background"
@@ -201,7 +242,6 @@ export function PlatformUsers() {
             </SelectContent>
           </Select>
 
-
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-[180px] h-10">
               <SelectValue placeholder="All Status" />
@@ -211,6 +251,7 @@ export function PlatformUsers() {
               <SelectItem value="active">Active</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="suspended">Suspended</SelectItem>
+              <SelectItem value="disabled">Disabled</SelectItem>
             </SelectContent>
           </Select>
 
@@ -229,7 +270,6 @@ export function PlatformUsers() {
         </div>
       </div>
 
-      {/* Table */}
       <div className="flex-1 overflow-auto">
         <Card className="m-8 border border-border shadow-sm">
           <div className="overflow-x-auto min-w-[900px]">
@@ -248,12 +288,10 @@ export function PlatformUsers() {
                       <ArrowUpDown className="w-3 h-3" />
                     </button>
                   </th>
-                  <th className="text-left p-4 text-[13px] font-medium text-muted-foreground">
-                    Status
-                  </th>
+                  <th className="text-left p-4 text-[13px] font-medium text-muted-foreground">Status</th>
                   <th className="text-left p-4 text-[13px] font-medium text-muted-foreground">
                     <button type="button" className="flex items-center gap-1 hover:text-foreground transition-colors">
-                      Total API Calls
+                      Verification Sessions
                       <ArrowUpDown className="w-3 h-3" />
                     </button>
                   </th>
@@ -263,16 +301,13 @@ export function PlatformUsers() {
                       <ArrowUpDown className="w-3 h-3" />
                     </button>
                   </th>
-                  <th className="text-left p-4 text-[13px] font-medium text-muted-foreground w-[60px]">
-                    Actions
-                  </th>
+                  <th className="text-left p-4 text-[13px] font-medium text-muted-foreground w-[60px]">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {groupedUsers.map((group) => {
                   const isExpanded = !!expandedUsers[group.verifymeUsername];
                   const memberships = group.memberships;
-
                   return (
                     <Fragment key={group.verifymeUsername}>
                       <tr className="hover:bg-accent/5 transition-colors">
@@ -296,20 +331,15 @@ export function PlatformUsers() {
                           <p className="text-[14px] text-foreground">{group.email}</p>
                         </td>
                         <td className="p-4 align-top">
-                          <UnifiedBadge
-                            variant="status"
-                            value={rowStatusLabel(group.rowStatus)}
-                          />
+                          <UnifiedBadge variant="status" value={rowStatusLabel(group.rowStatus)} />
                         </td>
                         <td className="p-4 align-top">
                           <p className="text-[14px] font-medium text-foreground tabular-nums">
-                            {group.totalApiCalls.toLocaleString()}
+                            {group.totalVerificationSessions.toLocaleString()}
                           </p>
                         </td>
                         <td className="p-4 align-top">
-                          <p className="text-[14px] text-foreground">
-                            {formatRelativeTime(group.lastActiveMax)}
-                          </p>
+                          <p className="text-[14px] text-foreground">{formatRelativeTime(group.lastActiveMax)}</p>
                         </td>
                         <td className="p-4 align-top">
                           <DropdownMenu>
@@ -319,59 +349,42 @@ export function PlatformUsers() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={() => setSelectedVerifymeUsername(group.verifymeUsername)}
-                              >
-                                View Details
+                              <DropdownMenuItem onClick={() => openDetail(group.verifymeUsername, "profile")}>
+                                View details
                               </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => toggleUserStatus(group.verifymeUsername)}
-                              >
-                                {group.rowStatus === "suspended" ? "Activate User" : "Suspend User"}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => resetCredentials(group.verifymeUsername)}
-                              >
-                                Reset Credentials
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className="text-red-600"
-                                onClick={() => removeUser(group.verifymeUsername)}
-                              >
-                                Delete User
+                              <DropdownMenuItem onClick={() => openDetail(group.verifymeUsername, "controls")}>
+                                Open User Controls
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </td>
                       </tr>
-                      {isExpanded && memberships.map((m) => (
-                        <tr key={m.id} className="bg-accent/5">
-                          <td className="py-2 pr-4 pl-10 align-top">
-                            <p className="text-[12px] font-mono text-foreground">
-                              {getEnterpriseUsername(m.enterpriseUsername, m.organizationId)}
-                            </p>
-                          </td>
-                          <td className="py-2 px-4 align-top">
-                            <p className="text-[12px] text-foreground">{m.organization}</p>
-                            <p className="text-[11px] font-mono text-muted-foreground">{m.organizationId}</p>
-                          </td>
-                          <td className="py-2 px-4 align-top">
-                            <UnifiedBadge variant="status" value={rowStatusLabel(m.status)} />
-                          </td>
-                          <td className="py-2 px-4 align-top">
-                            <p className="text-[12px] font-mono text-muted-foreground">
-                              <span className="tabular-nums">{m.apiCalls.toLocaleString()}</span>
-                              {" calls"}
-                            </p>
-                          </td>
-                          <td className="py-2 px-4 align-top">
-                            <p className="text-[12px] text-foreground">
-                              {formatRelativeTime(m.lastActive)}
-                            </p>
-                          </td>
-                          <td className="py-2 px-4" />
-                        </tr>
-                      ))}
+                      {isExpanded &&
+                        memberships.map((m) => (
+                          <tr key={m.id} className="bg-accent/5">
+                            <td className="py-2 pr-4 pl-10 align-top">
+                              <p className="text-[12px] font-mono text-foreground">
+                                {getEnterpriseUsername(m.enterpriseUsername, m.organizationId)}
+                              </p>
+                            </td>
+                            <td className="py-2 px-4 align-top">
+                              <p className="text-[12px] text-foreground">{m.organization}</p>
+                              <p className="text-[11px] font-mono text-muted-foreground">{m.organizationId}</p>
+                            </td>
+                            <td className="py-2 px-4 align-top">
+                              <UnifiedBadge variant="status" value={rowStatusLabel(m.status)} />
+                            </td>
+                            <td className="py-2 px-4 align-top">
+                              <p className="text-[12px] font-mono text-muted-foreground tabular-nums">
+                                {m.verificationSessions.toLocaleString()} sessions
+                              </p>
+                            </td>
+                            <td className="py-2 px-4 align-top">
+                              <p className="text-[12px] text-foreground">{formatRelativeTime(m.lastActive)}</p>
+                            </td>
+                            <td className="py-2 px-4" />
+                          </tr>
+                        ))}
                     </Fragment>
                   );
                 })}
@@ -380,81 +393,384 @@ export function PlatformUsers() {
           </div>
         </Card>
       </div>
+
       <Dialog
-        open={selectedVerifymeUsername !== null}
-        onOpenChange={(open) => !open && setSelectedVerifymeUsername(null)}
+        open={detailOpen}
+        onOpenChange={(open) => {
+          if (!open) closeDetail();
+        }}
       >
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Linked end user details</DialogTitle>
+            <DialogTitle>VerifyMe user</DialogTitle>
             <DialogDescription>
               {selectedRowGroup
-                ? `${selectedRowGroup.verifymeUsername} • ${selectedRowGroup.email}`
-                : "End user details"}
+                ? `${selectedRowGroup.verifymeUsername} · ${selectedRowGroup.email}`
+                : "User details"}
             </DialogDescription>
           </DialogHeader>
-          {selectedRowGroup && (
-            <div className="space-y-3 text-sm">
-              <p>
-                <span className="text-muted-foreground">VerifyMe Username:</span>{" "}
-                {selectedRowGroup.verifymeUsername}
-              </p>
-              <p>
-                <span className="text-muted-foreground">Email:</span> {selectedRowGroup.email}
-              </p>
-              <p>
-                <span className="text-muted-foreground">Row status:</span>{" "}
-                {rowStatusLabel(selectedRowGroup.rowStatus)}
-              </p>
-              <p>
-                <span className="text-muted-foreground">Total API calls (all orgs):</span>{" "}
-                {selectedRowGroup.totalApiCalls.toLocaleString()}
-              </p>
-              <p>
-                <span className="text-muted-foreground">Last active (latest):</span>{" "}
-                {formatRelativeTime(selectedRowGroup.lastActiveMax)}
-              </p>
-              <p>
-                <span className="text-muted-foreground">Created (first link):</span>{" "}
-                {selectedUserLinks.length > 0
-                  ? formatDate(
-                    [...selectedUserLinks].sort((a, b) => a.created.localeCompare(b.created))[0]!.created,
-                  )
-                  : "—"}
-              </p>
-              <div>
-                <p className="text-muted-foreground mb-2">Organization links</p>
-                <ul className="mt-1 space-y-2 border border-border rounded-md p-3 bg-accent/5">
+          {selectedRowGroup ? (
+            <Tabs value={detailTab} onValueChange={setDetailTab} className="w-full">
+              <TabsList className="flex flex-wrap h-auto gap-1 bg-muted/40 p-1">
+                <TabsTrigger value="profile" className="text-[12px]">
+                  Profile & Status
+                </TabsTrigger>
+                <TabsTrigger value="devices" className="text-[12px]">
+                  Devices / Secure State
+                </TabsTrigger>
+                <TabsTrigger value="orgs" className="text-[12px]">
+                  Linked Organizations
+                </TabsTrigger>
+                <TabsTrigger value="activity" className="text-[12px]">
+                  Verification Activity
+                </TabsTrigger>
+                <TabsTrigger value="controls" className="text-[12px]">
+                  User Controls
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="profile" className="mt-4 space-y-3 text-[13px] m-0">
+                <p>
+                  <span className="text-muted-foreground">VerifyMe username:</span>{" "}
+                  <span className="font-mono">{selectedRowGroup.verifymeUsername}</span>
+                </p>
+                <p>
+                  <span className="text-muted-foreground">Masked identity:</span>{" "}
+                  <span className="font-mono">{maskVerifymeIdentity(selectedRowGroup.verifymeUsername)}</span>
+                </p>
+                <p>
+                  <span className="text-muted-foreground">Email:</span> {selectedRowGroup.email}
+                </p>
+                <p className="flex items-center gap-2">
+                  <span className="text-muted-foreground">Account status:</span>
+                  <UnifiedBadge variant="status" value={rowStatusLabel(selectedRowGroup.rowStatus)} />
+                </p>
+                <p>
+                  <span className="text-muted-foreground">Verification sessions (all orgs, sample):</span>{" "}
+                  <span className="tabular-nums font-medium">
+                    {selectedRowGroup.totalVerificationSessions.toLocaleString()}
+                  </span>
+                </p>
+                <p>
+                  <span className="text-muted-foreground">Last active (latest):</span>{" "}
+                  {formatRelativeTime(selectedRowGroup.lastActiveMax)}
+                </p>
+                <p>
+                  <span className="text-muted-foreground">First link created:</span>{" "}
+                  {selectedUserLinks.length > 0
+                    ? formatDate(
+                        [...selectedUserLinks].sort((a, b) => a.created.localeCompare(b.created))[0]!.created,
+                      )
+                    : "—"}
+                </p>
+                <p className="text-[12px] text-muted-foreground border border-border rounded-md p-3 bg-muted/20">
+                  Passcodes, OTPs, biometrics, tokens, recovery secrets, and transaction codes are never shown in VerifyMe
+                  Admin.
+                </p>
+              </TabsContent>
+
+              <TabsContent value="devices" className="mt-4 space-y-3 text-[13px] m-0">
+                {(() => {
+                  const d = mockDeviceSecureState(selectedRowGroup.verifymeUsername);
+                  return (
+                    <>
+                      <p>
+                        <span className="text-muted-foreground">Device enrollment:</span> {d.summary}
+                      </p>
+                      <p>
+                        <span className="text-muted-foreground">Registered devices (count only):</span>{" "}
+                        <span className="tabular-nums font-medium">{d.enrolledDevices}</span>
+                      </p>
+                      <p>
+                        <span className="text-muted-foreground">Trust summary:</span> {d.trustLabel}
+                      </p>
+                      <p className="text-[12px] text-muted-foreground border border-border rounded-md p-3 bg-muted/20">
+                        No biometric templates, raw device keys, or recovery payloads are displayed.
+                      </p>
+                    </>
+                  );
+                })()}
+              </TabsContent>
+
+              <TabsContent value="orgs" className="mt-4 m-0">
+                <ul className="space-y-2 border border-border rounded-md p-3 bg-accent/5">
                   {selectedUserLinks
                     .slice()
                     .sort((a, b) => a.organization.localeCompare(b.organization))
                     .map((link) => (
                       <li key={link.id} className="text-[13px] leading-snug">
                         <span className="font-medium text-foreground">{link.organization}</span>
-                        <span className="text-muted-foreground font-mono text-[12px] ml-1">
-                          ({link.organizationId})
-                        </span>
+                        <span className="text-muted-foreground font-mono text-[12px] ml-1">({link.organizationId})</span>
                         <br />
                         <span className="text-muted-foreground">Org username:</span>{" "}
                         <span className="font-mono">
                           {getEnterpriseUsername(link.enterpriseUsername, link.organizationId)}
                         </span>
                         {" · "}
-                        <span className="text-muted-foreground">API calls:</span>{" "}
-                        <span className="tabular-nums">{link.apiCalls.toLocaleString()}</span>
+                        <span className="text-muted-foreground">Link status:</span>{" "}
+                        <UnifiedBadge variant="status" value={rowStatusLabel(link.status)} />
                         {" · "}
-                        <span className="text-muted-foreground">Status:</span> {link.status}
-                        {" · "}
-                        <span className="text-muted-foreground">Last active:</span>{" "}
-                        {link.lastActive ? formatRelativeTime(link.lastActive) : "Never"}
+                        <span className="text-muted-foreground">Sessions (org-scoped sample):</span>{" "}
+                        <span className="tabular-nums">{link.verificationSessions.toLocaleString()}</span>
                       </li>
                     ))}
                 </ul>
-              </div>
-            </div>
-          )}
+              </TabsContent>
+
+              <TabsContent value="activity" className="mt-4 m-0 space-y-2 text-[13px]">
+                <p className="text-muted-foreground">
+                  Organization-scoped verification session counts (sample). Last activity reflects last successful
+                  session signal, not raw tokens.
+                </p>
+                <div className="border border-border rounded-md divide-y divide-border">
+                  {selectedUserLinks
+                    .slice()
+                    .sort((a, b) => b.verificationSessions - a.verificationSessions)
+                    .map((link) => (
+                      <div key={link.id} className="p-3 flex flex-wrap justify-between gap-2">
+                        <div>
+                          <p className="font-medium text-foreground">{link.organization}</p>
+                          <p className="text-[11px] font-mono text-muted-foreground">{link.organizationId}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="tabular-nums font-medium">{link.verificationSessions.toLocaleString()} sessions</p>
+                          <p className="text-[12px] text-muted-foreground">
+                            Last active: {link.lastActive ? formatRelativeTime(link.lastActive) : "Never"}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="controls" className="mt-4 space-y-4 m-0 text-[13px]">
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">Current user status:</span>
+                  <UnifiedBadge variant="status" value={rowStatusLabel(selectedRowGroup.rowStatus)} />
+                </div>
+                <p className="text-[12px] text-muted-foreground border border-border/80 rounded-md bg-muted/30 px-3 py-2">
+                  This action will be recorded in audit logs.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {selectedRowGroup.rowStatus === "active" || selectedRowGroup.rowStatus === "pending" ? (
+                    <Button type="button" variant="destructive" onClick={() => setSuspendOpen(true)}>
+                      Suspend user
+                    </Button>
+                  ) : null}
+                  {selectedRowGroup.rowStatus === "suspended" ? (
+                    <Button type="button" onClick={() => setReactivateOpen(true)}>
+                      Reactivate user
+                    </Button>
+                  ) : null}
+                  {selectedRowGroup.rowStatus === "disabled" ? (
+                    <Button type="button" onClick={() => setRestoreOpen(true)}>
+                      Restore access
+                    </Button>
+                  ) : null}
+                  {selectedRowGroup.rowStatus === "active" || selectedRowGroup.rowStatus === "pending" ? (
+                    <Button type="button" variant="outline" onClick={() => setDisableOpen(true)}>
+                      Disable user
+                    </Button>
+                  ) : null}
+                  {selectedRowGroup.rowStatus === "active" || selectedRowGroup.rowStatus === "pending" ? (
+                    <Button type="button" variant="outline" onClick={() => setResetOpen(true)}>
+                      Reset recovery / credentials
+                    </Button>
+                  ) : null}
+                </div>
+                <p className="text-[12px] text-muted-foreground">
+                  Reset recovery is a mock future action: confirming sets links to pending review and clears last-active
+                  timestamps in sample data only.
+                </p>
+              </TabsContent>
+            </Tabs>
+          ) : null}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setSelectedVerifymeUsername(null)}>Close</Button>
+            <Button variant="outline" onClick={closeDetail}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={suspendOpen} onOpenChange={setSuspendOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Suspend user?</DialogTitle>
+            <DialogDescription>
+              Suspends VerifyMe access for <span className="font-mono">{controlsTarget}</span> across linked
+              organizations (mock).
+            </DialogDescription>
+          </DialogHeader>
+          <p className="text-[12px] text-muted-foreground border border-border/80 rounded-md bg-muted/30 px-3 py-2">
+            This action will be recorded in audit logs.
+          </p>
+          <DialogFooter className="gap-2">
+            <Button type="button" variant="outline" onClick={() => setSuspendOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => {
+                if (!controlsTarget) return;
+                const n = usersData.filter((u) => u.verifymeUsername === controlsTarget).length;
+                applyStatusToUser(controlsTarget, "suspended");
+                setSuspendOpen(false);
+                setMessage(`${controlsTarget} suspended across ${n} linked organization(s).`);
+              }}
+            >
+              Confirm suspend
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={reactivateOpen} onOpenChange={setReactivateOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reactivate user?</DialogTitle>
+            <DialogDescription>
+              Restores active status for <span className="font-mono">{controlsTarget}</span> on all linked memberships
+              (mock).
+            </DialogDescription>
+          </DialogHeader>
+          <p className="text-[12px] text-muted-foreground border border-border/80 rounded-md bg-muted/30 px-3 py-2">
+            This action will be recorded in audit logs.
+          </p>
+          <DialogFooter className="gap-2">
+            <Button type="button" variant="outline" onClick={() => setReactivateOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                if (!controlsTarget) return;
+                const n = usersData.filter((u) => u.verifymeUsername === controlsTarget).length;
+                applyStatusToUser(controlsTarget, "active");
+                setReactivateOpen(false);
+                setMessage(`${controlsTarget} reactivated across ${n} linked organization(s).`);
+              }}
+            >
+              Confirm reactivate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={disableOpen}
+        onOpenChange={(o) => {
+          setDisableOpen(o);
+          if (!o) setDisableTyped("");
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Disable user</DialogTitle>
+            <DialogDescription>
+              Disabling blocks verification for <span className="font-mono">{controlsTarget}</span> (mock — not
+              delete). Type the VerifyMe username to confirm.
+            </DialogDescription>
+          </DialogHeader>
+          <p className="text-[12px] text-muted-foreground border border-border/80 rounded-md bg-muted/30 px-3 py-2">
+            This action will be recorded in audit logs.
+          </p>
+          <div className="space-y-2 py-1">
+            <label className="text-[13px]" htmlFor="disable-user-confirm">
+              VerifyMe username
+            </label>
+            <Input
+              id="disable-user-confirm"
+              autoComplete="off"
+              className="font-mono"
+              placeholder={controlsTarget ?? ""}
+              value={disableTyped}
+              onChange={(e) => setDisableTyped(e.target.value)}
+            />
+          </div>
+          <DialogFooter className="gap-2">
+            <Button type="button" variant="outline" onClick={() => setDisableOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={!disableMatches}
+              onClick={() => {
+                if (!controlsTarget) return;
+                const n = usersData.filter((u) => u.verifymeUsername === controlsTarget).length;
+                applyStatusToUser(controlsTarget, "disabled");
+                setDisableOpen(false);
+                setDisableTyped("");
+                setMessage(`${controlsTarget} disabled across ${n} linked organization(s).`);
+              }}
+            >
+              Confirm disable
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={resetOpen} onOpenChange={setResetOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reset recovery / credentials?</DialogTitle>
+            <DialogDescription>
+              Mock future action: sets all organization links for{" "}
+              <span className="font-mono">{controlsTarget}</span> to pending and clears last-active timestamps.
+            </DialogDescription>
+          </DialogHeader>
+          <p className="text-[12px] text-muted-foreground border border-border/80 rounded-md bg-muted/30 px-3 py-2">
+            This action will be recorded in audit logs.
+          </p>
+          <DialogFooter className="gap-2">
+            <Button type="button" variant="outline" onClick={() => setResetOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                if (!controlsTarget) return;
+                const n = usersData.filter((u) => u.verifymeUsername === controlsTarget).length;
+                applyPendingReset(controlsTarget);
+                setResetOpen(false);
+                setMessage(`Recovery reset initiated for ${controlsTarget} (${n} link(s)) — mock only.`);
+              }}
+            >
+              Confirm reset
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={restoreOpen} onOpenChange={setRestoreOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Restore access?</DialogTitle>
+            <DialogDescription>
+              Returns <span className="font-mono">{controlsTarget}</span> to active for all linked memberships (mock).
+            </DialogDescription>
+          </DialogHeader>
+          <p className="text-[12px] text-muted-foreground border border-border/80 rounded-md bg-muted/30 px-3 py-2">
+            This action will be recorded in audit logs.
+          </p>
+          <DialogFooter className="gap-2">
+            <Button type="button" variant="outline" onClick={() => setRestoreOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                if (!controlsTarget) return;
+                const n = usersData.filter((u) => u.verifymeUsername === controlsTarget).length;
+                applyStatusToUser(controlsTarget, "active");
+                setRestoreOpen(false);
+                setMessage(`${controlsTarget} restored to active across ${n} linked organization(s).`);
+              }}
+            >
+              Confirm restore
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

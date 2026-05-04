@@ -25,8 +25,9 @@ export type PlatformEndUserAssociation = {
   enterpriseUsername: string;
   organization: string;
   organizationId: string;
-  status: "active" | "pending" | "suspended";
-  apiCalls: number;
+  status: "active" | "pending" | "suspended" | "disabled";
+  /** Billable verification sessions (sample aggregate per org link). */
+  verificationSessions: number;
   lastActive: string | null;
   created: string;
 };
@@ -103,7 +104,7 @@ export const platformEndUserAssociations: PlatformEndUserAssociation[] = [
     organization: "Acme Corporation",
     organizationId: "ORG-001",
     status: "active",
-    apiCalls: 2450,
+    verificationSessions: 2450,
     lastActive: "2024-04-09T10:30:00",
     created: "2024-01-15",
   },
@@ -115,7 +116,7 @@ export const platformEndUserAssociations: PlatformEndUserAssociation[] = [
     organization: "Design Studio Pro",
     organizationId: "ORG-005",
     status: "active",
-    apiCalls: 980,
+    verificationSessions: 980,
     lastActive: "2024-04-08T11:20:00",
     created: "2024-02-19",
   },
@@ -127,7 +128,7 @@ export const platformEndUserAssociations: PlatformEndUserAssociation[] = [
     organization: "TechStart Inc.",
     organizationId: "ORG-002",
     status: "active",
-    apiCalls: 1823,
+    verificationSessions: 1823,
     lastActive: "2024-04-09T09:15:00",
     created: "2024-02-03",
   },
@@ -139,7 +140,7 @@ export const platformEndUserAssociations: PlatformEndUserAssociation[] = [
     organization: "Global Ventures",
     organizationId: "ORG-003",
     status: "active",
-    apiCalls: 3912,
+    verificationSessions: 3912,
     lastActive: "2024-04-09T10:15:00",
     created: "2023-12-08",
   },
@@ -151,7 +152,7 @@ export const platformEndUserAssociations: PlatformEndUserAssociation[] = [
     organization: "CloudScale Systems",
     organizationId: "ORG-007",
     status: "active",
-    apiCalls: 1245,
+    verificationSessions: 1245,
     lastActive: "2024-04-09T11:00:00",
     created: "2024-02-10",
   },
@@ -163,7 +164,7 @@ export const platformEndUserAssociations: PlatformEndUserAssociation[] = [
     organization: "Innovation Labs",
     organizationId: "ORG-004",
     status: "pending",
-    apiCalls: 0,
+    verificationSessions: 0,
     lastActive: null,
     created: "2024-03-22",
   },
@@ -175,7 +176,7 @@ export const platformEndUserAssociations: PlatformEndUserAssociation[] = [
     organization: "TechStart Inc.",
     organizationId: "ORG-002",
     status: "pending",
-    apiCalls: 0,
+    verificationSessions: 0,
     lastActive: null,
     created: "2024-04-01",
   },
@@ -187,7 +188,7 @@ export const platformEndUserAssociations: PlatformEndUserAssociation[] = [
     organization: "Design Studio Pro",
     organizationId: "ORG-005",
     status: "active",
-    apiCalls: 5234,
+    verificationSessions: 5234,
     lastActive: "2024-04-08T16:45:00",
     created: "2024-01-28",
   },
@@ -199,7 +200,7 @@ export const platformEndUserAssociations: PlatformEndUserAssociation[] = [
     organization: "Finance Corp",
     organizationId: "ORG-006",
     status: "active",
-    apiCalls: 1567,
+    verificationSessions: 1567,
     lastActive: "2024-04-09T08:20:00",
     created: "2023-11-12",
   },
@@ -211,7 +212,7 @@ export const platformEndUserAssociations: PlatformEndUserAssociation[] = [
     organization: "CloudScale Systems",
     organizationId: "ORG-007",
     status: "suspended",
-    apiCalls: 892,
+    verificationSessions: 892,
     lastActive: "2024-03-15T14:30:00",
     created: "2024-02-14",
   },
@@ -223,7 +224,7 @@ export const platformEndUserAssociations: PlatformEndUserAssociation[] = [
     organization: "DataFlow Analytics",
     organizationId: "ORG-008",
     status: "active",
-    apiCalls: 2981,
+    verificationSessions: 2981,
     lastActive: "2024-04-09T07:50:00",
     created: "2024-03-05",
   },
