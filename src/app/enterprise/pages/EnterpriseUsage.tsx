@@ -19,6 +19,7 @@ import {
   enterpriseUsageLimit,
   enterpriseUsageSpend,
 } from "../data/enterpriseSample";
+import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
 
 export function EnterpriseUsage() {
   const usageData = enterpriseUsageTrend.map((point) => ({ date: point.date, sessions: point.usage }));
@@ -38,16 +39,11 @@ export function EnterpriseUsage() {
     }).format(amount);
 
   return (
-    <div className="p-8 space-y-6 max-w-[1400px]">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-[28px] font-semibold text-foreground">Usage & credits</h1>
-          <p className="text-[15px] text-muted-foreground mt-1 max-w-3xl">
-            Credit balance (monetary wallet), plan, billable verification sessions, delivery add-ons, and how outcomes map
-            to credits (sample data).
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
+    <PortalPageFrame
+      title="Usage & credits"
+      description="Credit balance (monetary wallet), plan, billable verification sessions, delivery add-ons, and how outcomes map to credits (sample data)."
+      headerActions={
+        <div className="flex flex-wrap items-center gap-3">
           <Select defaultValue="current">
             <SelectTrigger className="w-[180px]">
               <SelectValue />
@@ -61,9 +57,10 @@ export function EnterpriseUsage() {
           </Select>
           <Button variant="outline">Export report</Button>
         </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+      }
+      bodyClassName="space-y-6"
+    >
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Card className="p-5 border border-border shadow-sm">
           <div className="flex items-center gap-2 text-muted-foreground mb-1">
             <CreditCard className="w-4 h-4" />
@@ -132,7 +129,7 @@ export function EnterpriseUsage() {
         </Card>
       )}
 
-      <Card className="p-8 border border-border shadow-sm">
+      <Card className="border border-border p-6 shadow-sm sm:p-8">
         <div className="flex items-start justify-between mb-6 flex-wrap gap-4">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-xl bg-blue-500/10 flex items-center justify-center">
@@ -267,6 +264,6 @@ export function EnterpriseUsage() {
           </Button>
         </div>
       </Card>
-    </div>
+    </PortalPageFrame>
   );
 }

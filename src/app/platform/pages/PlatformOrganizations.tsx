@@ -29,6 +29,7 @@ import {
   registerPlatformOrganizationOverride,
   subscribePlatformOrganizationListeners,
 } from "../data/platformOrganizationSessionOverrides";
+import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
 
 export function PlatformOrganizations() {
   const navigate = useNavigate();
@@ -181,28 +182,27 @@ export function PlatformOrganizations() {
   ];
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="p-8 border-b border-border">
-        <div className="flex items-center justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">Organizations</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Create and manage organizations: plans, credits, verification sessions, client apps, redirect URIs, QR
-              linking, and integration readiness
-            </p>
-          </div>
+    <>
+      <PortalPageFrame
+        variant="fill"
+        rootClassName="h-full"
+        title="Organizations"
+        description="Create and manage organizations: plans, credits, verification sessions, client apps, redirect URIs, QR linking, and integration readiness"
+        headerActions={
           <Button onClick={() => setIsCreateDialogOpen(true)} className="shrink-0">
-            <Plus className="w-4 h-4 mr-2" />
+            <Plus className="mr-2 h-4 w-4" />
             Create Organization
           </Button>
-        </div>
-        {successMessage && (
-          <div className="mb-4 rounded-md border border-green-500/40 bg-green-500/10 px-4 py-2 text-sm text-green-700 dark:text-green-300">
-            {successMessage}
-          </div>
-        )}
+        }
+        headerExtra={
+          <>
+            {successMessage ? (
+              <div className="rounded-md border border-green-500/40 bg-green-500/10 px-4 py-2 text-sm text-green-700 dark:text-green-300">
+                {successMessage}
+              </div>
+            ) : null}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 mb-6">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
           <Card className="p-4 border border-border/70 shadow-none min-h-[92px]">
             <p className="text-xs text-muted-foreground">Total organizations</p>
             <p className="text-xl font-semibold text-foreground mt-1">{formatNumber(overviewStats.totalOrganizations)}</p>
@@ -275,25 +275,25 @@ export function PlatformOrganizations() {
             </SelectContent>
           </Select>
 
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-10 w-10 rounded-md"
-            onClick={() => {
-              setSearchQuery("");
-              setPlanFilter("all");
-              setStatusFilter("all");
-              setIntegrationFilter("all");
-            }}
-            aria-label="Clear filters"
-          >
-            <Filter className="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-auto">
-        <Card className="m-8 border border-border shadow-sm">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-10 w-10 rounded-md"
+                onClick={() => {
+                  setSearchQuery("");
+                  setPlanFilter("all");
+                  setStatusFilter("all");
+                  setIntegrationFilter("all");
+                }}
+                aria-label="Clear filters"
+              >
+                <Filter className="h-4 w-4" />
+              </Button>
+            </div>
+          </>
+        }
+      >
+        <Card className="border border-border shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1040px]">
               <thead className="border-b border-border bg-accent/5 sticky top-0 z-10">
@@ -432,13 +432,13 @@ export function PlatformOrganizations() {
             </table>
           </div>
         </Card>
-      </div>
+      </PortalPageFrame>
       <CreateOrganizationDialog
         open={isCreateDialogOpen}
         onOpenChange={setIsCreateDialogOpen}
         existingOrganizationCodes={organizationsDisplay.map((org) => org.organizationCode)}
         onSubmit={handleCreateOrganization}
       />
-    </div>
+    </>
   );
 }

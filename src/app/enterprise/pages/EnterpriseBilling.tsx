@@ -14,6 +14,7 @@ import {
   enterpriseUsagePct,
   enterpriseUsageSpend,
 } from "../data/enterpriseSample";
+import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
 
 export function EnterpriseBilling() {
   const invoices = enterpriseInvoices;
@@ -27,14 +28,11 @@ export function EnterpriseBilling() {
     }).format(amount);
 
   return (
-    <div className="p-8 space-y-6 max-w-7xl mx-auto">
-      <div>
-        <h2 className="text-[24px] font-semibold text-foreground">Billing</h2>
-        <p className="text-[15px] text-muted-foreground mt-1">
-          Plan, invoices or billing history, credit purchases, top-ups, and payment-related settings
-        </p>
-      </div>
-
+    <PortalPageFrame
+      title="Billing"
+      description="Plan, invoices or billing history, credit purchases, top-ups, and payment-related settings."
+      bodyClassName="max-w-7xl space-y-6"
+    >
       {/* Current Plan */}
       <Card className="p-6 shadow-sm">
         <div className="flex items-start justify-between mb-6">
@@ -50,19 +48,19 @@ export function EnterpriseBilling() {
         <div className="grid grid-cols-3 gap-6 mb-6">
           <div>
             <p className="text-[13px] text-muted-foreground mb-1">Monthly Cost</p>
-            <p className="text-[24px] font-semibold text-foreground">{formatCurrency(enterpriseOrganization.creditBalance)}</p>
+            <p className="text-2xl font-semibold tabular-nums tracking-tight text-foreground">{formatCurrency(enterpriseOrganization.creditBalance)}</p>
             <p className="text-[13px] text-muted-foreground mt-1">Included credit</p>
           </div>
           <div>
             <p className="text-[13px] text-muted-foreground mb-1">Verification Spend</p>
-            <p className="text-[24px] font-semibold text-foreground">{formatCurrency(enterpriseUsageSpend)}</p>
+            <p className="text-2xl font-semibold tabular-nums tracking-tight text-foreground">{formatCurrency(enterpriseUsageSpend)}</p>
             <p className="text-[13px] text-muted-foreground mt-1">
               {enterpriseOrganization.usage.toLocaleString()} calls this period
             </p>
           </div>
           <div>
             <p className="text-[13px] text-muted-foreground mb-1">Credit Remaining</p>
-            <p className="text-[24px] font-semibold text-foreground">{formatCurrency(enterpriseCreditRemaining)}</p>
+            <p className="text-2xl font-semibold tabular-nums tracking-tight text-foreground">{formatCurrency(enterpriseCreditRemaining)}</p>
             <p className="text-[13px] text-muted-foreground mt-1">{enterpriseCreditUtilizationPct.toFixed(1)}% utilized</p>
           </div>
         </div>
@@ -183,6 +181,6 @@ export function EnterpriseBilling() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </PortalPageFrame>
   );
 }

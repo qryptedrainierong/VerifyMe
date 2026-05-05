@@ -49,11 +49,15 @@ function DialogOverlay({
 function DialogContent({
   className,
   children,
+  overlayClassName,
   ...props
-}: React.ComponentProps<typeof DialogPrimitive.Content>) {
+}: React.ComponentProps<typeof DialogPrimitive.Content> & {
+  /** Merged into the overlay; use a higher z-index when stacking a dialog above another (e.g. confirm over detail). */
+  overlayClassName?: string;
+}) {
   return (
     <DialogPortal data-slot="dialog-portal">
-      <DialogOverlay />
+      <DialogOverlay className={overlayClassName} />
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(

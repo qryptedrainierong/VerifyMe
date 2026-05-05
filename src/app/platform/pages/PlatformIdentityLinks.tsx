@@ -27,6 +27,7 @@ import {
   type PlatformIdentityLinkRow,
 } from "../data/platformIdentityLinksSample";
 import { buildInitialOrganizations } from "../data/platformOrganizationsSample";
+import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
 
 function linkStatusLabel(s: IdentityLinkStatus): string {
   const map: Record<IdentityLinkStatus, string> = {
@@ -83,7 +84,7 @@ export function PlatformIdentityLinks() {
         r.organizationName.toLowerCase().includes(q) ||
         r.organizationId.toLowerCase().includes(q) ||
         r.customerDisplayName.toLowerCase().includes(q) ||
-        r.maskedVerifymeIdentity.toLowerCase().includes(q);
+        r.maskedVerifymeId.toLowerCase().includes(q);
       const matchesOrg = organizationFilter === "all-orgs" || r.organizationId === organizationFilter;
       const matchesStatus = statusFilter === "all" || r.linkStatus === statusFilter;
       const matchesConflict = conflictFilter === "all" || r.conflictStatus === conflictFilter;
@@ -121,34 +122,41 @@ export function PlatformIdentityLinks() {
     });
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="p-8 border-b border-border">
-        <h1 className="text-[24px] font-semibold text-foreground">Identity Links</h1>
-        <p className="text-[14px] text-muted-foreground mt-1 max-w-3xl">
-          Platform-wide view of organization <span className="font-mono text-foreground">client_user_id</span> to
-          VerifyMe identity links. Values are sample data only; no secrets or raw payloads are shown.
-        </p>
-        {urlOrganizationId ? (
-          <p className="text-[12px] text-muted-foreground mt-3">
-            URL filter: <span className="font-mono text-foreground">{urlOrganizationId}</span>
-            {!knownOrgIds.has(urlOrganizationId)
-              ? " — unknown organization id in sample set; adjust filters manually."
-              : " — applied when recognized in sample organizations."}
-          </p>
-        ) : (
-          <p className="text-[12px] text-muted-foreground mt-3">
-            Optional <span className="font-mono">?organizationId=…</span> pre-selects organization when recognized
-            (design-phase).
-          </p>
-        )}
-        {message ? (
-          <div className="mt-3 rounded-md border border-green-500/40 bg-green-500/10 px-4 py-2 text-sm text-green-700 dark:text-green-300">
-            {message}
-          </div>
-        ) : null}
-      </div>
-
-      <div className="flex-1 overflow-auto p-8 space-y-6">
+    <>
+      <PortalPageFrame
+        variant="fill"
+        rootClassName="h-full"
+        title="Identity Links"
+        description={
+          <>
+            Platform-wide view of organization <span className="font-mono text-foreground">client_user_id</span> to
+            VerifyMe identity links. Values are sample data only; no secrets or raw payloads are shown.
+          </>
+        }
+        headerExtra={
+          <>
+            {urlOrganizationId ? (
+              <p className="text-xs text-muted-foreground sm:text-sm">
+                URL filter: <span className="font-mono text-foreground">{urlOrganizationId}</span>
+                {!knownOrgIds.has(urlOrganizationId)
+                  ? " — unknown organization id in sample set; adjust filters manually."
+                  : " — applied when recognized in sample organizations."}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground sm:text-sm">
+                Optional <span className="font-mono">?organizationId=…</span> pre-selects organization when recognized
+                (design-phase).
+              </p>
+            )}
+            {message ? (
+              <div className="rounded-md border border-green-500/40 bg-green-500/10 px-4 py-2 text-sm text-green-700 dark:text-green-300">
+                {message}
+              </div>
+            ) : null}
+          </>
+        }
+        bodyClassName="space-y-6"
+      >
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <Card className="p-4 border border-border shadow-sm">
             <p className="text-[12px] text-muted-foreground">Total links</p>
@@ -241,8 +249,9 @@ export function PlatformIdentityLinks() {
                   <th className="text-left p-3 font-medium text-muted-foreground">Organization</th>
                   <th className="text-left p-3 font-medium text-muted-foreground">client_user_id</th>
                   <th className="text-left p-3 font-medium text-muted-foreground">Customer</th>
-                  <th className="text-left p-3 font-medium text-muted-foreground">Masked VerifyMe ID</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground">VerifyMe ID (masked)</th>
                   <th className="text-left p-3 font-medium text-muted-foreground">Link status</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground">Conflict status</th>
                   <th className="text-left p-3 font-medium text-muted-foreground">Last verified</th>
                   <th className="text-left p-3 font-medium text-muted-foreground">Created / linked</th>
                   <th className="text-left p-3 font-medium text-muted-foreground w-[200px]">Actions</th>
@@ -257,9 +266,12 @@ export function PlatformIdentityLinks() {
                     </td>
                     <td className="p-3 font-mono text-[12px] align-top">{r.clientUserId}</td>
                     <td className="p-3 align-top">{r.customerDisplayName}</td>
-                    <td className="p-3 font-mono text-[12px] align-top">{r.maskedVerifymeIdentity}</td>
+                    <td className="p-3 font-mono text-[12px] align-top">{r.maskedVerifymeId}</td>
                     <td className="p-3 align-top">
                       <UnifiedBadge variant="status" value={linkStatusLabel(r.linkStatus)} />
+                    </td>
+                    <td className="p-3 align-top">
+                      <UnifiedBadge variant="status" value={conflictLabel(r.conflictStatus)} />
                     </td>
                     <td className="p-3 text-muted-foreground align-top">
                       {r.lastVerified ? formatDateTime(r.lastVerified) : "—"}
@@ -283,7 +295,7 @@ export function PlatformIdentityLinks() {
             </table>
           </div>
         </Card>
-      </div>
+      </PortalPageFrame>
 
       <Dialog open={detailRow !== null} onOpenChange={(o) => !o && setDetailRow(null)}>
         <DialogContent className="sm:max-w-lg">
@@ -305,8 +317,8 @@ export function PlatformIdentityLinks() {
                 <span className="text-muted-foreground">Customer:</span> {detailRow.customerDisplayName}
               </p>
               <p>
-                <span className="text-muted-foreground">Masked VerifyMe identity:</span>{" "}
-                <span className="font-mono">{detailRow.maskedVerifymeIdentity}</span>
+                <span className="text-muted-foreground">VerifyMe ID (masked):</span>{" "}
+                <span className="font-mono">{detailRow.maskedVerifymeId}</span>
               </p>
               <p className="flex flex-wrap items-center gap-2">
                 <span className="text-muted-foreground">Link status:</span>
@@ -369,6 +381,6 @@ export function PlatformIdentityLinks() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

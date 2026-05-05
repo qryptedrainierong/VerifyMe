@@ -13,6 +13,7 @@ import {
   enterpriseOrganizationProfileExtended,
   enterpriseVerificationSettingsMock,
 } from "../data/enterpriseSample";
+import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
 
 export function EnterpriseSettings() {
   const location = useLocation();
@@ -27,15 +28,11 @@ export function EnterpriseSettings() {
   }, [location.hash]);
 
   return (
-    <div className="p-8 space-y-6 max-w-5xl mx-auto">
-      <div>
-        <h2 className="text-[24px] font-semibold text-foreground">Settings</h2>
-        <p className="text-[15px] text-muted-foreground mt-1">
-          Organization profile, verification behavior, notifications, and security preferences (sample forms — no
-          persistence).
-        </p>
-      </div>
-
+    <PortalPageFrame
+      title="Settings"
+      description="Organization profile, verification behavior, notifications, and security preferences (sample forms — no persistence)."
+      bodyClassName="max-w-5xl space-y-6"
+    >
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="flex flex-wrap h-auto gap-1">
           <TabsTrigger value="profile">Profile & organization</TabsTrigger>
@@ -276,6 +273,6 @@ export function EnterpriseSettings() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </PortalPageFrame>
   );
 }

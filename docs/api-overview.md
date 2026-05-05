@@ -24,6 +24,13 @@ No request/response schemas are frozen in this repo during the design phase.
 - One **organization** may register **multiple client applications** (different `client_id` values, redirect URIs, environments).
 - **`client_id`** format: `<ORG_CODE>_<APP_TYPE>_<ENV>_<SEQ>` — see [`client-management.md`](./client-management.md).
 
+## Identifiers (disambiguation)
+
+- **`client_id`** — OIDC/API **client application** identifier (per registered app).
+- **`client_user_id`** — Organization-side **customer / user record** identifier (per org; carried in authorize context and linking).
+- **`verifyme_id`** — Public **VerifyMe user** display id (`vmXXXXXX`); not a foreign key.
+- **`verifyme_user_id`** — Internal **FK** to `verifyme_users.id` in linking and device tables; not used as primary display in admin UI.
+
 ## API documentation (product)
 
 First-class deliverables include integration guides, sequence diagrams, and sample authorize and token requests **without** real secrets.

@@ -21,6 +21,7 @@ import {
 } from "../../shared/components/ui/dropdown-menu";
 import { UnifiedBadge } from "../../shared/components/UnifiedBadge";
 import { buildInitialOrganizations, getVerificationSpend } from "../data/platformOrganizationsSample";
+import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
 
 export function PlatformBilling() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -124,24 +125,20 @@ export function PlatformBilling() {
   };
 
   return (
-    <div className="p-8 space-y-6 max-w-[1800px]">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-[24px] font-semibold text-foreground">Billing & Credits</h1>
-          <p className="text-[14px] text-muted-foreground mt-1">
-            Plan credits, top-ups, per-organization pricing, verification charges, OTP billing, and credit transactions
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
+    <PortalPageFrame
+      title="Billing & Credits"
+      description="Plan credits, top-ups, per-organization pricing, verification charges, OTP billing, and credit transactions."
+      headerActions={
+        <>
           <Button variant="outline">
-            <Download className="w-4 h-4 mr-2" />
+            <Download className="mr-2 h-4 w-4" />
             Export Report
           </Button>
           <Button>Generate Invoices</Button>
-        </div>
-      </div>
-
+        </>
+      }
+      bodyClassName="space-y-6"
+    >
       {/* KPI Cards */}
       <div className="grid grid-cols-4 gap-6">
         <Card className="p-6 border border-border shadow-sm">
@@ -435,6 +432,6 @@ export function PlatformBilling() {
           </table>
         </div>
       </Card>
-    </div>
+    </PortalPageFrame>
   );
 }

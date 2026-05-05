@@ -9,6 +9,7 @@ import { EnterpriseSettings } from "./pages/EnterpriseSettings";
 import { EnterpriseVerificationLogs } from "./pages/EnterpriseVerificationLogs";
 import { EnterpriseApiIntegration } from "./pages/EnterpriseApiIntegration";
 import { EnterpriseQrLinking } from "./pages/EnterpriseQrLinking";
+import { PortalNotFound } from "../shared/components/PortalNotFound";
 
 // Lazy router creation to prevent HMR connection errors
 // Reset router on each call to ensure fresh state
@@ -28,7 +29,7 @@ export function getEnterpriseRouter() {
           { path: "usage-credits", Component: EnterpriseUsage },
           { path: "billing", Component: EnterpriseBilling },
           { path: "settings", Component: EnterpriseSettings },
-          { path: "*", Component: NotFoundPage },
+          { path: "*", Component: EnterpriseNotFoundPage },
         ],
       },
     ],
@@ -45,15 +46,6 @@ export function getEnterpriseRouter() {
   );
 }
 
-function NotFoundPage() {
-  return (
-    <div className="p-8">
-      <div className="max-w-2xl mx-auto text-center py-20">
-        <h2 className="text-[24px] font-semibold text-foreground mb-2">Page Not Found</h2>
-        <p className="text-[15px] text-muted-foreground">
-          The page you're looking for doesn't exist in the organization portal.
-        </p>
-      </div>
-    </div>
-  );
+function EnterpriseNotFoundPage() {
+  return <PortalNotFound scope="organization" />;
 }

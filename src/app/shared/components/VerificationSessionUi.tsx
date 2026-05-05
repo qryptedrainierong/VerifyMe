@@ -123,8 +123,8 @@ export function VerificationSessionDetailBody({
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <p className="text-[11px] text-muted-foreground uppercase">VerifyMe identity (masked)</p>
-          <p className="font-mono">{session.maskedVerifyMeUserId ?? "—"}</p>
+          <p className="text-[11px] text-muted-foreground uppercase">VerifyMe ID (masked)</p>
+          <p className="font-mono">{session.maskedVerifymeId ?? "—"}</p>
         </div>
         <div>
           <p className="text-[11px] text-muted-foreground uppercase">Channel</p>

@@ -39,6 +39,7 @@ import {
   type VerificationSessionOutcome,
 } from "../../shared/data/verificationSessionsMock";
 import { buildInitialOrganizations } from "../data/platformOrganizationsSample";
+import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
 
 type OutcomeFilter = "all" | VerificationSessionOutcome;
 type BillableFilter = "all" | "billable" | "not_billable";
@@ -75,7 +76,8 @@ export function PlatformVerificationSessions() {
       if (channelFilter !== "all" && s.channel !== channelFilter) return false;
       if (!withinTimeFilter(s.createdAt, timeFilter)) return false;
       if (q.length > 0) {
-        const hay = `${s.sessionId} ${s.organizationName} ${s.clientUserId} ${s.customerName}`.toLowerCase();
+        const hay =
+          `${s.sessionId} ${s.organizationName} ${s.clientUserId} ${s.customerName} ${s.maskedVerifymeId ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
@@ -96,15 +98,13 @@ export function PlatformVerificationSessions() {
   }, [allSessions]);
 
   return (
-    <div className="p-8 space-y-6 max-w-[1600px] mx-auto">
-      <div className="max-w-4xl">
-        <h1 className="text-[28px] font-semibold text-foreground">Verification Sessions</h1>
-        <p className="text-[15px] text-muted-foreground mt-1">
-          Monitor platform-wide verification attempts, outcomes, billable decisions, and OIDC-style completion state.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+    <>
+      <PortalPageFrame
+        title="Verification Sessions"
+        description="Monitor platform-wide verification attempts, outcomes, billable decisions, and OIDC-style completion state."
+        bodyClassName="space-y-6"
+      >
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
         <Card className="p-4 border border-border shadow-sm">
           <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Total sessions</p>
           <p className="text-xl font-semibold mt-1">{stats.total}</p>
@@ -141,7 +141,7 @@ export function PlatformVerificationSessions() {
         <div className="relative flex-1 min-w-[200px] max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Search session ID, organization, client_user_id…"
+            placeholder="Search session ID, organization, client_user_id, VerifyMe ID…"
             className="pl-10 h-10"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -211,12 +211,13 @@ export function PlatformVerificationSessions() {
 
       <Card className="border border-border shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1180px] text-sm">
+          <table className="w-full min-w-[1280px] text-sm">
             <thead className="border-b border-border bg-accent/40">
               <tr>
                 <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">Session ID</th>
                 <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">Organization</th>
                 <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">client_user_id / customer</th>
+                <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">VerifyMe ID (masked)</th>
                 <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">Channel</th>
                 <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">Status / outcome</th>
                 <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">Attempts</th>
@@ -238,6 +239,7 @@ export function PlatformVerificationSessions() {
                     <p className="font-mono text-[12px]">{s.clientUserId}</p>
                     <p className="text-[12px] text-muted-foreground">{s.customerName}</p>
                   </td>
+                  <td className="p-3 font-mono text-[12px] text-muted-foreground">{s.maskedVerifymeId ?? "—"}</td>
                   <td className="p-3 text-[13px]">{channelLabel(s.channel)}</td>
                   <td className="p-3 space-y-1">
                     <UnifiedBadge variant="status" value={lifecycleLabel(s.status)} />
@@ -278,9 +280,10 @@ export function PlatformVerificationSessions() {
           </table>
         </div>
         {filtered.length === 0 && (
-          <p className="p-8 text-center text-muted-foreground text-sm">No sessions match filters.</p>
+          <p className="px-6 py-12 text-center text-sm text-muted-foreground sm:px-8">No sessions match filters.</p>
         )}
       </Card>
+      </PortalPageFrame>
 
       <Dialog open={detail !== null} onOpenChange={(o) => !o && setDetail(null)}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
@@ -303,6 +306,6 @@ export function PlatformVerificationSessions() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

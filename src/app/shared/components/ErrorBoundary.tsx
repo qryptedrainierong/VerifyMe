@@ -36,10 +36,10 @@ export class ErrorBoundary extends Component<Props, State> {
                 <AlertCircle className="w-8 h-8 text-red-600" />
               </div>
               <div>
-                <h2 className="text-[24px] font-semibold text-foreground mb-2">
+                <h2 className="mb-2 text-2xl font-semibold tracking-tight text-foreground">
                   Something went wrong
                 </h2>
-                <p className="text-[15px] text-muted-foreground mb-4">
+                <p className="mb-4 text-sm leading-relaxed text-muted-foreground">
                   The application encountered an error. Please try refreshing the page.
                 </p>
                 {this.state.error && (

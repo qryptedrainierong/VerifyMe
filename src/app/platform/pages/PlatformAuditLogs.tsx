@@ -18,6 +18,7 @@ import {
   getActionLabel,
   getCategoryColor,
 } from "../../shared/types/auditLog";
+import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
 
 /**
  * Utility Functions
@@ -781,24 +782,20 @@ export function PlatformAuditLogs() {
   };
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="p-8 border-b border-border">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-[24px] font-semibold text-foreground">Audit Logs</h1>
-            <p className="text-[14px] text-muted-foreground mt-1">
-              Admin actions, API events, linking events, verification lifecycle events, and security-sensitive changes
-            </p>
-          </div>
+    <>
+      <PortalPageFrame
+        variant="fill"
+        rootClassName="h-full"
+        title="Audit Logs"
+        description="Admin actions, API events, linking events, verification lifecycle events, and security-sensitive changes."
+        headerActions={
           <Button variant="outline">
-            <Download className="w-4 h-4 mr-2" />
+            <Download className="mr-2 h-4 w-4" />
             Export Logs
           </Button>
-        </div>
-
-        {/* Filters */}
-        <div className="flex items-center gap-3">
+        }
+        headerExtra={
+        <div className="flex flex-wrap items-center gap-3">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -865,14 +862,12 @@ export function PlatformAuditLogs() {
           </Select>
 
           <Button variant="outline" size="icon" className="h-10 w-10">
-            <Filter className="w-4 h-4" />
+            <Filter className="h-4 w-4" />
           </Button>
         </div>
-      </div>
-
-      {/* Table */}
-      <div className="flex-1 overflow-auto">
-        <Card className="m-8 border border-border shadow-sm">
+        }
+      >
+        <Card className="border border-border shadow-sm">
 
           {/* Pagination */}
           <div className="p-4 border-border flex items-center justify-between">
@@ -988,7 +983,7 @@ export function PlatformAuditLogs() {
                 ))}
                 {visibleLogs.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="p-8 text-center text-[13px] text-muted-foreground">
+                    <td colSpan={7} className="px-6 py-12 text-center text-sm text-muted-foreground sm:px-8">
                       No audit logs match the current search.
                     </td>
                   </tr>
@@ -1027,7 +1022,7 @@ export function PlatformAuditLogs() {
             </div>
           </div> */}
         </Card>
-      </div>
+      </PortalPageFrame>
 
       {/* Details Modal */}
       {isDetailsOpen && selectedLog && (
@@ -1037,7 +1032,7 @@ export function PlatformAuditLogs() {
           onClose={closeDetails}
         />
       )}
-    </div>
+    </>
   );
 }
 

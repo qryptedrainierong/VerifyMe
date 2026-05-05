@@ -10,6 +10,7 @@ import { PlatformSettings } from "./pages/PlatformSettings";
 import { PlatformClientApps } from "./pages/PlatformClientApps";
 import { PlatformIdentityLinks } from "./pages/PlatformIdentityLinks";
 import { PlatformVerificationSessions } from "./pages/PlatformVerificationSessions";
+import { PortalNotFound } from "../shared/components/PortalNotFound";
 
 // Lazy router creation to prevent HMR connection errors
 // Reset router on each call to ensure fresh state
@@ -36,7 +37,7 @@ export function getPlatformRouter() {
           { path: "billing", Component: PlatformBilling },
           { path: "audit-logs", Component: PlatformAuditLogs },
           { path: "settings", Component: PlatformSettings },
-          { path: "*", Component: NotFoundPage },
+          { path: "*", Component: PlatformNotFoundPage },
         ],
       },
     ],
@@ -53,18 +54,6 @@ export function getPlatformRouter() {
   );
 }
 
-function NotFoundPage() {
-  return (
-    <div className="p-8">
-      <div className="max-w-2xl mx-auto text-center py-20">
-        <h2 className="text-[24px] font-semibold text-foreground mb-2">
-          Page Not Found
-        </h2>
-        <p className="text-[15px] text-muted-foreground">
-          The page you're looking for doesn't exist in the
-          platform admin portal.
-        </p>
-      </div>
-    </div>
-  );
+function PlatformNotFoundPage() {
+  return <PortalNotFound scope="platform" />;
 }

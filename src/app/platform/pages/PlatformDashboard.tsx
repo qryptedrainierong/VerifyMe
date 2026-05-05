@@ -20,6 +20,7 @@ import { buildInitialOrganizations, getVerificationSpend } from "../data/platfor
 import { platformEndUserAssociations } from "../data/platformUsersSample";
 import { getVerificationSessionsMock } from "../../shared/data/verificationSessionsMock";
 import { UnifiedBadge } from "../../shared/components/UnifiedBadge";
+import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
 
 export function PlatformDashboard() {
   const organizations = useMemo(() => buildInitialOrganizations(), []);
@@ -115,15 +116,11 @@ export function PlatformDashboard() {
   );
 
   return (
-    <div className="p-8 space-y-6 max-w-[1800px]">
-      <div>
-        <h1 className="text-[24px] font-semibold text-foreground">Dashboard</h1>
-        <p className="text-[14px] text-muted-foreground mt-1 max-w-4xl">
-          Platform-wide overview of organizations, VerifyMe users, verification activity, billable events, credit usage,
-          and system health (sample metrics for UI design).
-        </p>
-      </div>
-
+    <PortalPageFrame
+      title="Dashboard"
+      description="Platform-wide overview of organizations, VerifyMe users, verification activity, billable events, credit usage, and system health (sample metrics for UI design)."
+      bodyClassName="space-y-6"
+    >
       {/* KPI Cards */}
       <div className="grid grid-cols-4 gap-6">
         <Card className="p-6 border border-border shadow-sm">
@@ -205,7 +202,7 @@ export function PlatformDashboard() {
             <ListChecks className="w-4 h-4 text-primary" />
             <p className="text-[13px] font-semibold text-foreground">Verification sessions (sample)</p>
           </div>
-          <p className="text-[28px] font-semibold">{sessionSnapshot.total}</p>
+          <p className="text-3xl font-semibold tabular-nums tracking-tight">{sessionSnapshot.total}</p>
           <p className="text-[12px] text-muted-foreground mt-1">Mock sessions in design dataset</p>
           <Button variant="link" className="px-0 h-auto mt-2" asChild>
             <Link to="/verification-sessions">Open verification sessions</Link>
@@ -213,7 +210,7 @@ export function PlatformDashboard() {
         </Card>
         <Card className="p-4 border border-border shadow-sm">
           <p className="text-[13px] font-semibold text-foreground mb-2">Failed rate (settled)</p>
-          <p className="text-[28px] font-semibold text-orange-700">{sessionSnapshot.failRate.toFixed(1)}%</p>
+          <p className="text-3xl font-semibold tabular-nums tracking-tight text-orange-700">{sessionSnapshot.failRate.toFixed(1)}%</p>
           <p className="text-[12px] text-muted-foreground mt-1">Failed ÷ non-pending outcomes</p>
         </Card>
         <Card className="p-4 border border-border shadow-sm">
@@ -447,6 +444,6 @@ export function PlatformDashboard() {
           ))}
         </div>
       </Card>
-    </div>
+    </PortalPageFrame>
   );
 }

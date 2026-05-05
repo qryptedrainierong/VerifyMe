@@ -18,11 +18,29 @@ export type PlatformPortalUser = {
   lastLogin: string | null;
 };
 
+/** MVP: one active device per VerifyMe user; mock only. */
+export type MockVerifymeUserDevice = {
+  label: string;
+  platform: string;
+  status: "active" | "pending_enrollment";
+  registeredAt: string;
+  lastVerifiedAt: string | null;
+  /** Summary only — no secrets or raw keys. */
+  secureStateSummary: string;
+};
+
+/**
+ * Organization ↔ VerifyMe user link (sample). Mirrors organization_user_links:
+ * - verifymeUserId: FK to verifyme_users.id (internal)
+ * - verifymeId: public vmXXXXXX display identifier (same for all rows of one user)
+ * - clientUserId: organization-side customer identifier
+ */
 export type PlatformEndUserAssociation = {
   id: string;
-  verifymeUsername: string;
+  verifymeUserId: string;
+  verifymeId: string;
   email: string;
-  enterpriseUsername: string;
+  clientUserId: string;
   organization: string;
   organizationId: string;
   status: "active" | "pending" | "suspended" | "disabled";
@@ -30,6 +48,7 @@ export type PlatformEndUserAssociation = {
   verificationSessions: number;
   lastActive: string | null;
   created: string;
+  device: MockVerifymeUserDevice;
 };
 
 export const platformPortalUsers: PlatformPortalUser[] = [
@@ -95,137 +114,176 @@ export const platformPortalUsers: PlatformPortalUser[] = [
   },
 ];
 
+const d = (
+  label: string,
+  platform: string,
+  status: MockVerifymeUserDevice["status"],
+  registeredAt: string,
+  lastVerifiedAt: string | null,
+  secureStateSummary: string,
+): MockVerifymeUserDevice => ({
+  label,
+  platform,
+  status,
+  registeredAt,
+  lastVerifiedAt,
+  secureStateSummary,
+});
+
+/** Sample organization–user links (same verifymeUserId repeats when one user links to multiple orgs). */
 export const platformEndUserAssociations: PlatformEndUserAssociation[] = [
   {
-    id: "USR-00145",
-    verifymeUsername: "john.smith",
+    id: "link-usr-00145-acme",
+    verifymeUserId: "a0000001-0000-4000-8000-000000000001",
+    verifymeId: "vm07f9a2",
     email: "john.smith@gmail.com",
-    enterpriseUsername: "jsmith",
+    clientUserId: "cust_acme_jsmith",
     organization: "Acme Corporation",
     organizationId: "ORG-001",
     status: "active",
     verificationSessions: 2450,
     lastActive: "2024-04-09T10:30:00",
     created: "2024-01-15",
+    device: d("iPhone 15 Pro", "iOS", "active", "2024-01-15T09:00:00Z", "2024-04-09T10:30:00Z", "Bound · step-up OK (sample)"),
   },
   {
-    id: "USR-00145-2",
-    verifymeUsername: "john.smith",
+    id: "link-usr-00145-dsp",
+    verifymeUserId: "a0000001-0000-4000-8000-000000000001",
+    verifymeId: "vm07f9a2",
     email: "john.smith@gmail.com",
-    enterpriseUsername: "john.s",
+    clientUserId: "cust_dsp_johns",
     organization: "Design Studio Pro",
     organizationId: "ORG-005",
     status: "active",
     verificationSessions: 980,
     lastActive: "2024-04-08T11:20:00",
     created: "2024-02-19",
+    device: d("iPhone 15 Pro", "iOS", "active", "2024-01-15T09:00:00Z", "2024-04-09T10:30:00Z", "Bound · step-up OK (sample)"),
   },
   {
-    id: "USR-00238",
-    verifymeUsername: "sarah.johnson",
+    id: "link-usr-00238",
+    verifymeUserId: "a0000002-0000-4000-8000-000000000002",
+    verifymeId: "vm91b3c4",
     email: "sarah.johnson@outlook.com",
-    enterpriseUsername: "sjohnson",
+    clientUserId: "cust_ts_sjohnson",
     organization: "TechStart Inc.",
     organizationId: "ORG-002",
     status: "active",
     verificationSessions: 1823,
     lastActive: "2024-04-09T09:15:00",
     created: "2024-02-03",
+    device: d("Pixel 8", "Android", "active", "2024-02-03T14:20:00Z", "2024-04-09T09:15:00Z", "Bound · healthy (sample)"),
   },
   {
-    id: "USR-00421",
-    verifymeUsername: "michael.chen",
+    id: "link-usr-00421-gv",
+    verifymeUserId: "a0000003-0000-4000-8000-000000000003",
+    verifymeId: "vm44d5e6",
     email: "michael.chen88@gmail.com",
-    enterpriseUsername: "mchen",
+    clientUserId: "cust_gv_mchen",
     organization: "Global Ventures",
     organizationId: "ORG-003",
     status: "active",
     verificationSessions: 3912,
     lastActive: "2024-04-09T10:15:00",
     created: "2023-12-08",
+    device: d("Galaxy S24", "Android", "active", "2023-12-08T11:00:00Z", "2024-04-09T10:15:00Z", "Bound (sample)"),
   },
   {
-    id: "USR-00421-2",
-    verifymeUsername: "michael.chen",
+    id: "link-usr-00421-cs",
+    verifymeUserId: "a0000003-0000-4000-8000-000000000003",
+    verifymeId: "vm44d5e6",
     email: "michael.chen88@gmail.com",
-    enterpriseUsername: "michael.chen",
+    clientUserId: "cust_cs_mchen",
     organization: "CloudScale Systems",
     organizationId: "ORG-007",
     status: "active",
     verificationSessions: 1245,
     lastActive: "2024-04-09T11:00:00",
     created: "2024-02-10",
+    device: d("Galaxy S24", "Android", "active", "2023-12-08T11:00:00Z", "2024-04-09T10:15:00Z", "Bound (sample)"),
   },
   {
-    id: "USR-00892",
-    verifymeUsername: "emily.davis",
+    id: "link-usr-00892",
+    verifymeUserId: "a0000004-0000-4000-8000-000000000004",
+    verifymeId: "vmaa12bc",
     email: "emily.davis@yahoo.com",
-    enterpriseUsername: "",
+    clientUserId: "",
     organization: "Innovation Labs",
     organizationId: "ORG-004",
     status: "pending",
     verificationSessions: 0,
     lastActive: null,
     created: "2024-03-22",
+    device: d("Pending device", "—", "pending_enrollment", "2024-03-22T08:00:00Z", null, "Enrollment not completed (sample)"),
   },
   {
-    id: "USR-00893",
-    verifymeUsername: "robert.martinez",
+    id: "link-usr-00893",
+    verifymeUserId: "a0000005-0000-4000-8000-000000000005",
+    verifymeId: "vmbb34de",
     email: "robert.martinez@outlook.com",
-    enterpriseUsername: "",
+    clientUserId: "",
     organization: "TechStart Inc.",
     organizationId: "ORG-002",
     status: "pending",
     verificationSessions: 0,
     lastActive: null,
     created: "2024-04-01",
+    device: d("Pending device", "—", "pending_enrollment", "2024-04-01T10:00:00Z", null, "Enrollment not completed (sample)"),
   },
   {
-    id: "USR-01204",
-    verifymeUsername: "james.wilson",
+    id: "link-usr-01204",
+    verifymeUserId: "a0000006-0000-4000-8000-000000000006",
+    verifymeId: "vmcc56ef",
     email: "jameswilson@icloud.com",
-    enterpriseUsername: "jwilson",
+    clientUserId: "cust_dsp_jwilson",
     organization: "Design Studio Pro",
     organizationId: "ORG-005",
     status: "active",
     verificationSessions: 5234,
     lastActive: "2024-04-08T16:45:00",
     created: "2024-01-28",
+    device: d("iPhone 14", "iOS", "active", "2024-01-28T13:00:00Z", "2024-04-08T16:45:00Z", "Bound (sample)"),
   },
   {
-    id: "USR-01567",
-    verifymeUsername: "lisa.anderson",
+    id: "link-usr-01567",
+    verifymeUserId: "a0000007-0000-4000-8000-000000000007",
+    verifymeId: "vmdd78ab",
     email: "lisa.anderson@gmail.com",
-    enterpriseUsername: "landerson",
+    clientUserId: "cust_fc_landerson",
     organization: "Finance Corp",
     organizationId: "ORG-006",
     status: "active",
     verificationSessions: 1567,
     lastActive: "2024-04-09T08:20:00",
     created: "2023-11-12",
+    device: d("iPhone 13", "iOS", "active", "2023-11-12T15:30:00Z", "2024-04-09T08:20:00Z", "Bound (sample)"),
   },
   {
-    id: "USR-01892",
-    verifymeUsername: "david.brown",
+    id: "link-usr-01892",
+    verifymeUserId: "a0000008-0000-4000-8000-000000000008",
+    verifymeId: "vmee90cd",
     email: "davidbrown@hotmail.com",
-    enterpriseUsername: "dbrown",
+    clientUserId: "cust_cs_dbrown",
     organization: "CloudScale Systems",
     organizationId: "ORG-007",
     status: "suspended",
     verificationSessions: 892,
     lastActive: "2024-03-15T14:30:00",
     created: "2024-02-14",
+    device: d("Pixel 7", "Android", "active", "2024-02-14T09:45:00Z", "2024-03-15T14:30:00Z", "Suspended account · device frozen (sample)"),
   },
   {
-    id: "USR-02134",
-    verifymeUsername: "ana.rodriguez",
+    id: "link-usr-02134",
+    verifymeUserId: "a0000009-0000-4000-8000-000000000009",
+    verifymeId: "vmff01ef",
     email: "ana.rodriguez@gmail.com",
-    enterpriseUsername: "arodriguez",
+    clientUserId: "cust_dfa_arodriguez",
     organization: "DataFlow Analytics",
     organizationId: "ORG-008",
     status: "active",
     verificationSessions: 2981,
     lastActive: "2024-04-09T07:50:00",
     created: "2024-03-05",
+    device: d("iPhone 15", "iOS", "active", "2024-03-05T12:00:00Z", "2024-04-09T07:50:00Z", "Bound (sample)"),
   },
 ];

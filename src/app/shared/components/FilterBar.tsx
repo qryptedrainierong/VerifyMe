@@ -1,6 +1,7 @@
 import { Filter } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
+import { cn } from "./ui/utils";
 import {
   Select,
   SelectContent,
@@ -22,11 +23,12 @@ interface FilterBarProps {
     onChange?: (value: string) => void;
   }>;
   actions?: React.ReactNode;
+  className?: string;
 }
 
-export function FilterBar({ onSearch, filters, actions }: FilterBarProps) {
+export function FilterBar({ onSearch, filters, actions, className }: FilterBarProps) {
   return (
-    <div className="flex items-center gap-3 p-4 bg-card border-b border-border">
+    <div className={cn("flex items-center gap-3 border-b border-border bg-card p-4", className)}>
       {onSearch && (
         <Input
           placeholder="Search..."

@@ -18,6 +18,7 @@ import {
   enterpriseUsageTrend,
   enterpriseUsageSpend,
 } from "../data/enterpriseSample";
+import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
 
 export function EnterpriseDashboard() {
   const usageData = enterpriseUsageTrend;
@@ -33,7 +34,7 @@ export function EnterpriseDashboard() {
 
   const recentActivity = enterpriseEndUsers.slice(0, 4).map((user, index) => ({
     id: index + 1,
-    user: user.enterpriseUsername,
+    clientUserId: user.clientUserId || "—",
     action:
       user.status === "active" ? "Completed a billable verification session" : "Has a pending VerifyMe link",
     timestamp: `${2 + index * 2} hour${index === 0 ? "" : "s"} ago`,
@@ -66,15 +67,11 @@ export function EnterpriseDashboard() {
     }).format(amount);
 
   return (
-    <div className="p-8 space-y-6 max-w-[1400px]">
-      <div>
-        <h1 className="text-[28px] font-semibold text-foreground">Dashboard</h1>
-        <p className="text-[15px] text-muted-foreground mt-1 max-w-3xl">
-          Organization-level overview of credits, verification sessions, linked end users, and integration readiness
-          (sample data).
-        </p>
-      </div>
-
+    <PortalPageFrame
+      title="Dashboard"
+      description="Organization-level overview of credits, verification sessions, linked end users, and integration readiness (sample data)."
+      bodyClassName="space-y-6"
+    >
       {enterprisePortalSetupIncomplete ? (
         <Card className="p-6 border-2 border-primary/30 bg-primary/5 shadow-sm">
           <div className="mb-4">
@@ -360,15 +357,12 @@ export function EnterpriseDashboard() {
             <div key={activity.id} className="p-5 flex items-center gap-4">
               <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                 <span className="text-[13px] font-medium text-primary">
-                  {activity.user
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")}
+                  {activity.clientUserId.replace(/[^a-z0-9]/gi, "").slice(0, 2).toUpperCase() || "—"}
                 </span>
               </div>
               <div className="flex-1">
                 <p className="text-[14px] text-foreground">
-                  <span className="font-medium">{activity.user}</span> {activity.action}
+                  <span className="font-medium font-mono text-[13px]">{activity.clientUserId}</span> {activity.action}
                 </p>
                 <p className="text-[12px] text-muted-foreground mt-0.5">{activity.timestamp}</p>
               </div>
@@ -376,6 +370,6 @@ export function EnterpriseDashboard() {
           ))}
         </div>
       </Card>
-    </div>
+    </PortalPageFrame>
   );
 }

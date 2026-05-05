@@ -23,6 +23,7 @@ import {
 } from "recharts";
 import { buildInitialOrganizations, getVerificationSpend } from "../data/platformOrganizationsSample";
 import { platformEndUserAssociations } from "../data/platformUsersSample";
+import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
 
 export function PlatformUsage() {
   const organizations = useMemo(() => buildInitialOrganizations(), []);
@@ -60,18 +61,13 @@ export function PlatformUsage() {
   };
 
   return (
-    <div className="p-8 space-y-6 max-w-[1800px]">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-[24px] font-semibold text-foreground">Usage Analytics</h1>
-          <p className="text-[14px] text-muted-foreground mt-1">
-            Monitor verification sessions, credits, and linked end users across organizations
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
+    <PortalPageFrame
+      title="Usage Analytics"
+      description="Monitor verification sessions, credits, and linked end users across organizations."
+      headerActions={
+        <div className="flex flex-wrap items-center gap-3">
           <Select defaultValue="30days">
-            <SelectTrigger className="w-[180px] h-10">
+            <SelectTrigger className="h-10 w-[180px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -83,8 +79,9 @@ export function PlatformUsage() {
           </Select>
           <Button variant="outline">Export Report</Button>
         </div>
-      </div>
-
+      }
+      bodyClassName="space-y-6"
+    >
       {/* KPI Cards */}
       <div className="grid grid-cols-4 gap-6">
         <Card className="p-6 border border-border shadow-sm">
@@ -339,6 +336,6 @@ export function PlatformUsage() {
           </p>
         </div>
       </Card>
-    </div>
+    </PortalPageFrame>
   );
 }

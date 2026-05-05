@@ -37,6 +37,7 @@ import {
   type VerificationSessionOutcome,
 } from "../../shared/data/verificationSessionsMock";
 import { enterpriseOrganization } from "../data/enterpriseSample";
+import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
 
 type OutcomeFilter = "all" | VerificationSessionOutcome;
 type BillableFilter = "all" | "billable" | "not_billable";
@@ -91,16 +92,18 @@ export function EnterpriseVerificationLogs() {
   }, [orgSessions]);
 
   return (
-    <div className="p-8 space-y-6 max-w-[1400px] mx-auto">
-      <div className="max-w-3xl">
-        <h1 className="text-[28px] font-semibold text-foreground">Verification Logs</h1>
-        <p className="text-[15px] text-muted-foreground mt-1">
-          Review verification sessions for <strong className="text-foreground">{enterpriseOrganization.organizationName}</strong>{" "}
-          only.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+    <>
+      <PortalPageFrame
+        title="Verification Logs"
+        description={
+          <>
+            Review verification sessions for{" "}
+            <strong className="text-foreground">{enterpriseOrganization.organizationName}</strong> only.
+          </>
+        }
+        bodyClassName="space-y-6"
+      >
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
         <Card className="p-4 border border-border shadow-sm">
           <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Total sessions</p>
           <p className="text-xl font-semibold mt-1">{stats.total}</p>
@@ -250,9 +253,10 @@ export function EnterpriseVerificationLogs() {
           </table>
         </div>
         {filtered.length === 0 && (
-          <p className="p-8 text-center text-muted-foreground text-sm">No sessions match filters.</p>
+          <p className="px-6 py-12 text-center text-sm text-muted-foreground sm:px-8">No sessions match filters.</p>
         )}
       </Card>
+      </PortalPageFrame>
 
       <Dialog open={detail !== null} onOpenChange={(o) => !o && setDetail(null)}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
@@ -275,6 +279,6 @@ export function EnterpriseVerificationLogs() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

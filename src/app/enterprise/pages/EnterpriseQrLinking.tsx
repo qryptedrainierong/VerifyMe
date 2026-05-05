@@ -3,18 +3,15 @@ import { Card } from "../../shared/components/ui/card";
 import { Button } from "../../shared/components/ui/button";
 import { UnifiedBadge } from "../../shared/components/UnifiedBadge";
 import { enterpriseQrKeyRow, enterpriseOrganization } from "../data/enterpriseSample";
+import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
 
 export function EnterpriseQrLinking() {
   return (
-    <div className="p-8 space-y-8 max-w-[1000px]">
-      <div>
-        <h1 className="text-[28px] font-semibold text-foreground">QR linking</h1>
-        <p className="text-[15px] text-muted-foreground mt-1 max-w-3xl">
-          How your organization issues QR codes and deep links so customer records connect to VerifyMe users—without
-          exposing private keys in this portal.
-        </p>
-      </div>
-
+    <PortalPageFrame
+      title="QR linking"
+      description="How your organization issues QR codes and deep links so customer records connect to VerifyMe users—without exposing private keys in this portal."
+      bodyClassName="max-w-5xl space-y-8"
+    >
       <Card className="p-6 border border-border shadow-sm space-y-4">
         <div className="flex items-center gap-2">
           <QrCode className="w-5 h-5 text-primary" />
@@ -122,6 +119,6 @@ export function EnterpriseQrLinking() {
       <p className="text-[12px] text-muted-foreground">
         Sample organization: <span className="font-medium text-foreground">{enterpriseOrganization.organizationName}</span>
       </p>
-    </div>
+    </PortalPageFrame>
   );
 }

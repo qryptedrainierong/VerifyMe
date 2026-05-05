@@ -27,6 +27,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../../shared/components/ui/dropdown-menu";
+import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
 
 type EnterpriseRole =
   | "Owner"
@@ -104,15 +105,10 @@ export function EnterpriseTeam() {
   ];
 
   return (
-    <div className="p-8 space-y-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-[24px] font-semibold text-foreground">Team & Roles</h2>
-          <p className="text-[15px] text-muted-foreground mt-1">
-            Organization portal users: Owner, Admin, Operations, Technical / API Manager, Finance / Billing, Compliance
-            / Auditor. Each member has one role at a time (MVP — no multi-role assignments).
-          </p>
-        </div>
+    <PortalPageFrame
+      title="Team & Roles"
+      description="Organization portal users: Owner, Admin, Operations, Technical / API Manager, Finance / Billing, Compliance / Auditor. Each member has one role at a time (MVP — no multi-role assignments)."
+      headerActions={
         <Dialog>
           <DialogTrigger asChild>
             <Button>
@@ -161,25 +157,26 @@ export function EnterpriseTeam() {
             </div>
           </DialogContent>
         </Dialog>
-      </div>
-
+      }
+      bodyClassName="max-w-7xl space-y-6"
+    >
       {/* Stats Cards */}
       <div className="grid grid-cols-4 gap-4">
         <Card className="p-4 shadow-sm">
           <p className="text-[13px] text-muted-foreground mb-1">Total Users</p>
-          <p className="text-[24px] font-semibold">24</p>
+          <p className="text-2xl font-semibold tabular-nums tracking-tight">24</p>
         </Card>
         <Card className="p-4 shadow-sm">
           <p className="text-[13px] text-muted-foreground mb-1">Active Now</p>
-          <p className="text-[24px] font-semibold text-green-600">18</p>
+          <p className="text-2xl font-semibold tabular-nums tracking-tight text-green-600">18</p>
         </Card>
         <Card className="p-4 shadow-sm">
           <p className="text-[13px] text-muted-foreground mb-1">Admins</p>
-          <p className="text-[24px] font-semibold">3</p>
+          <p className="text-2xl font-semibold tabular-nums tracking-tight">3</p>
         </Card>
         <Card className="p-4 shadow-sm">
           <p className="text-[13px] text-muted-foreground mb-1">Pending Invites</p>
-          <p className="text-[24px] font-semibold text-yellow-600">2</p>
+          <p className="text-2xl font-semibold tabular-nums tracking-tight text-yellow-600">2</p>
         </Card>
       </div>
 
@@ -251,6 +248,6 @@ export function EnterpriseTeam() {
         ]}
         data={teamMembers}
       />
-    </div>
+    </PortalPageFrame>
   );
 }

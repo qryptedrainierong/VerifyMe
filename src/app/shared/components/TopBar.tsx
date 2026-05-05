@@ -12,7 +12,7 @@ export function TopBar({ title, showSearch = true }: TopBarProps) {
     <header className="h-16 border-b border-border bg-card px-6 flex items-center justify-between sticky top-0 z-10 shadow-sm">
       <div className="flex items-center gap-6 flex-1">
         {title && (
-          <h1 className="text-[15px] font-medium text-muted-foreground">{title}</h1>
+          <h1 className="text-sm font-medium tracking-tight text-muted-foreground">{title}</h1>
         )}
 
         {showSearch && (

@@ -19,8 +19,7 @@ Documentation must not imply storing or displaying raw passcode, **OTP** values,
 
 ### Single active device (MVP)
 
-- MVP allows **one active device** per **VerifyMe User**.
-- Setting up a new device **revokes** the previous device’s sessions and keys (design intent).
+In the current MVP, each VerifyMe user is limited to a **single active device**. Registering a new device **replaces** the existing device and **rotates** the associated secure state. Future versions may support multiple devices per user, subject to additional security controls and policies.
 
 ## Account recovery
 
@@ -32,7 +31,7 @@ Organizations do **not** own VerifyMe accounts. They link to them.
 
 - Organizations may **invite** **VerifyMe Users** via **single invite**, **bulk invite**, or **automated Invite API** (server-to-server; rate limits and consent UX TBD).
 - Organizations **create or invite records** (e.g. CRM **`client_user_id`**), but **only the end-user** completes **cryptographic linking** in the **VerifyMe app**.
-- **No silent account creation:** a **VerifyMe User** must complete app onboarding and linking; the org cannot silently instantiate a VerifyMe identity.
+- **No silent account creation:** a **VerifyMe User** must complete app onboarding and linking; the org cannot silently instantiate a VerifyMe user account.
 
 ## Linked End Users — link status (UI alignment)
 
@@ -45,3 +44,5 @@ Invite envelope state (separate from link) may include `none`, `pending`, `accep
 ## Terminology
 
 Prefer **VerifyMe User** when the subject is the mobile identity. Prefer **Linked End User** (or organization user record) when the subject is the enterprise’s view of that relationship.
+
+Public display for a VerifyMe User in admin/support contexts is the **VerifyMe ID** (`verifyme_id`, `vmXXXXXX`). Internal joins use **`verifyme_user_id`** → `verifyme_users.id`. The organization’s customer key is **`client_user_id`**. **Email** is private account email, not a username.

@@ -27,6 +27,7 @@ import {
   DialogTrigger,
 } from "../../shared/components/ui/dialog";
 import { UnifiedBadge } from "../../shared/components/UnifiedBadge";
+import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
 import { platformPortalUsers, type PlatformPortalUser } from "../data/platformUsersSample";
 
 const statusLabel: Record<PlatformPortalUser["status"], "Active" | "Invited" | "Suspended"> = {
@@ -271,19 +272,17 @@ export function PlatformPortalUsers() {
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="p-8 border-b border-border">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-[24px] font-semibold text-foreground">VerifyMe platform users</h1>
-            <p className="text-[14px] text-muted-foreground mt-1">
-              Internal Qrypted / VerifyMe staff who operate the VerifyMe admin portal and organization lifecycle tools
-            </p>
-          </div>
+    <>
+      <PortalPageFrame
+        variant="fill"
+        rootClassName="h-full"
+        title="VerifyMe platform users"
+        description="Internal Qrypted / VerifyMe staff who operate the VerifyMe admin portal and organization lifecycle tools."
+        headerActions={
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
               <Button>
-                <UserPlus className="w-4 h-4 mr-2" />
+                <UserPlus className="mr-2 h-4 w-4" />
                 Create User
               </Button>
             </DialogTrigger>
@@ -322,14 +321,14 @@ export function PlatformPortalUsers() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                      {roleOptions.map((role) => (
-                        <SelectItem key={role} value={role}>
-                          {role}
-                        </SelectItem>
-                      ))}
+                        {roleOptions.map((role) => (
+                          <SelectItem key={role} value={role}>
+                            {role}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
-                  <p className="text-xs text-muted-foreground">{roleAccess[newUserRole].summary}</p>
+                    <p className="text-xs text-muted-foreground">{roleAccess[newUserRole].summary}</p>
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -358,143 +357,50 @@ export function PlatformPortalUsers() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-        </div>
-        {message && (
-          <div className="mb-4 rounded-md border border-green-500/40 bg-green-500/10 px-4 py-2 text-sm text-green-700 dark:text-green-300">
-            {message}
-          </div>
-        )}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 mb-6">
-          <Card className="p-4 border border-border/70 shadow-none min-h-[92px]">
-            <p className="text-xs text-muted-foreground">Total Users</p>
-            <p className="text-xl font-semibold text-foreground mt-1">{stats.totalUsers}</p>
-          </Card>
-          <Card className="p-4 border border-border/70 shadow-none min-h-[92px]">
-            <p className="text-xs text-muted-foreground">Active Users</p>
-            <p className="text-xl font-semibold text-foreground mt-1">{stats.activeUsers}</p>
-          </Card>
-          <Card className="p-4 border border-border/70 shadow-none min-h-[92px]">
-            <p className="text-xs text-muted-foreground">Admins</p>
-            <p className="text-xl font-semibold text-foreground mt-1">{stats.adminUsers}</p>
-          </Card>
-          <Card className="p-4 border border-border/70 shadow-none min-h-[92px]">
-            <p className="text-xs text-muted-foreground">Pending Invites</p>
-            <p className="text-xl font-semibold text-foreground mt-1">{stats.pendingInvites}</p>
-          </Card>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2.5">
-          <div className="relative flex-1 min-w-[240px] md:max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by name, email, or scope..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-10 rounded-md border-border bg-input-background pl-9 text-sm text-foreground placeholder:text-muted-foreground"
-            />
-          </div>
-
-          <Select value={roleFilter} onValueChange={(value) => setRoleFilter(value as typeof roleFilter)}>
-            <SelectTrigger className="h-10 w-[180px] rounded-md text-sm">
-              <SelectValue placeholder="All Roles" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Roles</SelectItem>
-              {roleOptions.map((role) => (
-                <SelectItem key={role} value={role}>
-                  {role}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as typeof statusFilter)}>
-            <SelectTrigger className="h-10 w-[180px] rounded-md text-sm">
-              <SelectValue placeholder="All Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="invited">Invited</SelectItem>
-              <SelectItem value="suspended">Suspended</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-10 w-10 rounded-md"
-            onClick={() => {
-              setSearchQuery("");
-              setRoleFilter("all");
-              setStatusFilter("all");
-            }}
-          >
-            <Filter className="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-auto">
-        <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
-          <DialogContent className="sm:max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>User Details</DialogTitle>
-              <DialogDescription>
-                {selectedUser ? `${selectedUser.name} • ${selectedUser.email}` : "Portal user details"}
-              </DialogDescription>
-            </DialogHeader>
-            {selectedUser && (
-              <div className="space-y-4">
-                <div className="rounded-md border border-border bg-accent/5 px-4 py-3 text-sm">
-                  <p className="font-medium text-foreground">{selectedUser.name}</p>
-                  <p className="text-muted-foreground">
-                    {selectedUser.email} • {selectedUser.role} • {selectedUser.organizationScope}
-                  </p>
-                  <p className="text-muted-foreground mt-1">{roleAccess[selectedUser.role].summary}</p>
-                </div>
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div className="rounded-md border border-border p-3">
-                    <p className="text-xs font-medium text-foreground mb-2">Can View & Do</p>
-                    <ul className="text-xs text-muted-foreground space-y-1">
-                      {roleAccess[selectedUser.role].can.map((item) => (
-                        <li key={item}>• {item}</li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div className="rounded-md border border-border p-3">
-                    <p className="text-xs font-medium text-foreground mb-2">Restrictions</p>
-                    <ul className="text-xs text-muted-foreground space-y-1">
-                      {(roleAccess[selectedUser.role].cannot.length > 0
-                        ? roleAccess[selectedUser.role].cannot
-                        : ["No restrictions"]).map((item) => (
-                        <li key={item}>• {item}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
+        }
+        headerExtra={
+          <>
+            {message ? (
+              <div className="rounded-md border border-green-500/40 bg-green-500/10 px-4 py-2 text-sm text-green-700 dark:text-green-300">
+                {message}
               </div>
-            )}
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDetailsDialogOpen(false)}>
-                Close
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-        <Dialog open={editingRoleUserId !== null} onOpenChange={(open) => !open && setEditingRoleUserId(null)}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Edit Role</DialogTitle>
-              <DialogDescription>Select the role you want to assign to this user.</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-2 py-2">
-              <Label>Role</Label>
-              <Select value={nextRole} onValueChange={(value) => setNextRole(value as PlatformPortalUser["role"])}>
-                <SelectTrigger>
-                  <SelectValue />
+            ) : null}
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+              <Card className="min-h-[92px] border border-border/70 p-4 shadow-none">
+                <p className="text-xs text-muted-foreground">Total Users</p>
+                <p className="mt-1 text-xl font-semibold text-foreground">{stats.totalUsers}</p>
+              </Card>
+              <Card className="min-h-[92px] border border-border/70 p-4 shadow-none">
+                <p className="text-xs text-muted-foreground">Active Users</p>
+                <p className="mt-1 text-xl font-semibold text-foreground">{stats.activeUsers}</p>
+              </Card>
+              <Card className="min-h-[92px] border border-border/70 p-4 shadow-none">
+                <p className="text-xs text-muted-foreground">Admins</p>
+                <p className="mt-1 text-xl font-semibold text-foreground">{stats.adminUsers}</p>
+              </Card>
+              <Card className="min-h-[92px] border border-border/70 p-4 shadow-none">
+                <p className="text-xs text-muted-foreground">Pending Invites</p>
+                <p className="mt-1 text-xl font-semibold text-foreground">{stats.pendingInvites}</p>
+              </Card>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2.5">
+              <div className="relative min-w-[240px] flex-1 md:max-w-md">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search by name, email, or scope..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-10 rounded-md border-border bg-input-background pl-9 text-sm text-foreground placeholder:text-muted-foreground"
+                />
+              </div>
+
+              <Select value={roleFilter} onValueChange={(value) => setRoleFilter(value as typeof roleFilter)}>
+                <SelectTrigger className="h-10 w-[180px] rounded-md text-sm">
+                  <SelectValue placeholder="All Roles" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="all">All Roles</SelectItem>
                   {roleOptions.map((role) => (
                     <SelectItem key={role} value={role}>
                       {role}
@@ -502,62 +408,85 @@ export function PlatformPortalUsers() {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">{roleAccess[nextRole].summary}</p>
+
+              <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as typeof statusFilter)}>
+                <SelectTrigger className="h-10 w-[180px] rounded-md text-sm">
+                  <SelectValue placeholder="All Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="invited">Invited</SelectItem>
+                  <SelectItem value="suspended">Suspended</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-10 w-10 rounded-md"
+                onClick={() => {
+                  setSearchQuery("");
+                  setRoleFilter("all");
+                  setStatusFilter("all");
+                }}
+              >
+                <Filter className="h-4 w-4" />
+              </Button>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setEditingRoleUserId(null)}>Cancel</Button>
-              <Button onClick={applyEditedRole}>Save Role</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-        <Card className="m-8 border border-border shadow-sm">
+          </>
+        }
+      >
+        <Card className="border border-border shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="border-b border-border bg-accent/5 sticky top-0 z-10">
+              <thead className="sticky top-0 z-10 border-b border-border bg-accent/5">
                 <tr>
-                  <th className="text-left p-4 text-[12px] font-semibold tracking-wide text-muted-foreground uppercase">
-                    <button className="flex items-center gap-1 hover:text-foreground transition-colors">
+                  <th className="p-4 text-left text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    <button className="flex items-center gap-1 transition-colors hover:text-foreground">
                       User
-                      <ArrowUpDown className="w-3 h-3" />
+                      <ArrowUpDown className="h-3 w-3" />
                     </button>
                   </th>
-                  <th className="text-left p-4 text-[12px] font-semibold tracking-wide text-muted-foreground uppercase">Role</th>
-                  <th className="text-left p-4 text-[12px] font-semibold tracking-wide text-muted-foreground uppercase">Organization Scope</th>
-                  <th className="text-left p-4 text-[12px] font-semibold tracking-wide text-muted-foreground uppercase">Status</th>
-                  <th className="text-left p-4 text-[12px] font-semibold tracking-wide text-muted-foreground uppercase">Last Login</th>
-                  <th className="text-left p-4 text-[12px] font-semibold tracking-wide text-muted-foreground uppercase">Created</th>
-                  <th className="text-left p-4 text-[12px] font-semibold tracking-wide text-muted-foreground uppercase w-[60px]">Actions</th>
+                  <th className="p-4 text-left text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Role</th>
+                  <th className="p-4 text-left text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Organization Scope
+                  </th>
+                  <th className="p-4 text-left text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Status</th>
+                  <th className="p-4 text-left text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Last Login</th>
+                  <th className="p-4 text-left text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Created</th>
+                  <th className="w-[60px] p-4 text-left text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {users.map((user) => (
-                  <tr key={user.id} className="hover:bg-accent/5 transition-colors">
+                  <tr key={user.id} className="transition-colors hover:bg-accent/5">
                     <td className="p-4">
                       <div>
                         <p className="text-[14px] font-medium text-foreground">{user.name}</p>
                         <p className="text-[12px] text-muted-foreground">{user.email}</p>
                       </div>
                     </td>
-                    <td className="p-4 whitespace-nowrap">
+                    <td className="whitespace-nowrap p-4">
                       <UnifiedBadge variant="role" value={user.role} />
                     </td>
                     <td className="p-4">
                       <p className="text-[14px] text-foreground">{user.organizationScope}</p>
                     </td>
-                    <td className="p-4 whitespace-nowrap">
+                    <td className="whitespace-nowrap p-4">
                       <UnifiedBadge variant="status" value={statusLabel[user.status]} />
                     </td>
                     <td className="p-4">
                       <p className="text-[14px] text-foreground">{formatRelativeTime(user.lastLogin)}</p>
                     </td>
-                    <td className="p-4 whitespace-nowrap">
+                    <td className="whitespace-nowrap p-4">
                       <p className="text-[14px] text-foreground">{formatDate(user.created)}</p>
                     </td>
                     <td className="p-4 align-top">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreVertical className="w-4 h-4" />
+                            <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
@@ -586,7 +515,7 @@ export function PlatformPortalUsers() {
                   <tr>
                     <td colSpan={7} className="p-10 text-center">
                       <p className="text-sm font-medium text-foreground">No users found</p>
-                      <p className="text-xs text-muted-foreground mt-1">Try clearing search or filter values.</p>
+                      <p className="mt-1 text-xs text-muted-foreground">Try clearing search or filter values.</p>
                     </td>
                   </tr>
                 )}
@@ -594,7 +523,84 @@ export function PlatformPortalUsers() {
             </table>
           </div>
         </Card>
-      </div>
-    </div>
+      </PortalPageFrame>
+
+      <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>User Details</DialogTitle>
+            <DialogDescription>
+              {selectedUser ? `${selectedUser.name} • ${selectedUser.email}` : "Portal user details"}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedUser && (
+            <div className="space-y-4">
+              <div className="rounded-md border border-border bg-accent/5 px-4 py-3 text-sm">
+                <p className="font-medium text-foreground">{selectedUser.name}</p>
+                <p className="text-muted-foreground">
+                  {selectedUser.email} • {selectedUser.role} • {selectedUser.organizationScope}
+                </p>
+                <p className="mt-1 text-muted-foreground">{roleAccess[selectedUser.role].summary}</p>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="rounded-md border border-border p-3">
+                  <p className="mb-2 text-xs font-medium text-foreground">Can View & Do</p>
+                  <ul className="space-y-1 text-xs text-muted-foreground">
+                    {roleAccess[selectedUser.role].can.map((item) => (
+                      <li key={item}>• {item}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="rounded-md border border-border p-3">
+                  <p className="mb-2 text-xs font-medium text-foreground">Restrictions</p>
+                  <ul className="space-y-1 text-xs text-muted-foreground">
+                    {(roleAccess[selectedUser.role].cannot.length > 0
+                      ? roleAccess[selectedUser.role].cannot
+                      : ["No restrictions"]).map((item) => (
+                      <li key={item}>• {item}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDetailsDialogOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={editingRoleUserId !== null} onOpenChange={(open) => !open && setEditingRoleUserId(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Role</DialogTitle>
+            <DialogDescription>Select the role you want to assign to this user.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label>Role</Label>
+            <Select value={nextRole} onValueChange={(value) => setNextRole(value as PlatformPortalUser["role"])}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {roleOptions.map((role) => (
+                  <SelectItem key={role} value={role}>
+                    {role}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">{roleAccess[nextRole].summary}</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingRoleUserId(null)}>
+              Cancel
+            </Button>
+            <Button onClick={applyEditedRole}>Save Role</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

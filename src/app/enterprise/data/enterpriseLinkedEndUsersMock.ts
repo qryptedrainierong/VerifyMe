@@ -33,9 +33,9 @@ export type OrganizationUserRecord = {
   displayName: string;
   linkStatus: OrganizationLinkStatus;
   inviteStatus: OrganizationInviteStatus;
-  maskedVerifymeUserId: string | null;
-  /** When linkStatus is conflict: second masked identity involved in the clash (mock). */
-  conflictingMaskedVerifymeUserId?: string | null;
+  maskedVerifymeId: string | null;
+  /** When linkStatus is conflict: second masked VerifyMe ID involved in the clash (mock). */
+  conflictingMaskedVerifymeId?: string | null;
   /** Org admin marked conflict dialog as reviewed (mock UI only). */
   conflictReviewed?: boolean;
   lastVerifiedAt: string | null;
@@ -119,7 +119,7 @@ export function getInitialOrganizationUserRecords(): OrganizationUserRecord[] {
       displayName: "John Smith",
       linkStatus: "linked",
       inviteStatus: "accepted",
-      maskedVerifymeUserId: "vm_****3b9a",
+      maskedVerifymeId: "vm_****3b9a",
       lastVerifiedAt: "2024-04-09T10:30:00Z",
       invitedAt: "2024-01-10T09:00:00Z",
       createdAt: "2024-01-15",
@@ -139,7 +139,7 @@ export function getInitialOrganizationUserRecords(): OrganizationUserRecord[] {
       displayName: "Maria Chan",
       linkStatus: "pending",
       inviteStatus: "pending",
-      maskedVerifymeUserId: null,
+      maskedVerifymeId: null,
       lastVerifiedAt: null,
       invitedAt: "2026-04-27T11:00:00Z",
       createdAt: "2026-04-27",
@@ -155,7 +155,7 @@ export function getInitialOrganizationUserRecords(): OrganizationUserRecord[] {
       displayName: "Kim Nguyen",
       linkStatus: "unlinked",
       inviteStatus: "expired",
-      maskedVerifymeUserId: null,
+      maskedVerifymeId: null,
       lastVerifiedAt: null,
       invitedAt: "2026-03-01T12:00:00Z",
       createdAt: "2026-02-20",
@@ -171,7 +171,7 @@ export function getInitialOrganizationUserRecords(): OrganizationUserRecord[] {
       displayName: "Ben Wong",
       linkStatus: "suspended",
       inviteStatus: "accepted",
-      maskedVerifymeUserId: "vm_****8c21",
+      maskedVerifymeId: "vm_****8c21",
       lastVerifiedAt: "2024-03-15T09:00:00Z",
       invitedAt: "2024-01-05T10:00:00Z",
       createdAt: "2024-01-08",
@@ -187,7 +187,7 @@ export function getInitialOrganizationUserRecords(): OrganizationUserRecord[] {
       displayName: "Olivia Lee",
       linkStatus: "revoked",
       inviteStatus: "superseded",
-      maskedVerifymeUserId: null,
+      maskedVerifymeId: null,
       lastVerifiedAt: "2024-02-01T14:00:00Z",
       invitedAt: "2023-12-01T08:00:00Z",
       createdAt: "2023-11-28",
@@ -203,7 +203,7 @@ export function getInitialOrganizationUserRecords(): OrganizationUserRecord[] {
       displayName: "Policy Admin",
       linkStatus: "disabled",
       inviteStatus: "accepted",
-      maskedVerifymeUserId: "vm_****1d44",
+      maskedVerifymeId: "vm_****1d44",
       lastVerifiedAt: null,
       invitedAt: "2023-10-01T10:00:00Z",
       createdAt: "2023-09-22",
@@ -219,8 +219,8 @@ export function getInitialOrganizationUserRecords(): OrganizationUserRecord[] {
       displayName: "Duplicate scenario",
       linkStatus: "conflict",
       inviteStatus: "pending",
-      maskedVerifymeUserId: "vm_****9e01",
-      conflictingMaskedVerifymeUserId: "vm_****2a77",
+      maskedVerifymeId: "vm_****9e01",
+      conflictingMaskedVerifymeId: "vm_****2a77",
       lastVerifiedAt: "2026-04-20T12:00:00Z",
       invitedAt: "2026-04-25T09:30:00Z",
       createdAt: "2026-04-18",
@@ -236,7 +236,7 @@ export function getInitialOrganizationUserRecords(): OrganizationUserRecord[] {
       displayName: "Lee Expired-invite",
       linkStatus: "pending",
       inviteStatus: "expired",
-      maskedVerifymeUserId: null,
+      maskedVerifymeId: null,
       lastVerifiedAt: null,
       invitedAt: "2024-01-10T09:00:00Z",
       createdAt: "2024-01-08",

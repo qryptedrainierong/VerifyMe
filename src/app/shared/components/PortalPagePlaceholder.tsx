@@ -1,4 +1,5 @@
 import { Card } from "./ui/card";
+import { PortalPageFrame } from "./PortalPageFrame";
 
 export interface PortalPagePlaceholderSection {
   title: string;
@@ -13,12 +14,7 @@ interface PortalPagePlaceholderProps {
 
 export function PortalPagePlaceholder({ title, description, sections }: PortalPagePlaceholderProps) {
   return (
-    <div className="p-8 space-y-6 max-w-5xl">
-      <div>
-        <h1 className="text-[24px] font-semibold text-foreground">{title}</h1>
-        <p className="text-[14px] text-muted-foreground mt-2 max-w-3xl leading-relaxed">{description}</p>
-      </div>
-
+    <PortalPageFrame title={title} description={description} bodyClassName="max-w-5xl space-y-6">
       <div className="grid gap-4 sm:grid-cols-2">
         {sections.map((section) => (
           <Card key={section.title} className="border border-border p-5 shadow-sm">
@@ -33,6 +29,6 @@ export function PortalPagePlaceholder({ title, description, sections }: PortalPa
           Design-time placeholder — backend integration will connect live VerifyMe data here.
         </p>
       </Card>
-    </div>
+    </PortalPageFrame>
   );
 }

@@ -4,6 +4,8 @@ Conceptual end-to-end flow for organization-integrated identity verification. **
 
 For terms, see [`glossary.md`](./glossary.md). For billing, see [`billing-credits.md`](./billing-credits.md).
 
+Authorize requests carry the organization’s **`client_user_id`** (and registered **`client_id`**). The platform resolves the linked **`verifyme_user_id`** internally; admin surfaces may show a **masked `verifyme_id`** (public VerifyMe ID) but must not treat **`verifyme_user_id`** as a user-facing username.
+
 ## Sequence
 
 1. **Authorize**  

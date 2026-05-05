@@ -89,7 +89,7 @@ export function PlatformOrganizationDetail() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="p-8 border-b border-border bg-card">
+      <div className="border-b border-border bg-card px-6 py-6 sm:px-8 sm:py-7">
         <div className="mb-4">
           <Button variant="ghost" size="sm" onClick={() => navigate("/organizations")} className="mb-4">
             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -104,7 +104,9 @@ export function PlatformOrganizationDetail() {
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2 mb-2">
-                <h1 className="text-[28px] font-semibold text-foreground">{organization.organizationName}</h1>
+                <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+                  {organization.organizationName}
+                </h1>
                 <UnifiedBadge variant="plan" value={organization.plan} />
                 <UnifiedBadge variant="status" value={formatLifecycleStatus(organization.status)} />
                 <UnifiedBadge variant="integration" value={formatIntegrationStatus(organization.integrationStatus)} />

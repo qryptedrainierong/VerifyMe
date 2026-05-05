@@ -28,11 +28,11 @@ export function KPICard({ title, value, change, changeLabel, icon, trend }: KPIC
     <Card className="p-6 shadow-sm">
       <div className="flex items-start justify-between">
         <div className="flex-1">
-          <p className="text-[13px] text-muted-foreground mb-1">{title}</p>
-          <p className="text-[28px] font-semibold text-foreground mb-2">{value}</p>
+          <p className="mb-1 text-xs text-muted-foreground sm:text-sm">{title}</p>
+          <p className="mb-2 text-3xl font-semibold tabular-nums tracking-tight text-foreground">{value}</p>
           
           {(change !== undefined || changeLabel) && (
-            <div className={cn("flex items-center gap-1 text-[13px]", getTrendColor())}>
+            <div className={cn("flex items-center gap-1 text-xs sm:text-sm", getTrendColor())}>
               {trend && getTrendIcon()}
               {change !== undefined && (
                 <span>

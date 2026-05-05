@@ -3,7 +3,8 @@ import type { PlatformEndUserAssociation } from "./platformUsersSample";
 export type GroupedEndUserRowStatus = "active" | "pending" | "suspended" | "disabled";
 
 export type GroupedEndUser = {
-  verifymeUsername: string;
+  verifymeUserId: string;
+  verifymeId: string;
   email: string;
   memberships: PlatformEndUserAssociation[];
   /** Worst-wins across memberships: Disabled > Suspended > Pending > Active */
@@ -33,24 +34,27 @@ function maxLastActive(memberships: PlatformEndUserAssociation[]): string | null
   return best;
 }
 
-export function groupAssociationsByVerifymeUsername(
+export function groupAssociationsByVerifymeUserId(
   associations: PlatformEndUserAssociation[],
 ): GroupedEndUser[] {
   const byUser = new Map<string, PlatformEndUserAssociation[]>();
   for (const a of associations) {
-    const list = byUser.get(a.verifymeUsername) ?? [];
+    const list = byUser.get(a.verifymeUserId) ?? [];
     list.push(a);
-    byUser.set(a.verifymeUsername, list);
+    byUser.set(a.verifymeUserId, list);
   }
 
   const groups: GroupedEndUser[] = [];
-  for (const [verifymeUsername, memberships] of byUser) {
+  for (const [verifymeUserId, memberships] of byUser) {
     const sorted = [...memberships].sort((a, b) =>
       a.organization.localeCompare(b.organization),
     );
-    const email = sorted[0]?.email ?? "";
+    const first = sorted[0];
+    const email = first?.email ?? "";
+    const verifymeId = first?.verifymeId ?? "";
     groups.push({
-      verifymeUsername,
+      verifymeUserId,
+      verifymeId,
       email,
       memberships: sorted,
       rowStatus: aggregateRowStatus(sorted),
@@ -59,15 +63,15 @@ export function groupAssociationsByVerifymeUsername(
     });
   }
 
-  return groups.sort((a, b) => a.verifymeUsername.localeCompare(b.verifymeUsername));
+  return groups.sort((a, b) => a.verifymeId.localeCompare(b.verifymeId));
 }
 
 export function resolveSelectedOrganizationId(
-  verifymeUsername: string,
+  verifymeUserId: string,
   memberships: PlatformEndUserAssociation[],
   stored: Record<string, string | undefined>,
 ): string {
-  const storedId = stored[verifymeUsername];
+  const storedId = stored[verifymeUserId];
   if (storedId && memberships.some((m) => m.organizationId === storedId)) {
     return storedId;
   }

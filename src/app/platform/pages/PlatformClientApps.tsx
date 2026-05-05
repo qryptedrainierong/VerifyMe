@@ -26,6 +26,7 @@ import {
   type PlatformClientAppRow,
 } from "../data/platformClientAppsSample";
 import { buildInitialOrganizations, formatIntegrationStatus, type IntegrationStatus } from "../data/platformOrganizationsSample";
+import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
 
 export function PlatformClientApps() {
   const [searchParams] = useSearchParams();
@@ -101,34 +102,36 @@ export function PlatformClientApps() {
     s === "configured" ? "Configured (masked)" : "Rotation due";
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="p-8 border-b border-border">
-        <h1 className="text-[24px] font-semibold text-foreground">Client Apps / API</h1>
-        <p className="text-[14px] text-muted-foreground mt-1 max-w-3xl">
-          Platform-wide view of organization client applications and integration readiness. Client secrets, private
-          keys, and raw QR payloads are never shown.
-        </p>
-        {urlOrganizationId ? (
-          <p className="text-[12px] text-muted-foreground mt-3">
-            URL filter: <span className="font-mono text-foreground">{urlOrganizationId}</span>
-            {!knownOrgIds.has(urlOrganizationId)
-              ? " — unknown organization id in sample set; adjust filters manually."
-              : " — applied when recognized in sample organizations."}
-          </p>
-        ) : (
-          <p className="text-[12px] text-muted-foreground mt-3">
-            Optional <span className="font-mono">?organizationId=…</span> pre-selects organization when recognized
-            (design-phase).
-          </p>
-        )}
-        {message ? (
-          <div className="mt-3 rounded-md border border-green-500/40 bg-green-500/10 px-4 py-2 text-sm text-green-700 dark:text-green-300">
-            {message}
-          </div>
-        ) : null}
-      </div>
-
-      <div className="flex-1 overflow-auto p-8 space-y-6">
+    <>
+      <PortalPageFrame
+        variant="fill"
+        rootClassName="h-full"
+        title="Client Apps / API"
+        description="Platform-wide view of organization client applications and integration readiness. Client secrets, private keys, and raw QR payloads are never shown."
+        headerExtra={
+          <>
+            {urlOrganizationId ? (
+              <p className="text-xs text-muted-foreground sm:text-sm">
+                URL filter: <span className="font-mono text-foreground">{urlOrganizationId}</span>
+                {!knownOrgIds.has(urlOrganizationId)
+                  ? " — unknown organization id in sample set; adjust filters manually."
+                  : " — applied when recognized in sample organizations."}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground sm:text-sm">
+                Optional <span className="font-mono">?organizationId=…</span> pre-selects organization when recognized
+                (design-phase).
+              </p>
+            )}
+            {message ? (
+              <div className="rounded-md border border-green-500/40 bg-green-500/10 px-4 py-2 text-sm text-green-700 dark:text-green-300">
+                {message}
+              </div>
+            ) : null}
+          </>
+        }
+        bodyClassName="space-y-6"
+      >
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <Card className="p-4 border border-border shadow-sm">
             <p className="text-[12px] text-muted-foreground">Total client apps</p>
@@ -296,7 +299,7 @@ export function PlatformClientApps() {
             </table>
           </div>
         </Card>
-      </div>
+      </PortalPageFrame>
 
       <Dialog open={detailRow !== null} onOpenChange={(o) => !o && setDetailRow(null)}>
         <DialogContent className="sm:max-w-lg">
@@ -421,6 +424,6 @@ export function PlatformClientApps() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

@@ -131,7 +131,7 @@ export function OrganizationDetailTabs({
           </TabsList>
         </div>
 
-        <TabsContent value="org-details" className="flex-1 overflow-auto p-8 space-y-6 m-0 mt-0">
+        <TabsContent value="org-details" className="flex-1 overflow-auto m-0 mt-0 space-y-6 px-6 py-6 sm:px-8 sm:py-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <Card className="border border-border shadow-sm lg:col-span-2">
               <div className="p-6 border-b border-border">
@@ -278,7 +278,7 @@ export function OrganizationDetailTabs({
           </Card>
         </TabsContent>
 
-        <TabsContent value="usage" className="flex-1 overflow-auto p-8 space-y-6 m-0 mt-0">
+        <TabsContent value="usage" className="flex-1 overflow-auto m-0 mt-0 space-y-6 px-6 py-6 sm:px-8 sm:py-8">
           <div>
             <h3 className="text-[16px] font-semibold text-foreground mb-4">Dashboard</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
@@ -289,7 +289,7 @@ export function OrganizationDetailTabs({
                   </div>
                 </div>
                 <p className="text-[13px] text-muted-foreground mb-1">Billable spend this period</p>
-                <p className="text-[28px] font-semibold text-foreground tabular-nums">{formatCurrency(billableSpend)}</p>
+                <p className="text-3xl font-semibold tabular-nums tracking-tight text-foreground">{formatCurrency(billableSpend)}</p>
                 <p className="text-[12px] text-muted-foreground mt-1">From billable verification outcomes (sample)</p>
               </Card>
               <Card className="p-6 border border-border shadow-sm">
@@ -299,7 +299,7 @@ export function OrganizationDetailTabs({
                   </div>
                 </div>
                 <p className="text-[13px] text-muted-foreground mb-1">Verification sessions</p>
-                <p className="text-[28px] font-semibold text-foreground tabular-nums">{formatNumber(organization.usage)}</p>
+                <p className="text-3xl font-semibold tabular-nums tracking-tight text-foreground">{formatNumber(organization.usage)}</p>
                 <p className="text-[12px] text-muted-foreground mt-1">Session volume for this period (sample)</p>
               </Card>
               <Card className="p-6 border border-border shadow-sm">
@@ -312,7 +312,7 @@ export function OrganizationDetailTabs({
                   </span>
                 </div>
                 <p className="text-[13px] text-muted-foreground mb-1">Admin seat usage</p>
-                <p className="text-[28px] font-semibold text-foreground tabular-nums">{formatNumber(organization.seatsUsed)}</p>
+                <p className="text-3xl font-semibold tabular-nums tracking-tight text-foreground">{formatNumber(organization.seatsUsed)}</p>
                 <p className="text-[12px] text-muted-foreground mt-1">Organization Admin Portal seats in use</p>
               </Card>
               <Card className="p-6 border border-border shadow-sm">
@@ -333,13 +333,13 @@ export function OrganizationDetailTabs({
                 {creditPosition >= 0 ? (
                   <>
                     <p className="text-[13px] text-muted-foreground mb-1">Credits remaining</p>
-                    <p className="text-[28px] font-semibold text-foreground tabular-nums">{formatCurrency(creditPosition)}</p>
+                    <p className="text-3xl font-semibold tabular-nums tracking-tight text-foreground">{formatCurrency(creditPosition)}</p>
                     <p className="text-[12px] text-muted-foreground mt-1">creditBalance − billable spend (this period)</p>
                   </>
                 ) : (
                   <>
                     <p className="text-[13px] text-muted-foreground mb-1">Credit overage</p>
-                    <p className="text-[28px] font-semibold text-red-600 tabular-nums">
+                    <p className="text-3xl font-semibold tabular-nums tracking-tight text-red-600">
                       {formatCurrency(Math.abs(creditPosition))}
                     </p>
                     <p className="text-[12px] text-muted-foreground mt-1">Billable spend exceeds current wallet balance.</p>
@@ -370,7 +370,7 @@ export function OrganizationDetailTabs({
           </div>
         </TabsContent>
 
-        <TabsContent value="integration" className="flex-1 overflow-auto p-8 space-y-6 m-0 mt-0">
+        <TabsContent value="integration" className="flex-1 overflow-auto m-0 mt-0 space-y-6 px-6 py-6 sm:px-8 sm:py-8">
           <Card className="border border-border shadow-sm">
             <div className="p-6 border-b border-border">
               <h3 className="text-[16px] font-semibold text-foreground">Integration setup checklist</h3>
@@ -445,7 +445,7 @@ export function OrganizationDetailTabs({
           </Card>
         </TabsContent>
 
-        <TabsContent value="controls" className="flex-1 overflow-auto p-8 space-y-6 m-0 mt-0">
+        <TabsContent value="controls" className="flex-1 overflow-auto m-0 mt-0 space-y-6 px-6 py-6 sm:px-8 sm:py-8">
           <Card className="border border-border shadow-sm">
             <div className="p-6 border-b border-border">
               <h3 className="text-[16px] font-semibold text-foreground">Lifecycle Control</h3>

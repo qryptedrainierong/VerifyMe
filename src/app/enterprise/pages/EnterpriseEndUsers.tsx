@@ -53,6 +53,7 @@ import {
   type OrganizationLinkStatus,
   type OrganizationUserRecord,
 } from "../data/enterpriseLinkedEndUsersMock";
+import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
 
 type RecentFilter = "all" | "invited_recent" | "verified_recent";
 
@@ -193,7 +194,7 @@ export function EnterpriseEndUsers() {
       displayName,
       linkStatus: "pending",
       inviteStatus: "pending",
-      maskedVerifymeUserId: null,
+      maskedVerifymeId: null,
       lastVerifiedAt: null,
       invitedAt: new Date().toISOString(),
       createdAt: new Date().toISOString().slice(0, 10),
@@ -220,7 +221,7 @@ export function EnterpriseEndUsers() {
         displayName: "CSV Import One",
         linkStatus: "pending",
         inviteStatus: "pending",
-        maskedVerifymeUserId: null,
+        maskedVerifymeId: null,
         lastVerifiedAt: null,
         invitedAt: new Date().toISOString(),
         createdAt: new Date().toISOString().slice(0, 10),
@@ -236,7 +237,7 @@ export function EnterpriseEndUsers() {
         displayName: "CSV Import Two",
         linkStatus: "pending",
         inviteStatus: "pending",
-        maskedVerifymeUserId: null,
+        maskedVerifymeId: null,
         lastVerifiedAt: null,
         invitedAt: new Date().toISOString(),
         createdAt: new Date().toISOString().slice(0, 10),
@@ -313,7 +314,7 @@ export function EnterpriseEndUsers() {
         updateRecord(r.id, {
           linkStatus: "revoked",
           inviteStatus: "superseded",
-          maskedVerifymeUserId: null,
+          maskedVerifymeId: null,
           invite: null,
         });
         bumpMessage(`Link revoked for ${r.displayName}.`);
@@ -344,42 +345,39 @@ export function EnterpriseEndUsers() {
   };
 
   return (
-    <div className="p-8 space-y-6 max-w-[1600px] mx-auto">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between min-w-0">
-        <div className="min-w-0 flex-1 lg:max-w-3xl lg:pr-4">
-          <h1 className="text-[28px] font-semibold text-foreground">Linked End Users</h1>
-          <p className="text-[15px] text-muted-foreground mt-1">
-            Manage your Organization’s customer records linked to VerifyMe identities. Your Organization creates and invites
-            records; the end-user completes linking only through the VerifyMe mobile app.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2 shrink-0 items-center lg:justify-end">
+    <PortalPageFrame
+      title="Linked End Users"
+      description="Manage your Organization’s customer records linked to VerifyMe identities. Your Organization creates and invites records; the end-user completes linking only through the VerifyMe mobile app."
+      headerActions={
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
           <Button onClick={() => setAddOpen(true)}>
-            <UserPlus className="w-4 h-4 mr-2" />
+            <UserPlus className="mr-2 h-4 w-4" />
             Add End-user
           </Button>
           <Button variant="outline" onClick={() => setBulkOpen(true)}>
-            <Upload className="w-4 h-4 mr-2" />
+            <Upload className="mr-2 h-4 w-4" />
             Bulk Invite
           </Button>
           <Button variant="outline" onClick={() => setApiGuideOpen(true)}>
-            <BookOpen className="w-4 h-4 mr-2" />
+            <BookOpen className="mr-2 h-4 w-4" />
             Invite API Guide
           </Button>
           <Button variant="outline" onClick={exportRecordsCsv}>
-            <Download className="w-4 h-4 mr-2" />
+            <Download className="mr-2 h-4 w-4" />
             Export
           </Button>
         </div>
-      </div>
-
-      {successMessage && (
-        <div className="rounded-md border border-green-500/40 bg-green-500/10 px-4 py-2 text-sm text-green-800 dark:text-green-300">
-          {successMessage}
-        </div>
-      )}
-
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      }
+      headerExtra={
+        successMessage ? (
+          <div className="rounded-md border border-green-500/40 bg-green-500/10 px-4 py-2 text-sm text-green-800 dark:text-green-300">
+            {successMessage}
+          </div>
+        ) : null
+      }
+      bodyClassName="space-y-6"
+    >
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
         <Card className="p-4 border border-border shadow-sm">
           <p className="text-[12px] text-muted-foreground uppercase tracking-wide">Total records</p>
           <p className="text-2xl font-semibold mt-1">{stats.total}</p>
@@ -430,7 +428,7 @@ export function EnterpriseEndUsers() {
           </li>
           <li>
             <strong className="text-foreground">Conflict</strong> — same client_user_id appears linked to a different
-            VerifyMe identity; needs review.
+            VerifyMe ID conflict; needs review.
           </li>
         </ul>
       </Card>
@@ -483,7 +481,7 @@ export function EnterpriseEndUsers() {
                 </th>
                 <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">Link status</th>
                 <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">Invite status</th>
-                <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">VerifyMe identity</th>
+                <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">VerifyMe ID (masked)</th>
                 <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">Last verified</th>
                 <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">Created / invited</th>
                 <th className="text-right p-3 font-semibold text-muted-foreground uppercase text-[11px] w-[72px]">Actions</th>
@@ -512,7 +510,7 @@ export function EnterpriseEndUsers() {
                   <td className="p-3">
                     <UnifiedBadge variant="status" value={inviteStatusLabel(r.inviteStatus)} />
                   </td>
-                  <td className="p-3 font-mono text-[12px] text-muted-foreground">{r.maskedVerifymeUserId ?? "—"}</td>
+                  <td className="p-3 font-mono text-[12px] text-muted-foreground">{r.maskedVerifymeId ?? "—"}</td>
                   <td className="p-3 text-muted-foreground">{formatDateTime(r.lastVerifiedAt)}</td>
                   <td className="p-3 text-muted-foreground">
                     <span className="block">{formatDate(r.createdAt)}</span>
@@ -586,7 +584,7 @@ export function EnterpriseEndUsers() {
           </table>
         </div>
         {filtered.length === 0 && (
-          <p className="p-8 text-center text-muted-foreground text-sm">No records match your filters.</p>
+          <p className="px-6 py-12 text-center text-sm text-muted-foreground sm:px-8">No records match your filters.</p>
         )}
       </Card>
 
@@ -913,8 +911,8 @@ export function EnterpriseEndUsers() {
                   </div>
                 </div>
                 <div>
-                  <p className="text-[11px] text-muted-foreground uppercase">VerifyMe identity (masked)</p>
-                  <p className="font-mono">{detailRecord.maskedVerifymeUserId ?? "—"}</p>
+                  <p className="text-[11px] text-muted-foreground uppercase">VerifyMe ID (masked)</p>
+                  <p className="font-mono">{detailRecord.maskedVerifymeId ?? "—"}</p>
                   <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
                     Not shown: VerifyMe email, full VerifyMe profile, other linked organizations, passcode, OTP, biometric
                     data, raw one-time token, Encrypted_Auth_Cred, Transaction_Code, or raw encrypted QR payload.
@@ -984,7 +982,7 @@ export function EnterpriseEndUsers() {
             <div className="space-y-4 text-[13px]">
               <div className="rounded-md border border-orange-200 bg-orange-50/80 px-3 py-2 text-orange-950 dark:bg-orange-950/30 dark:border-orange-900 dark:text-orange-100">
                 <strong className="text-foreground">Reason:</strong> This client_user_id appears linked to a different
-                VerifyMe identity.
+                VerifyMe ID.
               </div>
               <dl className="grid grid-cols-1 gap-3">
                 <div>
@@ -996,12 +994,12 @@ export function EnterpriseEndUsers() {
                   <dd>{conflictRecord.displayName}</dd>
                 </div>
                 <div>
-                  <dt className="text-[11px] font-medium text-muted-foreground uppercase">Current masked VerifyMe identity</dt>
-                  <dd className="font-mono">{conflictRecord.maskedVerifymeUserId ?? "—"}</dd>
+                  <dt className="text-[11px] font-medium text-muted-foreground uppercase">Current VerifyMe ID (masked)</dt>
+                  <dd className="font-mono">{conflictRecord.maskedVerifymeId ?? "—"}</dd>
                 </div>
                 <div>
-                  <dt className="text-[11px] font-medium text-muted-foreground uppercase">Conflicting masked VerifyMe identity</dt>
-                  <dd className="font-mono">{conflictRecord.conflictingMaskedVerifymeUserId ?? "vm_**** (mock)"}</dd>
+                  <dt className="text-[11px] font-medium text-muted-foreground uppercase">Conflicting VerifyMe ID (masked)</dt>
+                  <dd className="font-mono">{conflictRecord.conflictingMaskedVerifymeId ?? "vm_**** (mock)"}</dd>
                 </div>
               </dl>
               <p className="text-[12px] text-muted-foreground leading-relaxed">
@@ -1032,6 +1030,6 @@ export function EnterpriseEndUsers() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </PortalPageFrame>
   );
 }

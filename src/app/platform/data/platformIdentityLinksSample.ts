@@ -7,8 +7,8 @@ export type PlatformIdentityLinkRow = {
   organizationName: string;
   clientUserId: string;
   customerDisplayName: string;
-  /** Masked VerifyMe identity — never raw IDs in UI. */
-  maskedVerifymeIdentity: string;
+  /** Masked public VerifyMe ID (`verifyme_id`) — never raw values in UI. */
+  maskedVerifymeId: string;
   linkStatus: IdentityLinkStatus;
   lastVerified: string | null;
   createdLinkedAt: string;
@@ -22,7 +22,7 @@ export const platformIdentityLinks: PlatformIdentityLinkRow[] = [
     organizationName: "Acme Corporation",
     clientUserId: "cust_acme_88291",
     customerDisplayName: "Jordan Lee",
-    maskedVerifymeIdentity: "vmid••••9f2a",
+    maskedVerifymeId: "vmid••••9f2a",
     linkStatus: "linked",
     lastVerified: "2024-04-09T10:12:00",
     createdLinkedAt: "2024-01-10",
@@ -34,7 +34,7 @@ export const platformIdentityLinks: PlatformIdentityLinkRow[] = [
     organizationName: "Acme Corporation",
     clientUserId: "cust_acme_99102",
     customerDisplayName: "Priya Nair",
-    maskedVerifymeIdentity: "vmid••••1c88",
+    maskedVerifymeId: "vmid••••1c88",
     linkStatus: "linked",
     lastVerified: "2024-04-08T18:40:00",
     createdLinkedAt: "2024-02-02",
@@ -46,7 +46,7 @@ export const platformIdentityLinks: PlatformIdentityLinkRow[] = [
     organizationName: "TechStart Inc.",
     clientUserId: "ts_user_441",
     customerDisplayName: "Alex Kim",
-    maskedVerifymeIdentity: "vmid••••77bd",
+    maskedVerifymeId: "vmid••••77bd",
     linkStatus: "pending",
     lastVerified: null,
     createdLinkedAt: "2024-04-01",
@@ -58,7 +58,7 @@ export const platformIdentityLinks: PlatformIdentityLinkRow[] = [
     organizationName: "Global Ventures",
     clientUserId: "gv_portal_0092",
     customerDisplayName: "Sam Rivera",
-    maskedVerifymeIdentity: "vmid••••aa01",
+    maskedVerifymeId: "vmid••••aa01",
     linkStatus: "linked",
     lastVerified: "2024-04-09T09:05:00",
     createdLinkedAt: "2023-12-20",
@@ -70,7 +70,7 @@ export const platformIdentityLinks: PlatformIdentityLinkRow[] = [
     organizationName: "Design Studio Pro",
     clientUserId: "dsp_contractor_12",
     customerDisplayName: "Morgan Blake",
-    maskedVerifymeIdentity: "vmid••••4e33",
+    maskedVerifymeId: "vmid••••4e33",
     linkStatus: "suspended",
     lastVerified: "2024-03-20T14:00:00",
     createdLinkedAt: "2024-01-28",
@@ -82,7 +82,7 @@ export const platformIdentityLinks: PlatformIdentityLinkRow[] = [
     organizationName: "CloudScale Systems",
     clientUserId: "cs_ops_771",
     customerDisplayName: "Casey Wu",
-    maskedVerifymeIdentity: "vmid••••b902",
+    maskedVerifymeId: "vmid••••b902",
     linkStatus: "disabled",
     lastVerified: "2024-02-11T11:30:00",
     createdLinkedAt: "2024-02-01",
@@ -94,7 +94,7 @@ export const platformIdentityLinks: PlatformIdentityLinkRow[] = [
     organizationName: "DataFlow Analytics",
     clientUserId: "dfa_analyst_03",
     customerDisplayName: "Riley Chen",
-    maskedVerifymeIdentity: "vmid••••c0de",
+    maskedVerifymeId: "vmid••••c0de",
     linkStatus: "linked",
     lastVerified: "2024-04-09T07:55:00",
     createdLinkedAt: "2024-03-06",

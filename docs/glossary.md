@@ -30,7 +30,28 @@ External API identifier for a **client application** (OIDC-style). Format (desig
 `<ORG_CODE>_<APP_TYPE>_<ENV>_<SEQ>`
 
 **client_user_id**  
-Organization-owned customer record key carried in invites / QR payloads and verification context. Not a VerifyMe User identifier by itself until linked.
+Organization-owned customer record key carried in invites / QR payloads and verification context. Unique within an **organization**; not globally unique. Not a VerifyMe User identifier by itself until linked.
+
+**id** (generic)  
+Internal UUID primary key for a table unless a document names a specific table.
+
+**verifyme_id**  
+Public, privacy-safe **VerifyMe user** identifier in **`vmXXXXXX`** form (six alphanumeric characters after the prefix). **Generated at VerifyMe account creation** with a random, non-PII suffix: unique, stable, **not** derived from email, name, phone, organization, or `client_user_id`. Used for admin and support display. **Not** a relational foreign key and **not** interchangeable with `verifyme_user_id`. **Rotation** (support-controlled) changes the public id only through a defined admin workflow and **does not** break organization links because links use internal **`verifyme_user_id`**.
+
+**verifyme_user_id**  
+Foreign key to **`verifyme_users.id`** when used **outside** the `verifyme_users` table (e.g. on **organization_user_links**, **user_devices**). Internal relationship field only; do not use as primary human-facing identity in UI.
+
+**email** (VerifyMe User)  
+Private **login**, **recovery**, and **OTP delivery** identifier for the VerifyMe mobile account. **Not** a username, **not** public display identity; admin UIs should mask or restrict display.
+
+**admin_user_id**  
+Internal UUID for a **VerifyMe Admin Portal** or **Organization Admin Portal** staff user row when a doc needs a generic admin FK label.
+
+**Device**  
+Registered **VerifyMe User** device that holds secure verification state. In the **current MVP**, each VerifyMe user is limited to a **single active device**. Registering a new device replaces the existing device and rotates the associated secure state. Future versions may support multiple devices per user, subject to additional security controls and policies.
+
+**Deprecated terminology**  
+VerifyMe does **not** use **username**, **handle**, or **VerifyMe Handle** for end-user identity. Use **VerifyMe ID** (`verifyme_id`) for public display and **`client_user_id`** on the organization side.
 
 ## Verification and tokens
 

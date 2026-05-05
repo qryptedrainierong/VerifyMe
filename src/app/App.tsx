@@ -27,23 +27,23 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-6">
-      <div className="w-full max-w-4xl">
-        <div className="text-center mb-12">
-          <div className="flex items-center justify-center mb-6">
+    <div className="flex min-h-screen items-center justify-center bg-background p-6">
+      <div className="mx-auto w-full max-w-screen-2xl">
+        <div className="mb-12 text-center">
+          <div className="mb-6 flex items-center justify-center">
             <img src={logoImage} alt="VerifyMe" className="h-20 w-auto" />
           </div>
-          <p className="text-[15px] text-muted-foreground max-w-lg mx-auto">
+          <p className="mx-auto max-w-lg text-sm leading-relaxed text-muted-foreground sm:text-base">
             VerifyMe is a privacy-preserving identity verification platform for call-center and messaging flows.
             Select a portal to explore the admin experience.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           {/* VerifyMe Admin Portal */}
           <button
             onClick={() => setSelectedPortal("platform")}
-            className="group bg-card border border-border rounded-lg p-8 text-left hover:border-primary hover:shadow-sm transition-all"
+            className="group rounded-lg border border-border bg-card p-6 text-left transition-all hover:border-primary hover:shadow-sm sm:p-8"
           >
             <div className="flex items-start justify-between mb-4">
               <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
@@ -75,24 +75,24 @@ export default function App() {
                 />
               </svg>
             </div>
-            <h2 className="text-[20px] font-semibold text-foreground mb-2">
+            <h2 className="mb-2 text-xl font-semibold tracking-tight text-foreground">
               VerifyMe Admin Portal
             </h2>
-            <p className="text-[14px] text-muted-foreground mb-4">
+            <p className="mb-4 text-sm leading-relaxed text-muted-foreground">
               Internal Qrypted / VerifyMe console for organizations, VerifyMe users, identity links, verification
               sessions, client apps, credits, and audit trails
             </p>
             <div className="flex flex-wrap gap-2">
-              <span className="inline-flex items-center px-2 py-1 rounded bg-accent/50 text-[12px] text-accent-foreground">
+              <span className="inline-flex items-center rounded bg-accent/50 px-2 py-1 text-xs text-accent-foreground">
                 Organizations
               </span>
-              <span className="inline-flex items-center px-2 py-1 rounded bg-accent/50 text-[12px] text-accent-foreground">
+              <span className="inline-flex items-center rounded bg-accent/50 px-2 py-1 text-xs text-accent-foreground">
                 Verification
               </span>
-              <span className="inline-flex items-center px-2 py-1 rounded bg-accent/50 text-[12px] text-accent-foreground">
+              <span className="inline-flex items-center rounded bg-accent/50 px-2 py-1 text-xs text-accent-foreground">
                 Credits & billing
               </span>
-              <span className="inline-flex items-center px-2 py-1 rounded bg-accent/50 text-[12px] text-accent-foreground">
+              <span className="inline-flex items-center rounded bg-accent/50 px-2 py-1 text-xs text-accent-foreground">
                 Audit logs
               </span>
             </div>
@@ -101,7 +101,7 @@ export default function App() {
           {/* Organization Admin Portal */}
           <button
             onClick={() => setSelectedPortal("enterprise")}
-            className="group bg-card border border-border rounded-lg p-8 text-left hover:border-primary hover:shadow-sm transition-all"
+            className="group rounded-lg border border-border bg-card p-6 text-left transition-all hover:border-primary hover:shadow-sm sm:p-8"
           >
             <div className="flex items-start justify-between mb-4">
               <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
@@ -133,24 +133,24 @@ export default function App() {
                 />
               </svg>
             </div>
-            <h2 className="text-[20px] font-semibold text-foreground mb-2">
+            <h2 className="mb-2 text-xl font-semibold tracking-tight text-foreground">
               Organization Admin Portal
             </h2>
-            <p className="text-[14px] text-muted-foreground mb-4">
+            <p className="mb-4 text-sm leading-relaxed text-muted-foreground">
               Enterprise console for linked customers, verification history, OIDC-style API setup, QR linking,
               team access, credits, and billing
             </p>
             <div className="flex flex-wrap gap-2">
-              <span className="inline-flex items-center px-2 py-1 rounded bg-accent/50 text-[12px] text-accent-foreground">
+              <span className="inline-flex items-center rounded bg-accent/50 px-2 py-1 text-xs text-accent-foreground">
                 Linked end users
               </span>
-              <span className="inline-flex items-center px-2 py-1 rounded bg-accent/50 text-[12px] text-accent-foreground">
+              <span className="inline-flex items-center rounded bg-accent/50 px-2 py-1 text-xs text-accent-foreground">
                 Verification logs
               </span>
-              <span className="inline-flex items-center px-2 py-1 rounded bg-accent/50 text-[12px] text-accent-foreground">
+              <span className="inline-flex items-center rounded bg-accent/50 px-2 py-1 text-xs text-accent-foreground">
                 API & QR linking
               </span>
-              <span className="inline-flex items-center px-2 py-1 rounded bg-accent/50 text-[12px] text-accent-foreground">
+              <span className="inline-flex items-center rounded bg-accent/50 px-2 py-1 text-xs text-accent-foreground">
                 Usage & billing
               </span>
             </div>
@@ -158,10 +158,10 @@ export default function App() {
         </div>
 
         <div className="mt-8 text-center">
-          <p className="text-[13px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground sm:text-sm">
             Shared VerifyMe design system — platform vs. organization scopes only
           </p>
-          <p className="text-[11px] text-muted-foreground mt-2">
+          <p className="mt-2 text-xs text-muted-foreground/80">
             v{BUILD_VERSION}
           </p>
         </div>

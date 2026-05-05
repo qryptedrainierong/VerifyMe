@@ -8,6 +8,7 @@ import {
   enterpriseMockRedirectUris,
   enterpriseOrganization,
 } from "../data/enterpriseSample";
+import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
 
 export function EnterpriseApiIntegration() {
   const client = enterpriseMockClientApplication;
@@ -16,15 +17,11 @@ export function EnterpriseApiIntegration() {
     new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
   return (
-    <div className="p-8 space-y-8 max-w-[1200px]">
-      <div>
-        <h1 className="text-[28px] font-semibold text-foreground">API integration</h1>
-        <p className="text-[15px] text-muted-foreground mt-1 max-w-3xl">
-          OIDC-style client configuration for VerifyMe: client identifiers, redirect URIs, scopes, and confidential-client
-          secret handling (design-time sample).
-        </p>
-      </div>
-
+    <PortalPageFrame
+      title="API integration"
+      description="OIDC-style client configuration for VerifyMe: client identifiers, redirect URIs, scopes, and confidential-client secret handling (design-time sample)."
+      bodyClassName="max-w-6xl space-y-8"
+    >
       <Card className="p-6 border border-border shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
           <div className="flex items-start gap-3">
@@ -212,6 +209,6 @@ export function EnterpriseApiIntegration() {
           <strong className="text-foreground">{enterpriseOrganization.plan}</strong>
         </p>
       </Card>
-    </div>
+    </PortalPageFrame>
   );
 }

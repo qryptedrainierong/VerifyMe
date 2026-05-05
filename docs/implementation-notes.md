@@ -49,6 +49,8 @@ Tokens live in `src/styles/theme.css` with Tailwind mapping. Prefer token change
 
 Pages are largely mock-driven; there is no production API layer in repo scope. Adding live data will need a deliberate client/model strategy.
 
+**Identity fields in mocks:** `PlatformEndUserAssociation` uses `verifymeUserId` (UUID), `verifymeId` (`vm…` public id), `clientUserId`, and `device` (single-device MVP). Verification session mocks expose `maskedVerifymeId` for admin display, not internal FKs. Naming follows [`glossary.md`](./glossary.md).
+
 ## Audit logs UI (prototype)
 
 Types: `src/app/shared/types/auditLog.ts`. Main screen: `src/app/platform/pages/PlatformAuditLogs.tsx`. Specifications: [`audit-logs-plan.md`](./audit-logs-plan.md), [`audit-logs-schema.md`](./audit-logs-schema.md), [`audit-logs-ui.md`](./audit-logs-ui.md).

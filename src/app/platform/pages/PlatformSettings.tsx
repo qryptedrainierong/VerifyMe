@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../../shared/components/ui/select";
+import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
 
 export function PlatformSettings() {
   const [defaultCurrency, setDefaultCurrency] = useState("USD");
@@ -23,20 +24,18 @@ export function PlatformSettings() {
   };
 
   return (
-    <div className="p-8 space-y-6 max-w-5xl">
-      <div>
-        <h1 className="text-[24px] font-semibold text-foreground">Platform Settings</h1>
-        <p className="text-[14px] text-muted-foreground mt-1">
-          Platform defaults and limits: token attempts, session timeout, pricing defaults, OTP billing defaults, issuer
-          URL, audit retention, and related controls
-        </p>
-      </div>
-      {saveMessage && (
-        <div className="rounded-md border border-green-500/40 bg-green-500/10 px-4 py-2 text-sm text-green-700 dark:text-green-300">
-          {saveMessage}
-        </div>
-      )}
-
+    <PortalPageFrame
+      title="Platform Settings"
+      description="Platform defaults and limits: token attempts, session timeout, pricing defaults, OTP billing defaults, issuer URL, audit retention, and related controls."
+      headerExtra={
+        saveMessage ? (
+          <div className="rounded-md border border-green-500/40 bg-green-500/10 px-4 py-2 text-sm text-green-700 dark:text-green-300">
+            {saveMessage}
+          </div>
+        ) : null
+      }
+      bodyClassName="max-w-5xl space-y-6"
+    >
       <Card className="border border-border shadow-sm">
         <div className="p-6 border-b border-border">
           <h3 className="text-[16px] font-semibold text-foreground">General</h3>
@@ -102,6 +101,6 @@ export function PlatformSettings() {
         <Button variant="outline" onClick={() => setSaveMessage(null)}>Cancel</Button>
         <Button onClick={handleSave}>Save Changes</Button>
       </div>
-    </div>
+    </PortalPageFrame>
   );
 }

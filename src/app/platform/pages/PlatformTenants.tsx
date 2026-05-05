@@ -3,6 +3,7 @@ import { DataTable } from "../../shared/components/DataTable";
 import { StatusBadge } from "../../shared/components/StatusBadge";
 import { UnifiedBadge } from "../../shared/components/UnifiedBadge";
 import { FilterBar } from "../../shared/components/FilterBar";
+import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
 import { Button } from "../../shared/components/ui/button";
 import { Card } from "../../shared/components/ui/card";
 
@@ -83,48 +84,47 @@ export function PlatformTenants() {
   ];
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="p-6 border-b border-border">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-[20px] font-semibold text-foreground">Organizations (legacy)</h2>
-            <p className="text-[14px] text-muted-foreground mt-1">
-              Manage customer Organizations, plans, and credits — prefer the main Organizations experience for new work.
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline">
-              <Download className="w-4 h-4 mr-2" />
-              Export
-            </Button>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Organization
-            </Button>
-          </div>
+    <PortalPageFrame
+      variant="fill"
+      rootClassName="h-full"
+      title="Organizations (legacy)"
+      description="Manage customer organizations, plans, and credits. Prefer the main Organizations experience for new work."
+      headerActions={
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline">
+            <Download className="mr-2 h-4 w-4" />
+            Export
+          </Button>
+          <Button>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Organization
+          </Button>
         </div>
-
-        <div className="grid grid-cols-4 gap-4">
-          <Card className="p-4 shadow-sm">
-            <p className="text-[13px] text-muted-foreground mb-1">Total Organizations</p>
-            <p className="text-[24px] font-semibold">1,247</p>
+      }
+      headerExtra={
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <Card className="border border-border p-4 shadow-sm">
+            <p className="mb-1 text-xs text-muted-foreground">Total Organizations</p>
+            <p className="text-2xl font-semibold tabular-nums">1,247</p>
           </Card>
-          <Card className="p-4 shadow-sm">
-            <p className="text-[13px] text-muted-foreground mb-1">Active</p>
-            <p className="text-[24px] font-semibold text-green-600">1,189</p>
+          <Card className="border border-border p-4 shadow-sm">
+            <p className="mb-1 text-xs text-muted-foreground">Active</p>
+            <p className="text-2xl font-semibold tabular-nums text-green-600">1,189</p>
           </Card>
-          <Card className="p-4 shadow-sm">
-            <p className="text-[13px] text-muted-foreground mb-1">Trial</p>
-            <p className="text-[24px] font-semibold text-yellow-600">42</p>
+          <Card className="border border-border p-4 shadow-sm">
+            <p className="mb-1 text-xs text-muted-foreground">Trial</p>
+            <p className="text-2xl font-semibold tabular-nums text-yellow-600">42</p>
           </Card>
-          <Card className="p-4 shadow-sm">
-            <p className="text-[13px] text-muted-foreground mb-1">Churned</p>
-            <p className="text-[24px] font-semibold text-red-600">16</p>
+          <Card className="border border-border p-4 shadow-sm">
+            <p className="mb-1 text-xs text-muted-foreground">Churned</p>
+            <p className="text-2xl font-semibold tabular-nums text-red-600">16</p>
           </Card>
         </div>
-      </div>
-
+      }
+      bodyClassName="flex min-h-0 flex-1 flex-col gap-0 px-0 py-0 sm:px-0 sm:py-0"
+    >
       <FilterBar
+        className="shrink-0"
         onSearch={(value) => console.log("Search:", value)}
         filters={[
           {
@@ -153,7 +153,7 @@ export function PlatformTenants() {
         }
       />
 
-      <div className="flex-1 p-6 overflow-auto">
+      <div className="min-h-0 flex-1 overflow-auto px-6 py-6 sm:px-8 sm:py-8">
         <DataTable
           columns={[
             {
@@ -231,6 +231,6 @@ export function PlatformTenants() {
           data={tenants}
         />
       </div>
-    </div>
+    </PortalPageFrame>
   );
 }
