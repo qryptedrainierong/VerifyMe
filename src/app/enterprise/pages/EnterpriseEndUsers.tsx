@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState, useSyncExternalStore, type FormEvent } from "react";
 import {
   AlertTriangle,
   BookOpen,
@@ -39,7 +39,7 @@ import {
   SelectValue,
 } from "../../shared/components/ui/select";
 import { UnifiedBadge } from "../../shared/components/UnifiedBadge";
-import { enterpriseOrganization } from "../data/enterpriseSample";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../../shared/components/ui/tooltip";
 import {
   bulkImportPreviewMock,
   createMockInvite,
@@ -50,14 +50,29 @@ import {
   inviteStatusLabel,
   isInviteExpiredByClock,
   linkStatusLabel,
+  nameConsistencyBadgeClass,
+  nameConsistencyLabel,
+  orgVerificationOutcomeLabel,
+  type NameMatchStatus,
   type OrganizationLinkStatus,
   type OrganizationUserRecord,
 } from "../data/enterpriseLinkedEndUsersMock";
 import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
+import { UserRiskStatusBadge } from "../../shared/components/RiskSummary";
+import {
+  getEndUserAssociationStoreVersion,
+  getEndUserAssociations,
+  subscribeEndUserAssociationListeners,
+} from "../../platform/data/platformEndUserAssociationsSession";
+import { userRiskLevelForOrgAdmin } from "../../platform/data/mockPlatformRisk";
 
 type RecentFilter = "all" | "invited_recent" | "verified_recent";
 
 type BulkPreviewRow = (typeof bulkImportPreviewMock.previewRows)[number];
+
+function recordDisplayLabel(r: OrganizationUserRecord): string {
+  return r.customerDisplayName?.trim() || r.clientUserId;
+}
 
 function bulkRowStatusLabel(row: BulkPreviewRow) {
   switch (row.rowStatus) {
@@ -107,6 +122,13 @@ function isWithinDays(iso: string | null, days: number) {
 
 export function EnterpriseEndUsers() {
   const [records, setRecords] = useState<OrganizationUserRecord[]>(() => getInitialOrganizationUserRecords());
+
+  const assocVersion = useSyncExternalStore(
+    subscribeEndUserAssociationListeners,
+    getEndUserAssociationStoreVersion,
+    getEndUserAssociationStoreVersion,
+  );
+  const platformAssociations = useMemo(() => getEndUserAssociations(), [assocVersion]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | OrganizationLinkStatus>("all");
   const [recentFilter, setRecentFilter] = useState<RecentFilter>("all");
@@ -121,8 +143,8 @@ export function EnterpriseEndUsers() {
 
   const [addForm, setAddForm] = useState({
     clientUserId: "",
-    displayName: "",
-    notes: "",
+    customerDisplayName: "",
+    customerReference: "",
     contact: "",
   });
 
@@ -132,7 +154,8 @@ export function EnterpriseEndUsers() {
       const matchSearch =
         q.length === 0
         || r.clientUserId.toLowerCase().includes(q)
-        || r.displayName.toLowerCase().includes(q);
+        || (r.customerDisplayName ?? "").toLowerCase().includes(q)
+        || (r.customerReference ?? "").toLowerCase().includes(q);
       const matchStatus = statusFilter === "all" || r.linkStatus === statusFilter;
       let matchRecent = true;
       if (recentFilter === "invited_recent") {
@@ -185,13 +208,18 @@ export function EnterpriseEndUsers() {
   const handleAddSubmit = (e: FormEvent) => {
     e.preventDefault();
     const clientUserId = addForm.clientUserId.trim();
-    const displayName = addForm.displayName.trim();
-    if (!clientUserId || !displayName) return;
+    if (!clientUserId) return;
+    const customerDisplayName = addForm.customerDisplayName.trim() || null;
+    const customerReference = addForm.customerReference.trim() || null;
+    const nameMatchStatus: NameMatchStatus = customerDisplayName ? "not_checked" : "not_provided";
     const inviteId = `inv_acme_${clientUserId.replace(/[^a-z0-9]/gi, "_")}_${Date.now().toString(36).slice(-5)}`;
     const row: OrganizationUserRecord = {
       id: `ou-${Date.now()}`,
       clientUserId,
-      displayName,
+      customerDisplayName,
+      customerReference,
+      nameMatchStatus,
+      platformRiskVerifymeId: null,
       linkStatus: "pending",
       inviteStatus: "pending",
       maskedVerifymeId: null,
@@ -199,16 +227,15 @@ export function EnterpriseEndUsers() {
       invitedAt: new Date().toISOString(),
       createdAt: new Date().toISOString().slice(0, 10),
       verificationCount: 0,
-      customerNotes: addForm.notes.trim() || null,
       notificationPlaceholder: addForm.contact.trim() || null,
       invite: createMockInvite(clientUserId, inviteId),
       recentOutcomes: [],
     };
     setRecords((prev) => [row, ...prev]);
     setAddOpen(false);
-    setAddForm({ clientUserId: "", displayName: "", notes: "", contact: "" });
+    setAddForm({ clientUserId: "", customerDisplayName: "", customerReference: "", contact: "" });
     bumpMessage(
-      `Record created for ${displayName}. Invite URL (mock): ${row.invite?.inviteUrl}. The end-user must complete linking in the VerifyMe mobile app.`,
+      `Record created for ${recordDisplayLabel(row)}. Invite URL (mock): ${row.invite?.inviteUrl}. The end-user must complete linking in the VerifyMe mobile app.`,
     );
   };
 
@@ -218,7 +245,9 @@ export function EnterpriseEndUsers() {
       {
         id: `ou-bulk-${now}-1`,
         clientUserId: "CUST-CSV-001",
-        displayName: "CSV Import One",
+        customerDisplayName: "CSV Import One",
+        customerReference: "Bulk import (mock)",
+        nameMatchStatus: "not_checked",
         linkStatus: "pending",
         inviteStatus: "pending",
         maskedVerifymeId: null,
@@ -226,7 +255,6 @@ export function EnterpriseEndUsers() {
         invitedAt: new Date().toISOString(),
         createdAt: new Date().toISOString().slice(0, 10),
         verificationCount: 0,
-        customerNotes: "Bulk import (mock)",
         notificationPlaceholder: null,
         invite: createMockInvite("CUST-CSV-001", `inv_bulk_${now}a`),
         recentOutcomes: [],
@@ -234,7 +262,9 @@ export function EnterpriseEndUsers() {
       {
         id: `ou-bulk-${now}-2`,
         clientUserId: "CUST-CSV-002",
-        displayName: "CSV Import Two",
+        customerDisplayName: null,
+        customerReference: "REF-BULK-CSV-002",
+        nameMatchStatus: "not_provided",
         linkStatus: "pending",
         inviteStatus: "pending",
         maskedVerifymeId: null,
@@ -242,7 +272,6 @@ export function EnterpriseEndUsers() {
         invitedAt: new Date().toISOString(),
         createdAt: new Date().toISOString().slice(0, 10),
         verificationCount: 0,
-        customerNotes: "Bulk import (mock)",
         notificationPlaceholder: null,
         invite: createMockInvite("CUST-CSV-002", `inv_bulk_${now}b`),
         recentOutcomes: [],
@@ -267,10 +296,11 @@ export function EnterpriseEndUsers() {
   };
 
   const exportRecordsCsv = () => {
-    const header = "client_user_id,display_name,link_status,invite_status,last_verified_at";
+    const header =
+      "client_user_id,customer_display_name,customer_reference,link_status,invite_status,last_verified_at,name_match_status";
     const lines = records.map(
       (r) =>
-        `${r.clientUserId},${JSON.stringify(r.displayName)},${r.linkStatus},${r.inviteStatus},${r.lastVerifiedAt ?? ""}`,
+        `${r.clientUserId},${JSON.stringify(r.customerDisplayName ?? "")},${JSON.stringify(r.customerReference ?? "")},${r.linkStatus},${r.inviteStatus},${r.lastVerifiedAt ?? ""},${r.nameMatchStatus ?? ""}`,
     );
     const blob = new Blob([[header, ...lines].join("\n")], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -301,13 +331,13 @@ export function EnterpriseEndUsers() {
       case "suspend":
         if (r.linkStatus === "linked") {
           updateRecord(r.id, { linkStatus: "suspended" });
-          bumpMessage(`${r.displayName} suspended for this organization.`);
+          bumpMessage(`${recordDisplayLabel(r)} suspended for this organization.`);
         }
         break;
       case "reactivate":
         if (r.linkStatus === "suspended") {
           updateRecord(r.id, { linkStatus: "linked" });
-          bumpMessage(`${r.displayName} reactivated.`);
+          bumpMessage(`${recordDisplayLabel(r)} reactivated.`);
         }
         break;
       case "revoke":
@@ -317,11 +347,11 @@ export function EnterpriseEndUsers() {
           maskedVerifymeId: null,
           invite: null,
         });
-        bumpMessage(`Link revoked for ${r.displayName}.`);
+        bumpMessage(`Link revoked for ${recordDisplayLabel(r)}.`);
         break;
       case "disable":
         updateRecord(r.id, { linkStatus: "disabled" });
-        bumpMessage(`${r.displayName} disabled (requires admin review to re-enable).`);
+        bumpMessage(`${recordDisplayLabel(r)} disabled (requires admin review to re-enable).`);
         break;
       case "reinvite":
         updateRecord(r.id, {
@@ -330,7 +360,7 @@ export function EnterpriseEndUsers() {
           invitedAt: new Date().toISOString(),
           invite: createMockInvite(r.clientUserId, `inv_re_${r.clientUserId}_${Date.now().toString(36).slice(-4)}`),
         });
-        bumpMessage(`New invite issued for ${r.displayName} (mock).`);
+        bumpMessage(`New invite issued for ${recordDisplayLabel(r)} (mock).`);
         break;
       default:
         break;
@@ -433,11 +463,20 @@ export function EnterpriseEndUsers() {
         </ul>
       </Card>
 
+      <Card className="border border-border bg-muted/15 p-4 shadow-sm">
+        <p className="text-[13px] leading-relaxed text-muted-foreground">
+          <strong className="text-foreground">Privacy:</strong> VerifyMe does not show end-user legal names in this portal.
+          Agents see optional <strong className="text-foreground">customer display name</strong> (organization-provided
+          reference only) and a <strong className="text-foreground">name consistency</strong> risk signal — never both names
+          side-by-side with VerifyMe profile data.
+        </p>
+      </Card>
+
       <div className="flex flex-col lg:flex-row gap-3 flex-wrap">
         <div className="relative flex-1 min-w-[220px] max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Search client_user_id or customer name…"
+            placeholder="Search client_user_id, display name, or reference…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10 h-10"
@@ -470,14 +509,42 @@ export function EnterpriseEndUsers() {
         </Select>
       </div>
 
+      <p className="text-[12px] leading-relaxed text-muted-foreground max-w-3xl">
+        User risk status is a platform-derived safety indicator for the linked VerifyMe User. Organization Admin views do not
+        show cross-organization details, platform-wide risk factors, or full risk scores.
+      </p>
+
       <Card className="border border-border shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1100px] text-sm">
+          <table className="w-full min-w-[1380px] text-sm">
             <thead className="border-b border-border bg-accent/40">
               <tr>
                 <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">client_user_id</th>
                 <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">
-                  Customer name (display)
+                  Customer display name
+                </th>
+                <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="cursor-help border-b border-dotted border-muted-foreground">
+                        Name consistency
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs text-left">
+                      Derived from comparison between organization-provided name and VerifyMe profile. Used as a risk signal
+                      only.
+                    </TooltipContent>
+                  </Tooltip>
+                </th>
+                <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="cursor-help border-b border-dotted border-muted-foreground">User risk status</span>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs text-left">
+                      Summary band for the VerifyMe User (platform-wide). Not link risk. No cross-tenant detail in this portal.
+                    </TooltipContent>
+                  </Tooltip>
                 </th>
                 <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">Link status</th>
                 <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">Invite status</th>
@@ -491,7 +558,20 @@ export function EnterpriseEndUsers() {
               {filtered.map((r) => (
                 <tr key={r.id} className="hover:bg-accent/30">
                   <td className="p-3 font-mono text-[13px]">{r.clientUserId}</td>
-                  <td className="p-3 font-medium">{r.displayName}</td>
+                  <td className="p-3 font-medium text-foreground">{r.customerDisplayName?.trim() || "—"}</td>
+                  <td className="p-3 align-top">
+                    <span
+                      className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${nameConsistencyBadgeClass(r.nameMatchStatus)}`}
+                    >
+                      {nameConsistencyLabel(r.nameMatchStatus)}
+                    </span>
+                  </td>
+                  <td className="p-3 align-top">
+                    {(() => {
+                      const lvl = userRiskLevelForOrgAdmin(r.platformRiskVerifymeId, platformAssociations);
+                      return lvl ? <UserRiskStatusBadge level={lvl} /> : <span className="text-muted-foreground">—</span>;
+                    })()}
+                  </td>
                   <td className="p-3">
                     <div className="flex flex-col gap-1 items-start">
                       <div className="flex flex-wrap items-center gap-1.5">
@@ -614,21 +694,26 @@ export function EnterpriseEndUsers() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="dn">Customer name (display) *</Label>
+              <Label htmlFor="cdn">Customer display name</Label>
               <Input
-                id="dn"
-                value={addForm.displayName}
-                onChange={(e) => setAddForm((f) => ({ ...f, displayName: e.target.value }))}
-                required
+                id="cdn"
+                value={addForm.customerDisplayName}
+                onChange={(e) => setAddForm((f) => ({ ...f, customerDisplayName: e.target.value }))}
+                placeholder="Optional"
               />
+              <p className="text-[11px] leading-relaxed text-muted-foreground">
+                Optional. Used only as an agent visual reference during verification. VerifyMe does not treat this as
+                verified identity.
+              </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="notes">Customer reference / notes</Label>
+              <Label htmlFor="cref">Customer reference</Label>
               <Textarea
-                id="notes"
+                id="cref"
                 rows={2}
-                value={addForm.notes}
-                onChange={(e) => setAddForm((f) => ({ ...f, notes: e.target.value }))}
+                value={addForm.customerReference}
+                onChange={(e) => setAddForm((f) => ({ ...f, customerReference: e.target.value }))}
+                placeholder="Optional — CRM key, account fragment, etc."
               />
             </div>
             <div className="space-y-2">
@@ -675,7 +760,12 @@ export function EnterpriseEndUsers() {
             </Button>
             <div>
               <p className="text-[12px] font-medium text-muted-foreground uppercase mb-2">Expected columns</p>
-              <code className="text-[12px] bg-muted px-2 py-1 rounded font-mono">client_user_id, display_name, optional_email, optional_phone</code>
+              <code className="text-[12px] bg-muted px-2 py-1 rounded font-mono">
+                client_user_id,customer_display_name,customer_reference
+              </code>
+              <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+                Customer display name is optional and used only for agent reference.
+              </p>
             </div>
             <Separator />
             <p className="text-[14px] font-semibold">Mock validation preview</p>
@@ -694,7 +784,8 @@ export function EnterpriseEndUsers() {
                 <thead className="bg-accent/40">
                   <tr>
                     <th className="text-left p-2">client_user_id</th>
-                    <th className="text-left p-2">display_name (CSV)</th>
+                    <th className="text-left p-2">customer_display_name</th>
+                    <th className="text-left p-2">customer_reference</th>
                     <th className="text-left p-2">Validation</th>
                     <th className="text-left p-2">Notes</th>
                   </tr>
@@ -703,7 +794,8 @@ export function EnterpriseEndUsers() {
                   {bulkImportPreviewMock.previewRows.map((row, i) => (
                     <tr key={i} className="border-t border-border">
                       <td className="p-2 font-mono">{row.clientUserId || "—"}</td>
-                      <td className="p-2">{row.displayName}</td>
+                      <td className="p-2">{row.customerDisplayName ?? "—"}</td>
+                      <td className="p-2">{row.customerReference?.trim() ? row.customerReference : "—"}</td>
                       <td className="p-2">
                         <UnifiedBadge variant="status" value={bulkRowStatusLabel(row)} />
                       </td>
@@ -761,6 +853,10 @@ export function EnterpriseEndUsers() {
             <div>
               <p className="font-medium text-foreground mb-1">Sample request</p>
               <pre className="bg-muted rounded-md p-3 text-[12px] overflow-x-auto font-mono">{inviteApiSampleRequest}</pre>
+              <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+                <code className="font-mono text-[11px]">customer_display_name</code> is organization-provided visual context
+                only and is not verified by VerifyMe.
+              </p>
             </div>
             <div>
               <p className="font-medium text-foreground mb-1">Sample response</p>
@@ -796,7 +892,8 @@ export function EnterpriseEndUsers() {
               <DialogHeader>
                 <DialogTitle>Invite link & QR</DialogTitle>
                 <DialogDescription>
-                  Invite metadata for <span className="text-foreground font-medium">{inviteRecord.displayName}</span>
+                  Invite metadata for{" "}
+                  <span className="text-foreground font-medium">{recordDisplayLabel(inviteRecord)}</span>
                 </DialogDescription>
                 <div className="flex flex-wrap items-center gap-2 pt-2">
                   <span className="text-[11px] text-muted-foreground uppercase">Invite status</span>
@@ -890,14 +987,35 @@ export function EnterpriseEndUsers() {
                 <DialogDescription>Organization-scoped view — no full VerifyMe profile.</DialogDescription>
               </DialogHeader>
               <div className="space-y-3 text-[13px]">
+                <p className="rounded-md border border-border/80 bg-muted/30 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
+                  Customer display information is provided by the organization for reference only. VerifyMe verifies the
+                  linked user, not the displayed name.
+                </p>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <p className="text-[11px] text-muted-foreground uppercase">client_user_id</p>
                     <p className="font-mono">{detailRecord.clientUserId}</p>
                   </div>
                   <div>
-                    <p className="text-[11px] text-muted-foreground uppercase">Customer name (display)</p>
-                    <p>{detailRecord.displayName}</p>
+                    <p className="text-[11px] text-muted-foreground uppercase">Customer display name</p>
+                    <p>{detailRecord.customerDisplayName?.trim() || "—"}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <p className="text-[11px] text-muted-foreground uppercase">Name consistency</p>
+                    <span
+                      className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${nameConsistencyBadgeClass(detailRecord.nameMatchStatus)}`}
+                    >
+                      {nameConsistencyLabel(detailRecord.nameMatchStatus)}
+                    </span>
+                    <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
+                      Risk signal only — not proof of identity.
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-muted-foreground uppercase">Customer reference</p>
+                    <p>{detailRecord.customerReference?.trim() || "—"}</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
@@ -932,12 +1050,6 @@ export function EnterpriseEndUsers() {
                   <p className="text-[11px] text-muted-foreground uppercase">Verification count (org)</p>
                   <p>{detailRecord.verificationCount}</p>
                 </div>
-                {detailRecord.customerNotes && (
-                  <div>
-                    <p className="text-[11px] text-muted-foreground uppercase">Notes</p>
-                    <p>{detailRecord.customerNotes}</p>
-                  </div>
-                )}
                 <Separator />
                 <p className="font-medium text-foreground">Recent verification outcomes (this organization)</p>
                 <ul className="space-y-1">
@@ -946,7 +1058,7 @@ export function EnterpriseEndUsers() {
                   )}
                   {detailRecord.recentOutcomes.map((o, i) => (
                     <li key={i} className="flex justify-between gap-2">
-                      <span>{o.outcome}</span>
+                      <span>{orgVerificationOutcomeLabel(o.outcome)}</span>
                       <span className="text-muted-foreground text-[12px]">{formatDateTime(o.at)}</span>
                     </li>
                   ))}
@@ -990,8 +1102,18 @@ export function EnterpriseEndUsers() {
                   <dd className="font-mono">{conflictRecord.clientUserId}</dd>
                 </div>
                 <div>
-                  <dt className="text-[11px] font-medium text-muted-foreground uppercase">Customer name (display)</dt>
-                  <dd>{conflictRecord.displayName}</dd>
+                  <dt className="text-[11px] font-medium text-muted-foreground uppercase">Customer display name</dt>
+                  <dd>{conflictRecord.customerDisplayName?.trim() || "—"}</dd>
+                </div>
+                <div>
+                  <dt className="text-[11px] font-medium text-muted-foreground uppercase">Name consistency</dt>
+                  <dd>
+                    <span
+                      className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${nameConsistencyBadgeClass(conflictRecord.nameMatchStatus)}`}
+                    >
+                      {nameConsistencyLabel(conflictRecord.nameMatchStatus)}
+                    </span>
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-[11px] font-medium text-muted-foreground uppercase">Current VerifyMe ID (masked)</dt>

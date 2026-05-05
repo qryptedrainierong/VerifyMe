@@ -286,4 +286,18 @@ export const platformEndUserAssociations: PlatformEndUserAssociation[] = [
     created: "2024-03-05",
     device: d("iPhone 15", "iOS", "active", "2024-03-05T12:00:00Z", "2024-04-09T07:50:00Z", "Bound (sample)"),
   },
+  {
+    id: "link-usr-conflict1-ts",
+    verifymeUserId: "a0000011-0000-4000-8000-000000000011",
+    verifymeId: "vmconflict1",
+    email: "conflict.sample@example.com",
+    clientUserId: "ts_contractor_901",
+    organization: "TechStart Inc.",
+    organizationId: "ORG-002",
+    status: "active",
+    verificationSessions: 142,
+    lastActive: "2024-04-07T16:20:00",
+    created: "2024-03-18",
+    device: d("iPhone 15", "iOS", "active", "2024-03-18T12:00:00Z", "2024-04-07T16:20:00Z", "Bound (sample)"),
+  },
 ];

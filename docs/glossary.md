@@ -32,6 +32,15 @@ External API identifier for a **client application** (OIDC-style). Format (desig
 **client_user_id**  
 Organization-owned customer record key carried in invites / QR payloads and verification context. Unique within an **organization**; not globally unique. Not a VerifyMe User identifier by itself until linked.
 
+**customer_display_name**  
+Optional organization-provided display label for **agent reference** during verification workflows (e.g. Linked End Users). Not verified by VerifyMe as identity.
+
+**customer_name_for_matching**  
+Optional organization-provided value used **internally** for fraud/risk comparison with VerifyMe profile data. **Not** exposed in Organization Admin UI.
+
+**name_match_status**  
+Derived **risk signal** indicating consistency between organization-provided name data and VerifyMe profile comparison. **Not** proof of identity.
+
 **id** (generic)  
 Internal UUID primary key for a table unless a document names a specific table.
 
@@ -53,10 +62,39 @@ Registered **VerifyMe User** device that holds secure verification state. In the
 **Deprecated terminology**  
 VerifyMe does **not** use **username**, **handle**, or **VerifyMe Handle** for end-user identity. Use **VerifyMe ID** (`verifyme_id`) for public display and **`client_user_id`** on the organization side.
 
+## Risk scoring
+
+**VerifyMe User risk (platform risk)**  
+The **risk score** and **risk level** (0–100; Low / Moderate / High / Critical) belong to the **VerifyMe User** and are **universal** across that user’s linked organizations. **VerifyMe Admin** sees full **Platform Risk** detail on the user record. **Organization Admin** may see a **User risk status** band only — **not** cross-organization detail or full factor lists. See [`risk-scoring.md`](./risk-scoring.md).
+
+**Identity link — conflict and name consistency**  
+**Identity links** do **not** carry a separate primary **link risk score** in product UX. Operators focus on **conflict status**, **resolution** (auditable), and **`name_match_status`** / optional **`name_match_score`** as **signals**, not proof of identity. See [`risk-scoring.md`](./risk-scoring.md).
+
+**risk_level**  
+Derived band from the **VerifyMe User** numeric score: **Low** (0–24), **Moderate** (25–49), **High** (50–74), **Critical** (75–100) — see [`risk-scoring.md`](./risk-scoring.md).
+
 ## Verification and tokens
 
 **verification session**  
 One OIDC-style authorization attempt from `/authorize` through token exchange, with lifecycle states (e.g. initiated, challenge_dispatched, awaiting_token) and a final **outcome** (see [`verification-flow.md`](./verification-flow.md) and mock types in `src/app/shared/data/verificationSessionsMock.ts`).
+
+**Session status (product UI)**  
+Operational state of a verification session. Labels: **Pending**, **Awaiting verification**, **Verified**, **Not verified**, **Expired**, **Error**, **Cancelled**. **Verified** means the session completed successfully and the proof passed. **Not verified** means the session completed but proof failed. **ID Proof Fail** means the user attempted verification but did not successfully prove identity. **Session status** and **ID proof result** are separate: a session may complete as **Not verified** because the ID proof failed.
+
+**ID proof result (product UI)**  
+Whether the user successfully proved identity for that session. Labels: **ID Proof Pass**, **ID Proof Fail**, **Unavailable**, **Indeterminate**. **ID Proof Pass** means the submitted proof or token validated. **ID Proof Fail** means the user attempted proof but failed to prove identity. **Expired**, **Error**, and **Cancelled** sessions typically have **Unavailable** for ID proof result; **Indeterminate** means VerifyMe cannot confidently classify the proof result. Internal enums may still expose `verified` / `failed` for completed attempts; UI maps them to **ID Proof Pass** / **ID Proof Fail** for clarity — do not show raw internal values as primary copy.
+
+**Risk status (relative to verification)**  
+**Risk status** is separate from the current proof result. Repeated **ID Proof Fail** results may increase **VerifyMe User** platform risk. A single **ID Proof Pass** does not automatically clear high risk.
+
+**Name consistency**  
+**Name mismatch** is a contextual signal on the link or session. A user can still have **ID Proof Pass** while name consistency is **mismatch**; operators may need to review link context.
+
+**verification status (admin UI)**  
+Prefer **session status** (above) for product copy. Legacy docs may say “process state”; it is distinct from **ID proof result**.
+
+**ID Proof Pass / ID Proof Fail**  
+Product-facing labels for a **completed** proof attempt. They map to internal outcome values `verified` and `failed` where APIs expose those enums. Do not use **Identity Pass** / **Identity Fail** in new copy.
 
 **verification token**  
 Short-lived **one-time** value generated in the VerifyMe app after passcode + OTP + biometric steps, entered by an organization representative on the **VerifyMe Verification Page**. Docs must **not** describe storing or displaying this token in admin UIs.
@@ -79,7 +117,7 @@ OIDC-style identity token from the `/token` exchange. **MVP:** only **id_token**
 Monetary value in an organization **credit wallet** (not an abstract “API quota”). Consumed according to plan and **billable outcomes**.
 
 **billable outcome**  
-A **final** verification session outcome that incurs a charge. **Billable:** Verified, Failed. **Not billable:** Expired, Error, Indeterminate, Cancelled, Pending. See [`billing-credits.md`](./billing-credits.md).
+A verification session incurs a charge when a **billable ID proof result** applies: **ID Proof Pass** or **ID Proof Fail** (completed proof attempt). **Not billable:** **Expired**, **Error**, **Indeterminate**, **Cancelled**, **Pending**, **Awaiting verification** (no completed proof attempt in those states). See [`billing-credits.md`](./billing-credits.md).
 
 ## Invites and linking
 

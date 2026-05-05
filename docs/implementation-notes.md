@@ -1,6 +1,6 @@
 # Implementation notes (repository)
 
-Engineering context for this **frontend-only** VerifyMe Admin Portals bundle: layout, tooling, and cache/version behavior. Product rules live in [`product-spec.md`](./product-spec.md), [`glossary.md`](./glossary.md), and related domain docs.
+Engineering context for this **frontend-only** VerifyMe Admin Portals bundle: layout, tooling, and cache/version behavior. Product rules live in [`product-spec.md`](./product-spec.md), [`glossary.md`](./glossary.md), and related domain docs. **Risk scoring** (platform vs link scope, privacy, UI, audit, proposed snapshot fields) is canonical in [`risk-scoring.md`](./risk-scoring.md).
 
 ## Tech stack
 
@@ -53,11 +53,17 @@ Tokens live in `src/styles/theme.css` with Tailwind mapping. Prefer token change
 
 VerifyMe Admin list pages should be **summary-first**: the table is a filterable overview. **Row click** navigates to a **full-page detail** for major entities or opens a **detail dialog** for event/transaction/log rows (see “Detail presentation” above). **Destructive or security-sensitive actions** (refunds, credential rotation, account disable, conflict resolution, etc.) must live **inside** detail **controls** and use **explicit confirmation** (e.g. alert/confirm flow), not row-level menus or ad-hoc list buttons.
 
+### Governance & audit logs
+
+Governance actions must be performed from **entity detail pages**, require **confirmation**, and **produce audit log events** in a live system. **List pages** (including Audit Logs) must **not** expose destructive controls on rows; Audit Logs is read-only with modal detail. Confirmation copy in the prototype states that the action **will be recorded in audit logs**; mocks do not persist new audit rows unless explicitly wired later.
+
 ## Data and state
 
 Pages are largely mock-driven; there is no production API layer in repo scope. Adding live data will need a deliberate client/model strategy.
 
-**Identity fields in mocks:** `PlatformEndUserAssociation` uses `verifymeUserId` (UUID), `verifymeId` (`vm…` public id), `clientUserId`, and `device` (single-device MVP). Verification session mocks expose `maskedVerifymeId` for admin display, not internal FKs. Naming follows [`glossary.md`](./glossary.md).
+**Identity fields in mocks:** `PlatformEndUserAssociation` keeps `verifymeUserId` (UUID) for relational joins only; **VerifyMe Admin normal UI** surfaces **`verifymeId` (`vm…`)**, masked email, and `client_user_id` where relevant — not internal UUIDs. Verification sessions use `maskedVerifymeId` in data as the display VerifyMe ID field. Naming follows [`glossary.md`](./glossary.md).
+
+**Risk UX:** **Platform Risk** (score, signals) lives on **VerifyMe User** detail. **Identity Links** emphasize **conflict** and **name consistency**; **Organization Admin** shows **User risk status** only (no cross-org factors). See [`risk-scoring.md`](./risk-scoring.md).
 
 ## Audit logs UI (prototype)
 

@@ -8,8 +8,9 @@ If you arrived from a legacy **`/documentation`** path in another system, use th
 
 1. Start with **[`product-spec.md`](./product-spec.md)** for surfaces and scope, then **[`glossary.md`](./glossary.md)** for shared terms.
 2. Follow **[`verification-flow.md`](./verification-flow.md)** for the end-user and OIDC-style authorization path.
-3. Use domain docs (billing, clients, end users, QR, API) when working on those areas.
-4. Use **engineering** docs for repo layout, maintenance, cache/versioning context, and audit log specifications.
+3. For **platform vs per-organization risk** (scores, privacy, audit), use **[`risk-scoring.md`](./risk-scoring.md)**.
+4. Use domain docs (billing, clients, end users, QR, API) when working on those areas.
+5. Use **engineering** docs for repo layout, maintenance, cache/versioning context, and audit log specifications.
 
 All paths below are under `./` (this `docs/` directory).
 
@@ -35,6 +36,7 @@ All paths below are under `./` (this `docs/` directory).
 | [`billing-credits.md`](./billing-credits.md) | Credits, plans, billable verification outcomes, OTP billing |
 | [`qr-linking.md`](./qr-linking.md) | QR linking payloads, keys, deep links (no raw payload storage in UI) |
 | [`api-overview.md`](./api-overview.md) | HTTP / OIDC-style integration overview, MVP scopes |
+| [`risk-scoring.md`](./risk-scoring.md) | VerifyMe User risk, identity-link conflict/consistency, privacy, UI, audit |
 
 ---
 
@@ -42,7 +44,7 @@ All paths below are under `./` (this `docs/` directory).
 
 | Document | Purpose |
 |----------|---------|
-| [`schema-notes.md`](./schema-notes.md) | High-level relational concepts (no migrations in this repo) |
+| [`schema-notes.md`](./schema-notes.md) | High-level relational concepts (no migrations in this repo); includes risk snapshot sketches |
 
 ---
 
@@ -85,6 +87,7 @@ These stay grouped as the **audit** set; they are part of `/docs` but are the ca
 | `maintenance.md` | Where to edit code safely |
 | `product-spec.md` | Vision, surfaces, verification sessions (UI notes) |
 | `qr-linking.md` | QR linking design |
+| `risk-scoring.md` | User risk & link conflict design |
 | `schema-notes.md` | Relational concepts |
 | `verification-flow.md` | Authorize → token exchange narrative |
 

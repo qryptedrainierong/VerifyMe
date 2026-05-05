@@ -23,10 +23,12 @@ import {
   subscribeEndUserAssociationListeners,
 } from "../data/platformEndUserAssociationsSession";
 import { displayClientUserId, maskEmail, rowStatusLabel } from "../utils/verifyMeUserFormatters";
+import { RiskSummary } from "../../shared/components/RiskSummary";
+import { computePlatformRiskSummary } from "../data/mockPlatformRisk";
 
 export function PlatformVerifyMeUserDetail() {
   const navigate = useNavigate();
-  const { verifymeUserId } = useParams();
+  const { verifymeId: verifymeIdParam } = useParams();
 
   const storeVersion = useSyncExternalStore(
     subscribeEndUserAssociationListeners,
@@ -47,24 +49,26 @@ export function PlatformVerifyMeUserDetail() {
   const [restoreOpen, setRestoreOpen] = useState(false);
 
   const selectedUserLinks = useMemo(() => {
-    if (!verifymeUserId) return [];
-    return usersData.filter((u) => u.verifymeUserId === verifymeUserId);
-  }, [usersData, verifymeUserId]);
+    if (!verifymeIdParam) return [];
+    return usersData.filter((u) => u.verifymeId === verifymeIdParam);
+  }, [usersData, verifymeIdParam]);
 
   const selectedRowGroup = useMemo(() => {
     if (selectedUserLinks.length === 0) return null;
     return groupAssociationsByVerifymeUserId(selectedUserLinks)[0] ?? null;
   }, [selectedUserLinks]);
 
-  const controlsTarget = verifymeUserId ?? null;
+  const platformRisk = useMemo(
+    () => (selectedRowGroup ? computePlatformRiskSummary(selectedRowGroup) : null),
+    [selectedRowGroup],
+  );
+
+  const controlsTarget = verifymeIdParam ?? null;
 
   const disableMatches =
     selectedRowGroup && disableTyped.trim().toLowerCase() === selectedRowGroup.verifymeId.toLowerCase();
 
-  const displayVerifymeIdForMessages = (id: string) =>
-    usersData.find((u) => u.verifymeUserId === id)?.verifymeId ?? id;
-
-  const linkCountForUser = (id: string) => usersData.filter((u) => u.verifymeUserId === id).length;
+  const linkCountForVerifymeId = (vmId: string) => usersData.filter((u) => u.verifymeId === vmId).length;
 
   const formatDate = (dateString: string) =>
     new Date(dateString + "Z").toLocaleDateString("en-US", {
@@ -97,13 +101,11 @@ export function PlatformVerifyMeUserDetail() {
     return `${diffDays} day${diffDays > 1 ? "s" : ""} ago (UTC)`;
   };
 
-  const applyStatusToUser = (userId: string, status: PlatformEndUserAssociation["status"]) => {
-    setEndUserAssociations((prev) =>
-      prev.map((user) => (user.verifymeUserId === userId ? { ...user, status } : user)),
-    );
+  const applyStatusByVerifymeId = (vmId: string, status: PlatformEndUserAssociation["status"]) => {
+    setEndUserAssociations((prev) => prev.map((user) => (user.verifymeId === vmId ? { ...user, status } : user)));
   };
 
-  if (!verifymeUserId || !selectedRowGroup) {
+  if (!verifymeIdParam || !selectedRowGroup) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-4 p-8">
         <p className="text-sm text-muted-foreground">VerifyMe user not found.</p>
@@ -138,9 +140,6 @@ export function PlatformVerifyMeUserDetail() {
                 Private account email (masked):{" "}
                 <span className="font-mono text-foreground">{maskEmail(selectedRowGroup.email)}</span>
               </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Internal id: <span className="font-mono">{selectedRowGroup.verifymeUserId}</span>
-              </p>
             </div>
           </div>
         </div>
@@ -161,6 +160,9 @@ export function PlatformVerifyMeUserDetail() {
               <TabsTrigger value="profile" className="flex-none shrink-0 px-2 text-[11px] sm:text-[12px]">
                 Profile & Status
               </TabsTrigger>
+              <TabsTrigger value="platform-risk" className="flex-none shrink-0 px-2 text-[11px] sm:text-[12px]">
+                Platform Risk
+              </TabsTrigger>
               <TabsTrigger value="devices" className="flex-none shrink-0 px-2 text-[11px] sm:text-[12px]">
                 Device / Secure State
               </TabsTrigger>
@@ -176,90 +178,139 @@ export function PlatformVerifyMeUserDetail() {
             </TabsList>
 
             <TabsContent value="profile" className="mt-6 space-y-3 text-[13px]">
-              <Card className="border border-border p-6 shadow-sm">
-                <p>
-                  <span className="text-muted-foreground">VerifyMe ID:</span>{" "}
-                  <span className="font-mono font-medium">{selectedRowGroup.verifymeId}</span>
-                </p>
-                <p>
-                  <span className="text-muted-foreground">Internal user id (verifyme_user_id):</span>{" "}
-                  <span className="font-mono text-[12px] text-muted-foreground">{selectedRowGroup.verifymeUserId}</span>
-                </p>
-                <p>
-                  <span className="text-muted-foreground">Private account email:</span> {selectedRowGroup.email}
-                </p>
-                <p className="text-[12px] text-muted-foreground">
-                  Email is for login, recovery, and OTP delivery — not a public display identity.
-                </p>
-                <p className="flex items-center gap-2">
-                  <span className="text-muted-foreground">Account status:</span>
-                  <UnifiedBadge variant="status" value={rowStatusLabel(selectedRowGroup.rowStatus)} />
-                </p>
-                <p>
-                  <span className="text-muted-foreground">Verification sessions (all orgs, sample):</span>{" "}
-                  <span className="font-medium tabular-nums">
-                    {selectedRowGroup.totalVerificationSessions.toLocaleString()}
-                  </span>
-                </p>
-                <p>
-                  <span className="text-muted-foreground">Last active (latest):</span>{" "}
-                  {formatRelativeTime(selectedRowGroup.lastActiveMax)}
-                </p>
-                <p>
-                  <span className="text-muted-foreground">First link created:</span>{" "}
-                  {selectedUserLinks.length > 0
-                    ? formatDate(
-                        [...selectedUserLinks].sort((a, b) => a.created.localeCompare(b.created))[0]!.created,
-                      )
-                    : "—"}
-                </p>
-                <p className="rounded-md border border-border bg-muted/20 p-3 text-[12px] text-muted-foreground">
-                  Passcodes, OTPs, biometrics, tokens, recovery secrets, and transaction codes are never shown in VerifyMe
-                  Admin.
+              <Card className="border border-border p-6 shadow-sm space-y-3">
+                <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2 text-[13px]">
+                  <div>
+                    <dt className="text-muted-foreground">VerifyMe ID</dt>
+                    <dd className="font-mono font-medium text-foreground">{selectedRowGroup.verifymeId}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Status</dt>
+                    <dd>
+                      <UnifiedBadge variant="status" value={rowStatusLabel(selectedRowGroup.rowStatus)} />
+                    </dd>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <dt className="text-muted-foreground">Private account email</dt>
+                    <dd className="font-mono text-foreground">{maskEmail(selectedRowGroup.email)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Created</dt>
+                    <dd>
+                      {selectedUserLinks.length > 0
+                        ? formatDate(
+                            [...selectedUserLinks].sort((a, b) => a.created.localeCompare(b.created))[0]!.created,
+                          )
+                        : "—"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Last active</dt>
+                    <dd>{formatRelativeTime(selectedRowGroup.lastActiveMax)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Linked organizations</dt>
+                    <dd className="tabular-nums font-medium">{selectedRowGroup.memberships.length}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Verification sessions (sample)</dt>
+                    <dd className="tabular-nums font-medium">
+                      {selectedRowGroup.totalVerificationSessions.toLocaleString()}
+                    </dd>
+                  </div>
+                </dl>
+                <p className="text-[12px] text-muted-foreground border-t border-border pt-3">
+                  Sensitive credentials are never shown in this portal.
                 </p>
               </Card>
             </TabsContent>
 
+            <TabsContent value="platform-risk" className="mt-6 space-y-4 text-[13px]">
+              {platformRisk ? (
+                <>
+                  <RiskSummary
+                    score={platformRisk.score}
+                    level={platformRisk.level}
+                    signals={platformRisk.signals}
+                    recommendation={platformRisk.recommendation}
+                  />
+                  <Card className="border border-border p-6 shadow-sm">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Supporting metrics (sample)</p>
+                    <dl className="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+                      <div>
+                        <dt className="text-muted-foreground">Linked organizations (count)</dt>
+                        <dd className="tabular-nums font-medium">{selectedRowGroup.memberships.length}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">Verification sessions (sample aggregate)</dt>
+                        <dd className="tabular-nums font-medium">
+                          {selectedRowGroup.totalVerificationSessions.toLocaleString()}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">Account status</dt>
+                        <dd>
+                          <UnifiedBadge variant="status" value={rowStatusLabel(selectedRowGroup.rowStatus)} />
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">Last active (max across links)</dt>
+                        <dd>{formatRelativeTime(selectedRowGroup.lastActiveMax)}</dd>
+                      </div>
+                      <div className="sm:col-span-2">
+                        <dt className="text-muted-foreground">Device enrollment (summary)</dt>
+                        <dd>
+                          {selectedRowGroup.memberships[0]?.device?.status === "active"
+                            ? "Active device on file"
+                            : selectedRowGroup.memberships[0]?.device?.status === "pending_enrollment"
+                              ? "Enrollment incomplete"
+                              : "—"}
+                        </dd>
+                      </div>
+                    </dl>
+                    <p className="mt-4 text-[12px] leading-relaxed text-muted-foreground border-t border-border pt-3">
+                      Platform risk is universal for this VerifyMe User across linked organizations. Signals are aggregated —
+                      other organizations are not named in factor labels.
+                    </p>
+                  </Card>
+                </>
+              ) : null}
+            </TabsContent>
+
             <TabsContent value="devices" className="mt-6 space-y-4 text-[13px]">
               <Card className="border border-border p-6 shadow-sm">
-                <p className="rounded-md border border-border bg-muted/20 p-3 text-[12px] leading-relaxed text-muted-foreground">
-                  In the current MVP, each VerifyMe user is limited to a single active device. Registering a new device
-                  replaces the existing device and rotates the associated secure state.
-                </p>
-                <p className="text-[12px] text-muted-foreground">
-                  This account is currently limited to one active device (MVP). Setting up a new device will replace the
-                  existing device.
+                <p className="text-[12px] text-muted-foreground mb-4">
+                  One active device per account (MVP). Replacing a device rotates binding for this user.
                 </p>
                 {(() => {
                   const dev = selectedRowGroup.memberships[0]?.device;
-                  if (!dev) return <p className="text-muted-foreground">No device sample.</p>;
+                  if (!dev) return <p className="text-muted-foreground">No device on file.</p>;
+                  const bindingOk = dev.status === "active";
                   return (
-                    <div className="mt-4 rounded-lg border border-border p-4">
+                    <div className="rounded-lg border border-border p-4">
                       <p className="mb-3 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                        Registered device
+                        Active device
                       </p>
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <div>
-                          <p className="text-[11px] text-muted-foreground">Device label</p>
-                          <p className="font-medium">{dev.label}</p>
+                          <p className="text-[11px] text-muted-foreground">Device</p>
+                          <p className="font-medium">
+                            {dev.label} · {dev.platform}
+                          </p>
                         </div>
                         <div>
-                          <p className="text-[11px] text-muted-foreground">Platform</p>
-                          <p>{dev.platform}</p>
-                        </div>
-                        <div>
-                          <p className="text-[11px] text-muted-foreground">Status</p>
+                          <p className="text-[11px] text-muted-foreground">Enrollment</p>
                           <UnifiedBadge variant="status" value={dev.status === "active" ? "Active" : "Pending enrollment"} />
                         </div>
                         <div>
-                          <p className="text-[11px] text-muted-foreground">Secure state</p>
-                          <p className="text-[13px]">{dev.secureStateSummary}</p>
+                          <p className="text-[11px] text-muted-foreground">Binding summary</p>
+                          <p className="text-[13px]">{bindingOk ? "Bound · healthy" : "Enrollment incomplete"}</p>
                         </div>
                         <div>
-                          <p className="text-[11px] text-muted-foreground">Registered at</p>
+                          <p className="text-[11px] text-muted-foreground">Registered</p>
                           <p>{formatDateTime(dev.registeredAt)}</p>
                         </div>
-                        <div>
+                        <div className="sm:col-span-2">
                           <p className="text-[11px] text-muted-foreground">Last verified</p>
                           <p>{dev.lastVerifiedAt ? formatDateTime(dev.lastVerifiedAt) : "—"}</p>
                         </div>
@@ -267,10 +318,6 @@ export function PlatformVerifyMeUserDetail() {
                     </div>
                   );
                 })()}
-                <p className="rounded-md border border-border bg-muted/20 p-3 text-[12px] text-muted-foreground">
-                  No biometric templates, raw device keys, Encrypted_Auth_Cred, Transaction_Code, or generated tokens are
-                  displayed.
-                </p>
               </Card>
             </TabsContent>
 
@@ -286,7 +333,6 @@ export function PlatformVerifyMeUserDetail() {
                         className="border-b border-border/60 pb-2 text-[13px] leading-snug last:border-0 last:pb-0"
                       >
                         <span className="font-medium text-foreground">{link.organization}</span>
-                        <span className="ml-1 font-mono text-[12px] text-muted-foreground">({link.organizationId})</span>
                         <br />
                         <span className="text-muted-foreground">client_user_id:</span>{" "}
                         <span className="font-mono">{displayClientUserId(link.clientUserId, link.organizationId)}</span>
@@ -304,10 +350,7 @@ export function PlatformVerifyMeUserDetail() {
 
             <TabsContent value="activity" className="mt-6 space-y-2 text-[13px]">
               <Card className="border border-border p-6 shadow-sm">
-                <p className="text-muted-foreground">
-                  Organization-scoped verification session counts (sample). Last activity reflects the latest session signal,
-                  not raw tokens.
-                </p>
+                <p className="text-muted-foreground text-[13px]">Verification sessions by linked organization (sample).</p>
                 <div className="mt-4 divide-y divide-border rounded-md border border-border">
                   {selectedUserLinks
                     .slice()
@@ -316,7 +359,6 @@ export function PlatformVerifyMeUserDetail() {
                       <div key={link.id} className="flex flex-wrap justify-between gap-2 p-3">
                         <div>
                           <p className="font-medium text-foreground">{link.organization}</p>
-                          <p className="font-mono text-[11px] text-muted-foreground">{link.organizationId}</p>
                         </div>
                         <div className="text-right">
                           <p className="font-medium tabular-nums">{link.verificationSessions.toLocaleString()} sessions</p>
@@ -498,12 +540,10 @@ export function PlatformVerifyMeUserDetail() {
               variant="destructive"
               onClick={() => {
                 if (!controlsTarget) return;
-                const n = linkCountForUser(controlsTarget);
-                applyStatusToUser(controlsTarget, "suspended");
+                const n = linkCountForVerifymeId(controlsTarget);
+                applyStatusByVerifymeId(controlsTarget, "suspended");
                 setSuspendOpen(false);
-                setControlsFeedback(
-                  `${displayVerifymeIdForMessages(controlsTarget)} suspended across ${n} linked organization(s) (mock).`,
-                );
+                setControlsFeedback(`${controlsTarget} suspended across ${n} linked organization(s) (mock).`);
               }}
             >
               Confirm suspend
@@ -532,12 +572,10 @@ export function PlatformVerifyMeUserDetail() {
               type="button"
               onClick={() => {
                 if (!controlsTarget) return;
-                const n = linkCountForUser(controlsTarget);
-                applyStatusToUser(controlsTarget, "active");
+                const n = linkCountForVerifymeId(controlsTarget);
+                applyStatusByVerifymeId(controlsTarget, "active");
                 setReactivateOpen(false);
-                setControlsFeedback(
-                  `${displayVerifymeIdForMessages(controlsTarget)} reactivated across ${n} linked organization(s) (mock).`,
-                );
+                setControlsFeedback(`${controlsTarget} reactivated across ${n} linked organization(s) (mock).`);
               }}
             >
               Confirm reactivate
@@ -592,13 +630,11 @@ export function PlatformVerifyMeUserDetail() {
               disabled={!disableMatches}
               onClick={() => {
                 if (!controlsTarget) return;
-                const n = linkCountForUser(controlsTarget);
-                applyStatusToUser(controlsTarget, "disabled");
+                const n = linkCountForVerifymeId(controlsTarget);
+                applyStatusByVerifymeId(controlsTarget, "disabled");
                 setDisableOpen(false);
                 setDisableTyped("");
-                setControlsFeedback(
-                  `${displayVerifymeIdForMessages(controlsTarget)} disabled across ${n} linked organization(s) (mock).`,
-                );
+                setControlsFeedback(`${controlsTarget} disabled across ${n} linked organization(s) (mock).`);
               }}
             >
               Confirm disable
@@ -628,9 +664,7 @@ export function PlatformVerifyMeUserDetail() {
               onClick={() => {
                 if (!controlsTarget) return;
                 setResetOpen(false);
-                setControlsFeedback(
-                  `Recovery reset request recorded for ${displayVerifymeIdForMessages(controlsTarget)} (mock — no secrets returned).`,
-                );
+                setControlsFeedback(`Recovery reset request recorded for ${controlsTarget} (mock — no secrets returned).`);
               }}
             >
               Confirm recovery reset
@@ -659,12 +693,10 @@ export function PlatformVerifyMeUserDetail() {
               type="button"
               onClick={() => {
                 if (!controlsTarget) return;
-                const n = linkCountForUser(controlsTarget);
-                applyStatusToUser(controlsTarget, "active");
+                const n = linkCountForVerifymeId(controlsTarget);
+                applyStatusByVerifymeId(controlsTarget, "active");
                 setRestoreOpen(false);
-                setControlsFeedback(
-                  `${displayVerifymeIdForMessages(controlsTarget)} restored to active across ${n} linked organization(s) (mock).`,
-                );
+                setControlsFeedback(`${controlsTarget} restored to active across ${n} linked organization(s) (mock).`);
               }}
             >
               Confirm restore

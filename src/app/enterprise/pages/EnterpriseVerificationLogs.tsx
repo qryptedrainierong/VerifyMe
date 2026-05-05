@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import { ScrollText, Search, MoreVertical } from "lucide-react";
 import { Button } from "../../shared/components/ui/button";
 import { Card } from "../../shared/components/ui/card";
@@ -28,15 +28,26 @@ import {
   VerificationBillingCallout,
   BillableBadge,
   OutcomeBadge,
+  ProcessStatusBadge,
   VerificationSessionDetailBody,
 } from "../../shared/components/VerificationSessionUi";
 import {
   channelLabel,
   getOrgVerificationSessions,
+  verificationOutcomeLabel,
   type MockVerificationSession,
   type VerificationSessionOutcome,
 } from "../../shared/data/verificationSessionsMock";
 import { enterpriseOrganization } from "../data/enterpriseSample";
+import {
+  getEndUserAssociationStoreVersion,
+  getEndUserAssociations,
+  subscribeEndUserAssociationListeners,
+} from "../../platform/data/platformEndUserAssociationsSession";
+import {
+  computePlatformRiskSummaryForVerifymeId,
+  isPublicVerifymeIdForRiskCompute,
+} from "../../platform/data/mockPlatformRisk";
 import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
 
 type OutcomeFilter = "all" | VerificationSessionOutcome;
@@ -64,6 +75,18 @@ export function EnterpriseVerificationLogs() {
   const [dateFilter, setDateFilter] = useState<DateFilter>("all");
   const [detail, setDetail] = useState<MockVerificationSession | null>(null);
 
+  const assocVersion = useSyncExternalStore(
+    subscribeEndUserAssociationListeners,
+    getEndUserAssociationStoreVersion,
+    getEndUserAssociationStoreVersion,
+  );
+  const platformAssociations = useMemo(() => getEndUserAssociations(), [assocVersion]);
+
+  const sessionUserRisk = useMemo(() => {
+    if (!detail?.maskedVerifymeId || !isPublicVerifymeIdForRiskCompute(detail.maskedVerifymeId)) return null;
+    return computePlatformRiskSummaryForVerifymeId(detail.maskedVerifymeId, platformAssociations);
+  }, [detail, platformAssociations]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return orgSessions.filter((s) => {
@@ -73,7 +96,7 @@ export function EnterpriseVerificationLogs() {
       if (channelFilter !== "all" && s.channel !== channelFilter) return false;
       if (!withinDateFilter(s.createdAt, dateFilter)) return false;
       if (q.length > 0) {
-        const hay = `${s.sessionId} ${s.clientUserId} ${s.customerName}`.toLowerCase();
+        const hay = `${s.sessionId} ${s.clientUserId} ${s.customerDisplayName ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
@@ -97,8 +120,9 @@ export function EnterpriseVerificationLogs() {
         title="Verification Logs"
         description={
           <>
-            Review verification sessions for{" "}
-            <strong className="text-foreground">{enterpriseOrganization.organizationName}</strong> only.
+            Verification sessions for{" "}
+            <strong className="text-foreground">{enterpriseOrganization.organizationName}</strong> only. Customer display
+            names are organization-provided references.
           </>
         }
         bodyClassName="space-y-6"
@@ -109,11 +133,11 @@ export function EnterpriseVerificationLogs() {
           <p className="text-xl font-semibold mt-1">{stats.total}</p>
         </Card>
         <Card className="p-4 border border-border shadow-sm">
-          <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Verified</p>
+          <p className="text-[11px] text-muted-foreground uppercase tracking-wide">ID Proof Pass</p>
           <p className="text-xl font-semibold mt-1 text-green-700">{stats.verified}</p>
         </Card>
         <Card className="p-4 border border-border shadow-sm">
-          <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Failed</p>
+          <p className="text-[11px] text-muted-foreground uppercase tracking-wide">ID Proof Fail</p>
           <p className="text-xl font-semibold mt-1 text-red-700">{stats.failed}</p>
         </Card>
         <Card className="p-4 border border-border shadow-sm">
@@ -147,9 +171,9 @@ export function EnterpriseVerificationLogs() {
             <SelectValue placeholder="Outcome" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All outcomes</SelectItem>
-            <SelectItem value="verified">Verified</SelectItem>
-            <SelectItem value="failed">Failed</SelectItem>
+            <SelectItem value="all">All ID proof (internal filter)</SelectItem>
+            <SelectItem value="verified">{verificationOutcomeLabel("verified")}</SelectItem>
+            <SelectItem value="failed">{verificationOutcomeLabel("failed")}</SelectItem>
             <SelectItem value="expired">Expired</SelectItem>
             <SelectItem value="error">Error</SelectItem>
             <SelectItem value="indeterminate">Indeterminate</SelectItem>
@@ -192,16 +216,19 @@ export function EnterpriseVerificationLogs() {
 
       <Card className="border border-border shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1040px] text-sm">
+          <table className="w-full min-w-[1120px] text-sm">
             <thead className="border-b border-border bg-accent/40">
               <tr>
                 <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">Session ID</th>
                 <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">client_user_id</th>
-                <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">Customer name</th>
+                <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">
+                  Customer display (org)
+                </th>
                 <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">Channel</th>
-                <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">Outcome</th>
+                <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">Session status</th>
+                <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">ID proof result</th>
                 <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">Attempts</th>
-                <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">Billable</th>
+                <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">Billing</th>
                 <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">Cost</th>
                 <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">Timestamp</th>
                 <th className="text-right p-3 font-semibold text-muted-foreground uppercase text-[11px] w-[72px]">Actions</th>
@@ -212,10 +239,15 @@ export function EnterpriseVerificationLogs() {
                 <tr key={s.sessionId} className="hover:bg-accent/30">
                   <td className="p-3 font-mono text-[12px]">{s.sessionId}</td>
                   <td className="p-3 font-mono text-[12px]">{s.clientUserId}</td>
-                  <td className="p-3">{s.customerName}</td>
+                  <td className="p-3">
+                    <span>{s.customerDisplayName?.trim() || "—"}</span>
+                  </td>
                   <td className="p-3 text-[13px]">{channelLabel(s.channel)}</td>
                   <td className="p-3">
-                    <OutcomeBadge outcome={s.outcome} />
+                    <ProcessStatusBadge session={s} />
+                  </td>
+                  <td className="p-3">
+                    <OutcomeBadge session={s} />
                   </td>
                   <td className="p-3 tabular-nums">
                     {s.attemptsUsed}/{s.maxAttempts}
@@ -265,11 +297,15 @@ export function EnterpriseVerificationLogs() {
               <ScrollText className="w-5 h-5 text-primary" />
               Session details
             </DialogTitle>
-            <DialogDescription>Organization-scoped — no cross-Organization data.</DialogDescription>
+            <DialogDescription>Organization-scoped session detail.</DialogDescription>
           </DialogHeader>
           {detail && (
             <>
-              <VerificationSessionDetailBody session={detail} variant="organization" />
+              <VerificationSessionDetailBody
+                session={detail}
+                variant="organization"
+                userRiskPreview={sessionUserRisk ? { level: sessionUserRisk.level } : null}
+              />
               <DialogFooter>
                 <Button variant="outline" onClick={() => setDetail(null)}>
                   Close

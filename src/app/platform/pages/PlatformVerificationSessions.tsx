@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import { Filter, ListChecks, Search } from "lucide-react";
 import { Button } from "../../shared/components/ui/button";
 import { Card } from "../../shared/components/ui/card";
@@ -23,16 +23,26 @@ import {
   VerificationBillingCallout,
   BillableBadge,
   OutcomeBadge,
+  ProcessStatusBadge,
   VerificationSessionDetailBody,
 } from "../../shared/components/VerificationSessionUi";
 import {
   channelLabel,
   getVerificationSessionsMock,
-  lifecycleLabel,
+  verificationOutcomeLabel,
   type MockVerificationSession,
   type VerificationSessionOutcome,
 } from "../../shared/data/verificationSessionsMock";
 import { buildInitialOrganizations } from "../data/platformOrganizationsSample";
+import {
+  getEndUserAssociationStoreVersion,
+  getEndUserAssociations,
+  subscribeEndUserAssociationListeners,
+} from "../data/platformEndUserAssociationsSession";
+import {
+  computePlatformRiskSummaryForVerifymeId,
+  isPublicVerifymeIdForRiskCompute,
+} from "../data/mockPlatformRisk";
 import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
 import { shouldIgnoreRowOpenClick } from "../utils/tableRowNav";
 
@@ -61,6 +71,18 @@ export function PlatformVerificationSessions() {
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("all");
   const [detail, setDetail] = useState<MockVerificationSession | null>(null);
 
+  const assocVersion = useSyncExternalStore(
+    subscribeEndUserAssociationListeners,
+    getEndUserAssociationStoreVersion,
+    getEndUserAssociationStoreVersion,
+  );
+  const platformAssociations = useMemo(() => getEndUserAssociations(), [assocVersion]);
+
+  const sessionUserRisk = useMemo(() => {
+    if (!detail?.maskedVerifymeId || !isPublicVerifymeIdForRiskCompute(detail.maskedVerifymeId)) return null;
+    return computePlatformRiskSummaryForVerifymeId(detail.maskedVerifymeId, platformAssociations);
+  }, [detail, platformAssociations]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return allSessions.filter((s) => {
@@ -72,7 +94,7 @@ export function PlatformVerificationSessions() {
       if (!withinTimeFilter(s.createdAt, timeFilter)) return false;
       if (q.length > 0) {
         const hay =
-          `${s.sessionId} ${s.organizationName} ${s.clientUserId} ${s.customerName} ${s.maskedVerifymeId ?? ""}`.toLowerCase();
+          `${s.sessionId} ${s.organizationName} ${s.clientUserId} ${s.customerDisplayName ?? ""} ${s.maskedVerifymeId ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
@@ -98,7 +120,7 @@ export function PlatformVerificationSessions() {
         variant="fill"
         rootClassName="h-full"
         title="Verification Sessions"
-        description="Monitor platform-wide verification attempts, outcomes, billable decisions, and OIDC-style completion state."
+        description="Platform-wide sessions: session status, ID proof result, billing, and risk context (sample)."
         bodyClassName="space-y-6"
       >
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
@@ -107,11 +129,11 @@ export function PlatformVerificationSessions() {
           <p className="mt-1 text-xl font-semibold tabular-nums">{stats.total}</p>
         </Card>
         <Card className="border border-border p-4 shadow-sm">
-          <p className="text-xs text-muted-foreground">Verified</p>
+          <p className="text-xs text-muted-foreground">ID Proof Pass</p>
           <p className="mt-1 text-xl font-semibold tabular-nums text-green-700">{stats.verified}</p>
         </Card>
         <Card className="border border-border p-4 shadow-sm">
-          <p className="text-xs text-muted-foreground">Failed</p>
+          <p className="text-xs text-muted-foreground">ID Proof Fail</p>
           <p className="mt-1 text-xl font-semibold tabular-nums text-red-700">{stats.failed}</p>
         </Card>
         <Card className="border border-border p-4 shadow-sm">
@@ -162,9 +184,9 @@ export function PlatformVerificationSessions() {
             <SelectValue placeholder="Outcome" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All outcomes</SelectItem>
-            <SelectItem value="verified">Verified</SelectItem>
-            <SelectItem value="failed">Failed</SelectItem>
+            <SelectItem value="all">All ID proof (internal filter)</SelectItem>
+            <SelectItem value="verified">{verificationOutcomeLabel("verified")}</SelectItem>
+            <SelectItem value="failed">{verificationOutcomeLabel("failed")}</SelectItem>
             <SelectItem value="expired">Expired</SelectItem>
             <SelectItem value="error">Error</SelectItem>
             <SelectItem value="indeterminate">Indeterminate</SelectItem>
@@ -225,7 +247,7 @@ export function PlatformVerificationSessions() {
 
       <Card className="border border-border shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1100px] text-sm">
+          <table className="w-full min-w-[1180px] text-sm">
             <thead className="border-b border-border bg-accent/40">
               <tr>
                 <th className="p-3 text-left text-[11px] font-semibold uppercase text-muted-foreground">Session ID</th>
@@ -233,13 +255,12 @@ export function PlatformVerificationSessions() {
                 <th className="p-3 text-left text-[11px] font-semibold uppercase text-muted-foreground">
                   client_user_id / customer
                 </th>
-                <th className="p-3 text-left text-[11px] font-semibold uppercase text-muted-foreground">
-                  VerifyMe ID (masked)
-                </th>
+                <th className="p-3 text-left text-[11px] font-semibold uppercase text-muted-foreground">VerifyMe ID</th>
                 <th className="p-3 text-left text-[11px] font-semibold uppercase text-muted-foreground">Channel</th>
-                <th className="p-3 text-left text-[11px] font-semibold uppercase text-muted-foreground">Status / outcome</th>
+                <th className="p-3 text-left text-[11px] font-semibold uppercase text-muted-foreground">Session status</th>
+                <th className="p-3 text-left text-[11px] font-semibold uppercase text-muted-foreground">ID proof result</th>
                 <th className="p-3 text-left text-[11px] font-semibold uppercase text-muted-foreground">Attempts</th>
-                <th className="p-3 text-left text-[11px] font-semibold uppercase text-muted-foreground">Billable</th>
+                <th className="p-3 text-left text-[11px] font-semibold uppercase text-muted-foreground">Billing</th>
                 <th className="p-3 text-left text-[11px] font-semibold uppercase text-muted-foreground">Cost</th>
                 <th className="p-3 text-left text-[11px] font-semibold uppercase text-muted-foreground">Created</th>
               </tr>
@@ -257,17 +278,18 @@ export function PlatformVerificationSessions() {
                   <td className="p-3 font-mono text-[12px]">{s.sessionId}</td>
                   <td className="p-3">
                     <p className="font-medium text-[13px]">{s.organizationName}</p>
-                    <p className="text-[11px] text-muted-foreground font-mono">{s.organizationId}</p>
                   </td>
                   <td className="p-3">
                     <p className="font-mono text-[12px]">{s.clientUserId}</p>
-                    <p className="text-[12px] text-muted-foreground">{s.customerName}</p>
+                    <p className="text-[12px] text-muted-foreground">{s.customerDisplayName?.trim() || "—"}</p>
                   </td>
                   <td className="p-3 font-mono text-[12px] text-muted-foreground">{s.maskedVerifymeId ?? "—"}</td>
                   <td className="p-3 text-[13px]">{channelLabel(s.channel)}</td>
-                  <td className="p-3 space-y-1">
-                    <UnifiedBadge variant="status" value={lifecycleLabel(s.status)} />
-                    <OutcomeBadge outcome={s.outcome} />
+                  <td className="p-3">
+                    <ProcessStatusBadge session={s} />
+                  </td>
+                  <td className="p-3">
+                    <OutcomeBadge session={s} />
                   </td>
                   <td className="p-3 tabular-nums">
                     {s.attemptsUsed}/{s.maxAttempts}
@@ -311,11 +333,21 @@ export function PlatformVerificationSessions() {
           {detail && (
             <>
               <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-4">
-                <div className="mb-4 rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
-                  <span className="font-medium text-foreground">Summary</span> — outcome, channel, and billing flags (sample).
-                  Raw tokens and OTP values are never shown.
-                </div>
-                <VerificationSessionDetailBody session={detail} variant="platform" />
+                <p className="mb-4 text-xs text-muted-foreground">
+                  Sample session — secrets and raw tokens are never shown.
+                </p>
+                <VerificationSessionDetailBody
+                  session={detail}
+                  variant="platform"
+                  userRiskPreview={
+                    sessionUserRisk ? { level: sessionUserRisk.level, score: sessionUserRisk.score } : null
+                  }
+                  verifymeUserDetailHref={
+                    detail.maskedVerifymeId && isPublicVerifymeIdForRiskCompute(detail.maskedVerifymeId)
+                      ? `/verifyme-users/${encodeURIComponent(detail.maskedVerifymeId)}`
+                      : null
+                  }
+                />
               </div>
               <DialogFooter className="shrink-0 border-t border-border px-6 py-4">
                 <Button variant="outline" onClick={() => setDetail(null)}>

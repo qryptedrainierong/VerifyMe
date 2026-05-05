@@ -1,4 +1,4 @@
-import { Download, Filter, Search, ArrowUpDown, TrendingUp } from "lucide-react";
+import { Download, Filter, Search, TrendingUp } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Card } from "../../shared/components/ui/card";
 import { Button } from "../../shared/components/ui/button";
@@ -21,26 +21,30 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "../../shared/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../shared/components/ui/select";
 import { UnifiedBadge } from "../../shared/components/UnifiedBadge";
 import { buildInitialOrganizations, getVerificationSpend } from "../data/platformOrganizationsSample";
+import {
+  getPlatformBillingInvoices,
+  sortInvoicesForDisplay,
+  type PlatformBillingInvoiceRow,
+} from "../data/platformBillingInvoicesMock";
 import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
 import { shouldIgnoreRowOpenClick } from "../utils/tableRowNav";
 
-type InvoiceRow = {
-  id: string;
-  organization: string;
-  organizationId: string;
-  amount: number;
-  date: string;
-  dueDate: string;
-  status: string;
-};
-
 export function PlatformBilling() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedInvoice, setSelectedInvoice] = useState<InvoiceRow | null>(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<PlatformBillingInvoiceRow | null>(null);
+  const [invoiceListMode, setInvoiceListMode] = useState<"action" | "all">("action");
   const [refundConfirmOpen, setRefundConfirmOpen] = useState(false);
   const [reminderConfirmOpen, setReminderConfirmOpen] = useState(false);
+  const [reviewedConfirmOpen, setReviewedConfirmOpen] = useState(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const organizations = useMemo(() => buildInitialOrganizations(), []);
   const mrr = organizations.reduce((sum, org) => sum + getVerificationSpend(org), 0);
@@ -73,61 +77,72 @@ export function PlatformBilling() {
     },
   ];
 
-  const invoices: InvoiceRow[] = organizations.map((org, index) => ({
-    id: `INV-2024-${String(412 + index)}`,
-    organization: org.organizationName,
-    organizationId: org.id,
-    amount: Math.round(getVerificationSpend(org)),
-    date: "2024-04-01",
-    dueDate: "2024-04-15",
-    status: org.paymentStanding === "current" ? "paid" : org.paymentStanding,
-  }));
+  const invoiceSource = useMemo(() => getPlatformBillingInvoices(), []);
+  const sortedInvoices = useMemo(() => sortInvoicesForDisplay(invoiceSource), [invoiceSource]);
 
   const filteredInvoices = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    return invoices.filter(
-      (inv) =>
-        q.length === 0 ||
+    return sortedInvoices.filter((inv) => {
+      if (invoiceListMode === "action" && !inv.actionRequired) return false;
+      if (q.length === 0) return true;
+      return (
         inv.id.toLowerCase().includes(q) ||
         inv.organization.toLowerCase().includes(q) ||
-        inv.organizationId.toLowerCase().includes(q),
-    );
-  }, [invoices, searchQuery]);
+        inv.organizationId.toLowerCase().includes(q) ||
+        inv.periodLabel.toLowerCase().includes(q)
+      );
+    });
+  }, [sortedInvoices, searchQuery, invoiceListMode]);
 
-  const billingAlerts = invoices
-    .filter((invoice) => invoice.status === "failed" || invoice.status === "overdue" || invoice.status === "pending")
+  const billingAlerts = invoiceSource
+    .filter(
+      (invoice) =>
+        invoice.actionRequired ||
+        invoice.status === "failed" ||
+        invoice.status === "overdue" ||
+        invoice.status === "pending",
+    )
+    .slice(0, 8)
     .map((invoice, index) => ({
       id: index + 1,
       type: invoice.status,
       organization: invoice.organization,
       message:
         invoice.status === "failed"
-          ? "Payment failed - requires retry"
+          ? "Payment failed — retry or contact billing"
           : invoice.status === "overdue"
-            ? "Invoice overdue and needs follow-up"
-            : "Invoice pending payment confirmation",
+            ? "Invoice overdue"
+            : invoice.status === "refund_requested"
+              ? "Refund requested"
+              : invoice.status === "dispute_review"
+                ? "Dispute under review"
+                : "Pending payment",
       amount: invoice.amount,
       severity: invoice.status === "failed" ? "critical" : invoice.status === "overdue" ? "high" : "medium",
       time: `${index + 1} hour${index === 0 ? "" : "s"} ago`,
     }));
 
-  const recentBillingActivity = invoices.slice(0, 6).map((invoice, index) => ({
-    id: invoice.id,
-    action:
-      invoice.status === "paid"
-        ? "Invoice paid"
-        : invoice.status === "pending"
-          ? "Invoice generated"
-          : invoice.status === "overdue"
-            ? "Payment reminder sent"
-            : "Payment retry initiated",
-    organization: invoice.organization,
-    amount: invoice.amount,
-    time: `${10 + index * 15} min ago`,
-  }));
-  const failedPayments = invoices.filter((invoice) => invoice.status === "failed").length;
-  const overdueInvoices = invoices.filter((invoice) => invoice.status === "overdue").length;
-  const overdueValue = invoices
+  const recentBillingActivity = sortInvoicesForDisplay(invoiceSource)
+    .slice(0, 6)
+    .map((invoice, index) => ({
+      id: invoice.id,
+      action:
+        invoice.status === "paid"
+          ? "Invoice paid"
+          : invoice.status === "pending"
+            ? "Invoice issued"
+            : invoice.status === "overdue"
+              ? "Payment reminder"
+              : invoice.status === "failed"
+                ? "Payment retry"
+                : "Billing update",
+      organization: invoice.organization,
+      amount: invoice.amount,
+      time: `${10 + index * 15} min ago`,
+    }));
+  const failedPayments = invoiceSource.filter((invoice) => invoice.status === "failed").length;
+  const overdueInvoices = invoiceSource.filter((invoice) => invoice.status === "overdue").length;
+  const overdueValue = invoiceSource
     .filter((invoice) => invoice.status === "overdue")
     .reduce((sum, invoice) => sum + invoice.amount, 0);
 
@@ -152,20 +167,34 @@ export function PlatformBilling() {
     });
   };
 
-  const billingStatusLabel = (invoice: InvoiceRow) =>
-    invoice.status === "paid"
-      ? "Paid"
-      : invoice.status === "pending"
-        ? "Pending"
-        : invoice.status === "overdue"
-          ? "Overdue"
-          : "Failed";
+  const billingStatusLabel = (invoice: PlatformBillingInvoiceRow) => {
+    const m: Record<PlatformBillingInvoiceRow["status"], string> = {
+      paid: "Paid",
+      current: "Current",
+      pending: "Pending",
+      overdue: "Overdue",
+      failed: "Failed",
+      refund_requested: "Refund requested",
+      dispute_review: "Dispute review",
+    };
+    return m[invoice.status];
+  };
+
+  const formatDateTime = (iso: string) =>
+    new Date(iso).toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      timeZone: "UTC",
+    });
 
   return (
     <>
       <PortalPageFrame
         title="Billing & Credits"
-        description="Plan credits, top-ups, per-organization pricing, verification charges, OTP billing, and credit transactions."
+        description="Invoices, payment standing, and verification-related charges (sample)."
         headerActions={
           <>
             <Button variant="outline">
@@ -308,7 +337,6 @@ export function PlatformBilling() {
                   </span>
                 </div>
               </div>
-              <Button variant="outline" size="sm">Resolve</Button>
             </div>
           ))}
         </div>
@@ -317,17 +345,29 @@ export function PlatformBilling() {
       {/* Invoices Table */}
       <Card className="border border-border shadow-sm">
         <div className="border-b border-border p-6">
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h3 className="text-[15px] font-semibold text-foreground">Recent Invoices</h3>
-              <p className="text-[13px] text-muted-foreground">Click a row for invoice detail and billing controls (mock).</p>
+              <h3 className="text-[15px] font-semibold text-foreground">Invoices</h3>
+              <p className="text-[13px] text-muted-foreground">Open a row for reminders, refunds, or review (mock).</p>
             </div>
+            <Select
+              value={invoiceListMode}
+              onValueChange={(v) => setInvoiceListMode(v as "action" | "all")}
+            >
+              <SelectTrigger className="h-10 w-[200px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="action">Requires action</SelectItem>
+                <SelectItem value="all">All invoices</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <div className="relative min-w-[200px] max-w-md flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search invoices..."
+                placeholder="Search invoice id, organization, period…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="h-10 max-w-md bg-background pl-10"
@@ -346,47 +386,25 @@ export function PlatformBilling() {
           </div>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full min-w-[1000px]">
             <thead className="border-b border-border bg-accent/5">
               <tr>
-                <th className="p-4 text-left text-[13px] font-medium text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    Invoice ID
-                    <ArrowUpDown className="h-3 w-3" />
-                  </span>
-                </th>
-                <th className="p-4 text-left text-[13px] font-medium text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    Organization
-                    <ArrowUpDown className="h-3 w-3" />
-                  </span>
-                </th>
-                <th className="p-4 text-left text-[13px] font-medium text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    Amount
-                    <ArrowUpDown className="h-3 w-3" />
-                  </span>
-                </th>
-                <th className="p-4 text-left text-[13px] font-medium text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    Date
-                    <ArrowUpDown className="h-3 w-3" />
-                  </span>
-                </th>
-                <th className="p-4 text-left text-[13px] font-medium text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    Due date
-                    <ArrowUpDown className="h-3 w-3" />
-                  </span>
-                </th>
+                <th className="p-4 text-left text-[13px] font-medium text-muted-foreground">Invoice ID</th>
+                <th className="p-4 text-left text-[13px] font-medium text-muted-foreground">Organization</th>
+                <th className="p-4 text-left text-[13px] font-medium text-muted-foreground">Period</th>
+                <th className="p-4 text-left text-[13px] font-medium text-muted-foreground">Amount</th>
                 <th className="p-4 text-left text-[13px] font-medium text-muted-foreground">Status</th>
+                <th className="p-4 text-left text-[13px] font-medium text-muted-foreground">Action?</th>
+                <th className="p-4 text-left text-[13px] font-medium text-muted-foreground">Issued</th>
+                <th className="p-4 text-left text-[13px] font-medium text-muted-foreground">Due</th>
+                <th className="p-4 text-left text-[13px] font-medium text-muted-foreground">Last updated</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {filteredInvoices.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-sm text-muted-foreground">
-                    No invoices match your search.
+                  <td colSpan={9} className="p-8 text-center text-sm text-muted-foreground">
+                    No invoices match your filters.
                   </td>
                 </tr>
               ) : null}
@@ -404,20 +422,24 @@ export function PlatformBilling() {
                   </td>
                   <td className="p-4">
                     <p className="text-[14px] text-foreground">{invoice.organization}</p>
-                    <p className="font-mono text-[12px] text-muted-foreground">{invoice.organizationId}</p>
                   </td>
+                  <td className="p-4 text-[14px] text-muted-foreground">{invoice.periodLabel}</td>
                   <td className="p-4">
                     <p className="text-[14px] font-semibold text-foreground">{formatCurrency(invoice.amount)}</p>
                   </td>
                   <td className="p-4">
-                    <p className="text-[14px] text-foreground">{formatDate(invoice.date)}</p>
-                  </td>
-                  <td className="p-4">
-                    <p className="text-[14px] text-foreground">{formatDate(invoice.dueDate)}</p>
-                  </td>
-                  <td className="p-4">
                     <UnifiedBadge variant="billing" value={billingStatusLabel(invoice)} />
                   </td>
+                  <td className="p-4">
+                    {invoice.actionRequired ? (
+                      <UnifiedBadge variant="status" value="Yes" />
+                    ) : (
+                      <span className="text-[13px] text-muted-foreground">No</span>
+                    )}
+                  </td>
+                  <td className="p-4 text-[14px] text-foreground">{formatDate(invoice.issuedDate)}</td>
+                  <td className="p-4 text-[14px] text-foreground">{formatDate(invoice.dueDate)}</td>
+                  <td className="p-4 text-[12px] text-muted-foreground">{formatDateTime(invoice.lastUpdated)}</td>
                 </tr>
               ))}
             </tbody>
@@ -449,32 +471,39 @@ export function PlatformBilling() {
                 <p>
                   <span className="text-muted-foreground">Organization:</span> {selectedInvoice.organization}
                 </p>
-                <p className="font-mono text-xs text-muted-foreground">{selectedInvoice.organizationId}</p>
+                <p>
+                  <span className="text-muted-foreground">Period:</span> {selectedInvoice.periodLabel}
+                </p>
                 <p>
                   <span className="text-muted-foreground">Amount:</span> {formatCurrency(selectedInvoice.amount)}
                 </p>
                 <p>
-                  <span className="text-muted-foreground">Issued:</span> {formatDate(selectedInvoice.date)}
+                  <span className="text-muted-foreground">Issued:</span> {formatDate(selectedInvoice.issuedDate)}
                 </p>
                 <p>
                   <span className="text-muted-foreground">Due:</span> {formatDate(selectedInvoice.dueDate)}
                 </p>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Payment references, card tokens, and bank identifiers are never shown in VerifyMe Admin (mock UI).
+                <p>
+                  <span className="text-muted-foreground">Last updated:</span> {formatDateTime(selectedInvoice.lastUpdated)}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Payment references and bank identifiers are not shown here.
                 </p>
               </div>
               <div className="space-y-2 border-t border-border pt-4">
                 <p className="text-xs font-medium text-muted-foreground">Billing controls</p>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Refunds and reminders require confirmation. Actions below are mock / future backend integration.
-                </p>
                 <div className="flex flex-wrap gap-2">
                   <Button type="button" variant="outline" size="sm" onClick={() => setReminderConfirmOpen(true)}>
-                    Send payment reminder (mock)…
+                    Send payment reminder…
                   </Button>
                   <Button type="button" variant="outline" size="sm" onClick={() => setRefundConfirmOpen(true)}>
-                    Request refund (mock / future)…
+                    Request refund…
                   </Button>
+                  {selectedInvoice.status === "dispute_review" ? (
+                    <Button type="button" variant="secondary" size="sm" onClick={() => setReviewedConfirmOpen(true)}>
+                      Mark reviewed (mock)…
+                    </Button>
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -491,8 +520,13 @@ export function PlatformBilling() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Send payment reminder?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Mock only — no email is sent. In production this would queue a reminder for the billing contact.
+            <AlertDialogDescription className="space-y-2">
+              <span className="block">
+                Mock only — no email is sent. In production this would queue a reminder for the billing contact.
+              </span>
+              <span className="block rounded-md border border-border/80 bg-muted/30 px-3 py-2 text-[12px] text-muted-foreground">
+                This action will be recorded in audit logs.
+              </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -515,8 +549,13 @@ export function PlatformBilling() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Request refund?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Mock / future — billing operations are not executed in this prototype. Confirm to record intent only.
+            <AlertDialogDescription className="space-y-2">
+              <span className="block">
+                Mock / future — billing operations are not executed in this prototype. Confirm to record intent only.
+              </span>
+              <span className="block rounded-md border border-border/80 bg-muted/30 px-3 py-2 text-[12px] text-muted-foreground">
+                This action will be recorded in audit logs.
+              </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -527,6 +566,33 @@ export function PlatformBilling() {
                 const id = selectedInvoice?.id ?? "invoice";
                 setSelectedInvoice(null);
                 setActionMessage(`Refund request recorded for ${id} (mock / future).`);
+              }}
+            >
+              Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={reviewedConfirmOpen} onOpenChange={setReviewedConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mark dispute reviewed?</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <span className="block">Records review intent for this invoice (mock).</span>
+              <span className="block rounded-md border border-border/80 bg-muted/30 px-3 py-2 text-[12px] text-muted-foreground">
+                This action will be recorded in audit logs.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setReviewedConfirmOpen(false);
+                const id = selectedInvoice?.id ?? "invoice";
+                setSelectedInvoice(null);
+                setActionMessage(`Dispute marked reviewed for ${id} (mock).`);
               }}
             >
               Confirm

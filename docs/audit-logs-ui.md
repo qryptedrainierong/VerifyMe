@@ -5,6 +5,15 @@
 ## Overview
 This document outlines the design and implementation approach for the audit logs UI component, including schema-aligned data, modal details view, and action-specific layouts.
 
+**Current VerifyMe Admin prototype (`PlatformAuditLogs.tsx`):**
+
+- **Summary cards:** total events, security, admin, integration, billing/credits (counts follow mutually exclusive buckets from `getAuditSummaryBucket()` in `auditLog.ts`).
+- **Filters:** search, category (product-facing group), actor type, organization, severity, date range (mock anchor against sample timestamps).
+- **Table:** Timestamp, Event (label + raw key), Category, Actor, Target, Organization, Severity — **row click** opens **modal** detail only (no row actions menu).
+- **Modal:** Summary → Details → Related entity links (when sample ids exist) → Description → **Payload** (keys matching sensitive fragments redacted) → Controls footer (**Copy safe JSON**, Close). Modal width **`max-w-3xl`**. Entity links: Organization, VerifyMe User, Client App, Identity Link when `related*` fields are set; verification session shown as reference text (sessions stay on Verification Sessions UI).
+
+Mock rows live in `src/app/platform/data/platformAuditLogsSample.ts` and include governance-style actions (`organization.*`, `verifyme_user.*`, `client_app.*`, `identity_link.*`, `verification_session.*`, `plan.changed`, `credits.*`, etc.) alongside legacy keys such as `subscription.*` (UI labels use **Plan** wording).
+
 ---
 
 ## Phase 1: Data Structure Updates

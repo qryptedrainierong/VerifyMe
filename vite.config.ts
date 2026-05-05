@@ -56,6 +56,11 @@ export default defineConfig({
 
   // Development server configuration
   server: {
+    port: 5173,
+    strictPort: false,
+    /** Show LAN URL; helps when localhost behaves differently on some setups */
+    host: true,
+    clearScreen: false,
     // Force disable caching during development
     headers: {
       'Cache-Control': 'no-store',

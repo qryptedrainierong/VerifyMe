@@ -26,6 +26,14 @@ export type VerificationSessionOutcome =
 
 export type VerificationSessionChannel = "call" | "message" | "web";
 
+/** Name consistency signal for organization-provided customer label vs verified identity (sample). */
+export type VerificationNameConsistency =
+  | "strong_match"
+  | "partial_match"
+  | "mismatch"
+  | "unavailable"
+  | "not_evaluated";
+
 export type VerificationTokenExchangeStatus = "not_started" | "success" | "failed";
 
 export type SafeSessionTimelineEventName =
@@ -44,8 +52,11 @@ export type VerificationTimelineEvent = {
   label: SafeSessionTimelineEventName;
 };
 
-/** Final outcomes that incur a billable charge (single source of truth). */
-export const BILLABLE_OUTCOMES = ["verified", "failed"] as const satisfies readonly VerificationSessionOutcome[];
+/** Product ID proof classification for a session (derived from status + outcome in mocks). */
+export type IdProofResult = "id_proof_pass" | "id_proof_fail" | "unavailable" | "indeterminate";
+
+/** Optional mock-only: VerifyMe User risk band at session time (separate from proof result). */
+export type SessionContextRiskLevel = "Low" | "Moderate" | "High" | "Critical";
 
 export type MockVerificationSession = {
   sessionId: string;
@@ -53,8 +64,11 @@ export type MockVerificationSession = {
   organizationName: string;
   clientId: string;
   clientUserId: string;
-  customerName: string;
+  /** Organization-provided display label for reference — optional; not verified identity. */
+  customerDisplayName?: string | null;
+  /** Public/support VerifyMe identifier when resolved (vm…); internal FKs stay server-side only. */
   maskedVerifymeId: string | null;
+  nameConsistency?: VerificationNameConsistency;
   status: VerificationSessionLifecycle;
   outcome: VerificationSessionOutcome;
   method: "passcode_otp_biometric_token";
@@ -76,10 +90,63 @@ export type MockVerificationSession = {
   idTokenIssued: boolean;
   failureReason: string | null;
   timeline: VerificationTimelineEvent[];
+  /** Mock: short operator-facing scenario note (non-secret). */
+  operatorScenarioNote?: string | null;
+  /** Mock: user risk band for narrative — does not replace live risk engine. */
+  sessionContextRiskLevel?: SessionContextRiskLevel;
 };
 
+/** Internal `outcome` values that correspond to completed proof attempts in typical flows. */
+export const BILLABLE_OUTCOMES = ["verified", "failed"] as const satisfies readonly VerificationSessionOutcome[];
+
+export function deriveIdProofResult(session: MockVerificationSession): IdProofResult {
+  if (session.outcome === "indeterminate") return "indeterminate";
+  if (session.outcome === "verified" && session.status === "verified") return "id_proof_pass";
+  if (session.outcome === "failed" && session.status === "failed") return "id_proof_fail";
+  return "unavailable";
+}
+
+export function idProofResultLabel(result: IdProofResult): string {
+  const m: Record<IdProofResult, string> = {
+    id_proof_pass: "ID Proof Pass",
+    id_proof_fail: "ID Proof Fail",
+    unavailable: "Unavailable",
+    indeterminate: "Indeterminate",
+  };
+  return m[result];
+}
+
+/** Session operational state (product vocabulary). */
+export function sessionStatusLabel(session: MockVerificationSession): string {
+  const { status, outcome } = session;
+  if (outcome === "cancelled" || status === "cancelled") return "Cancelled";
+  if (outcome === "expired" || status === "expired") return "Expired";
+  if (outcome === "error" || status === "error") return "Error";
+  if (outcome === "indeterminate") return "Error";
+  if (outcome === "verified" && status === "verified") return "Verified";
+  if (outcome === "failed" && status === "failed") return "Not verified";
+  if (outcome === "pending") {
+    if (status === "initiated") return "Pending";
+    return "Awaiting verification";
+  }
+  return "Awaiting verification";
+}
+
+export function billingStatusLabel(session: MockVerificationSession): string {
+  return isSessionBillable(session) ? "Billable" : "Not billable";
+}
+
+export function isBillableProofResult(result: IdProofResult): boolean {
+  return result === "id_proof_pass" || result === "id_proof_fail";
+}
+
+export function isSessionBillable(session: MockVerificationSession): boolean {
+  return isBillableProofResult(deriveIdProofResult(session));
+}
+
+/** @deprecated Prefer isSessionBillable(session) — billing follows ID proof result, not outcome alone. */
 export function isOutcomeBillable(outcome: VerificationSessionOutcome): boolean {
-  return (BILLABLE_OUTCOMES as readonly VerificationSessionOutcome[]).includes(outcome);
+  return outcome === "verified" || outcome === "failed";
 }
 
 function t(base: string, offsetMin: number): string {
@@ -117,8 +184,9 @@ const rawSessions: MockVerificationSession[] = [
     organizationName: "Acme Corporation",
     clientId: "ACME_CALLCENTER_PROD_001",
     clientUserId: "jsmith",
-    customerName: "John Smith",
-    maskedVerifymeId: "vm_****3b9a",
+    customerDisplayName: "John Smith",
+    maskedVerifymeId: "vm07f9a2",
+    nameConsistency: "strong_match",
     status: "verified",
     outcome: "verified",
     method: "passcode_otp_biometric_token",
@@ -139,6 +207,7 @@ const rawSessions: MockVerificationSession[] = [
     tokenExchangeStatus: "success",
     idTokenIssued: true,
     failureReason: null,
+    operatorScenarioNote: "Proof validated — session completed successfully.",
     timeline: successTimeline(t(BASE, -120)),
   },
   {
@@ -147,8 +216,9 @@ const rawSessions: MockVerificationSession[] = [
     organizationName: "Acme Corporation",
     clientId: "ACME_CALLCENTER_PROD_001",
     clientUserId: "mchan",
-    customerName: "Maria Chan",
-    maskedVerifymeId: null,
+    customerDisplayName: "Maria Chan",
+    maskedVerifymeId: "vm91b3c4",
+    nameConsistency: "mismatch",
     status: "failed",
     outcome: "failed",
     method: "passcode_otp_biometric_token",
@@ -168,7 +238,9 @@ const rawSessions: MockVerificationSession[] = [
     authorizationCodeIssued: false,
     tokenExchangeStatus: "not_started",
     idTokenIssued: false,
-    failureReason: "Verification Service returned a negative result after maximum attempts (no secret values shown).",
+    failureReason: "Submitted proof did not validate after maximum attempts (no secret values shown).",
+    operatorScenarioNote: "Multiple failed proof attempts — may contribute to VerifyMe User platform risk.",
+    sessionContextRiskLevel: "Moderate",
     timeline: [
       ...partialTimeline(t(BASE, -400), "Token submitted on Verification Page"),
       { at: t(BASE, -361), label: "Verification Service returned result" },
@@ -180,8 +252,9 @@ const rawSessions: MockVerificationSession[] = [
     organizationName: "Acme Corporation",
     clientId: "ACME_CALLCENTER_PROD_001",
     clientUserId: "knguyen",
-    customerName: "Kim Nguyen",
-    maskedVerifymeId: null,
+    customerDisplayName: "Kim Nguyen",
+    maskedVerifymeId: "vm44d5e6",
+    nameConsistency: "unavailable",
     status: "expired",
     outcome: "expired",
     method: "passcode_otp_biometric_token",
@@ -202,6 +275,7 @@ const rawSessions: MockVerificationSession[] = [
     tokenExchangeStatus: "not_started",
     idTokenIssued: false,
     failureReason: "Session TTL elapsed before a verification token was submitted.",
+    operatorScenarioNote: "Expired — no billable proof attempt completed; ID proof Unavailable.",
     timeline: partialTimeline(t(BASE, -3000), "Awaiting verification token"),
   },
   {
@@ -210,8 +284,9 @@ const rawSessions: MockVerificationSession[] = [
     organizationName: "TechStart Inc.",
     clientId: "TECHSTART_CALLCENTER_SANDBOX_001",
     clientUserId: "cust-8821",
-    customerName: "Alex Rivera",
-    maskedVerifymeId: "vm_****aa01",
+    customerDisplayName: "Alex Rivera",
+    maskedVerifymeId: "vmaa12bc",
+    nameConsistency: "partial_match",
     status: "verified",
     outcome: "verified",
     method: "passcode_otp_biometric_token",
@@ -240,7 +315,7 @@ const rawSessions: MockVerificationSession[] = [
     organizationName: "TechStart Inc.",
     clientId: "TECHSTART_CALLCENTER_SANDBOX_001",
     clientUserId: "cust-9900",
-    customerName: "Jamie Lee",
+    customerDisplayName: "Jamie Lee",
     maskedVerifymeId: "vm_****bb02",
     status: "error",
     outcome: "error",
@@ -262,6 +337,7 @@ const rawSessions: MockVerificationSession[] = [
     tokenExchangeStatus: "not_started",
     idTokenIssued: false,
     failureReason: "Upstream integration fault — classified as error (not billable).",
+    operatorScenarioNote: "System/API error — ID proof Unavailable; not billable.",
     timeline: [
       { at: t(BASE, -2000), label: "Authorize request received" },
       { at: t(BASE, -1995), label: "End-user mapping found" },
@@ -274,7 +350,7 @@ const rawSessions: MockVerificationSession[] = [
     organizationName: "Global Ventures",
     clientId: "GLOBAL_MESSAGING_PROD_001",
     clientUserId: "gv-user-12",
-    customerName: "Sam Patel",
+    customerDisplayName: "Sam Patel",
     maskedVerifymeId: "vm_****cc03",
     status: "indeterminate",
     outcome: "indeterminate",
@@ -295,7 +371,8 @@ const rawSessions: MockVerificationSession[] = [
     authorizationCodeIssued: false,
     tokenExchangeStatus: "not_started",
     idTokenIssued: false,
-    failureReason: "Outcome could not be classified conclusively for billing (support review).",
+    failureReason: "Validation result could not be determined safely (support review).",
+    operatorScenarioNote: "ID proof Indeterminate — not billable.",
     timeline: partialTimeline(t(BASE, -6000), "Verification Service returned result"),
   },
   {
@@ -304,7 +381,7 @@ const rawSessions: MockVerificationSession[] = [
     organizationName: "Innovation Labs",
     clientId: "INNO_CALLCENTER_PROD_001",
     clientUserId: "lab-441",
-    customerName: "Chris Morgan",
+    customerDisplayName: "Chris Morgan",
     maskedVerifymeId: null,
     status: "challenge_dispatched",
     outcome: "pending",
@@ -326,6 +403,7 @@ const rawSessions: MockVerificationSession[] = [
     tokenExchangeStatus: "not_started",
     idTokenIssued: false,
     failureReason: null,
+    operatorScenarioNote: "Awaiting verification — challenge sent; ID proof Unavailable; not billable.",
     timeline: partialTimeline(t(BASE, -15), "Email challenge sent"),
   },
   {
@@ -334,7 +412,7 @@ const rawSessions: MockVerificationSession[] = [
     organizationName: "Design Studio Pro",
     clientId: "DESIGN_CALLCENTER_PROD_001",
     clientUserId: "design-client-9",
-    customerName: "Pat Kim",
+    customerDisplayName: "Pat Kim",
     maskedVerifymeId: "vm_****dd04",
     status: "cancelled",
     outcome: "cancelled",
@@ -356,6 +434,7 @@ const rawSessions: MockVerificationSession[] = [
     tokenExchangeStatus: "not_started",
     idTokenIssued: false,
     failureReason: "Cancelled by organization operator before completion.",
+    operatorScenarioNote: "Cancelled — ID proof Unavailable; not billable.",
     timeline: [
       { at: t(BASE, -8000), label: "Authorize request received" },
       { at: t(BASE, -7950), label: "End-user mapping found" },
@@ -368,7 +447,7 @@ const rawSessions: MockVerificationSession[] = [
     organizationName: "Finance Corp",
     clientId: "FINANCE_CALLCENTER_PROD_001",
     clientUserId: "fc-trader-02",
-    customerName: "Riley Ng",
+    customerDisplayName: "Riley Ng",
     maskedVerifymeId: "vm_****ee05",
     status: "verified",
     outcome: "verified",
@@ -398,7 +477,7 @@ const rawSessions: MockVerificationSession[] = [
     organizationName: "CloudScale Systems",
     clientId: "CLOUD_MESSAGING_PROD_001",
     clientUserId: "cs-api-77",
-    customerName: "Taylor Wu",
+    customerDisplayName: "Taylor Wu",
     maskedVerifymeId: "vm_****ff06",
     status: "verified",
     outcome: "verified",
@@ -428,7 +507,7 @@ const rawSessions: MockVerificationSession[] = [
     organizationName: "DataFlow Analytics",
     clientId: "DATAFLOW_CALLCENTER_PROD_001",
     clientUserId: "df-onboard-1",
-    customerName: "Jordan Lee",
+    customerDisplayName: "Jordan Lee",
     maskedVerifymeId: null,
     status: "initiated",
     outcome: "pending",
@@ -450,6 +529,7 @@ const rawSessions: MockVerificationSession[] = [
     tokenExchangeStatus: "not_started",
     idTokenIssued: false,
     failureReason: null,
+    operatorScenarioNote: "Pending session created — ID proof Unavailable; not billable.",
     timeline: [{ at: t(BASE, -5), label: "Authorize request received" }],
   },
   {
@@ -458,16 +538,16 @@ const rawSessions: MockVerificationSession[] = [
     organizationName: "Acme Corporation",
     clientId: "ACME_CALLCENTER_PROD_001",
     clientUserId: "bwong",
-    customerName: "Ben Wong",
+    customerDisplayName: "Ben Wong",
     maskedVerifymeId: "vm_****8c21",
-    status: "verified",
-    outcome: "verified",
+    status: "error",
+    outcome: "error",
     method: "passcode_otp_biometric_token",
     channel: "message",
     attemptsUsed: 1,
     maxAttempts: 3,
-    billable: true,
-    cost: 0.05,
+    billable: false,
+    cost: 0,
     currency: "USD",
     createdAt: t(BASE, -9000),
     updatedAt: t(BASE, -8985),
@@ -476,19 +556,15 @@ const rawSessions: MockVerificationSession[] = [
     redirectUri: "https://acme.com/auth/verifyme/callback",
     statePreview: "st_****d8d8",
     noncePreview: "nc_****e9e9",
-    authorizationCodeIssued: true,
-    tokenExchangeStatus: "failed",
+    authorizationCodeIssued: false,
+    tokenExchangeStatus: "not_started",
     idTokenIssued: false,
-    failureReason: "Authorization code issued, but Token API exchange failed at the organization integration (mock).",
+    failureReason: "System/API fault after authorize — no billable proof result (sample).",
+    operatorScenarioNote: "Session status Error; ID proof Unavailable — not billable.",
     timeline: [
       { at: t(BASE, -9000), label: "Authorize request received" },
       { at: t(BASE, -8998), label: "End-user mapping found" },
-      { at: t(BASE, -8996), label: "Email challenge sent" },
-      { at: t(BASE, -8990), label: "Awaiting verification token" },
-      { at: t(BASE, -8988), label: "Token submitted on Verification Page" },
-      { at: t(BASE, -8987), label: "Verification Service returned result" },
-      { at: t(BASE, -8986), label: "Authorization code issued" },
-      { at: t(BASE, -8985), label: "Token API exchange completed" },
+      { at: t(BASE, -8992), label: "Verification Service returned result" },
     ],
   },
   {
@@ -497,7 +573,7 @@ const rawSessions: MockVerificationSession[] = [
     organizationName: "Acme Corporation",
     clientId: "ACME_CALLCENTER_PROD_001",
     clientUserId: "olee",
-    customerName: "Olivia Lee",
+    customerDisplayName: "Olivia Lee",
     maskedVerifymeId: null,
     status: "verifying",
     outcome: "pending",
@@ -520,14 +596,119 @@ const rawSessions: MockVerificationSession[] = [
     idTokenIssued: false,
     failureReason: null,
     timeline: partialTimeline(t(BASE, -8), "Token submitted on Verification Page"),
+    nameConsistency: "not_evaluated",
+    operatorScenarioNote: "Awaiting user / agent action — ID proof not yet available.",
+  },
+  {
+    sessionId: "vs-acme-240428-13-highrisk-pass",
+    organizationId: "ORG-001",
+    organizationName: "Acme Corporation",
+    clientId: "ACME_CALLCENTER_PROD_001",
+    clientUserId: "bwong",
+    customerDisplayName: "Ben Wong",
+    maskedVerifymeId: "vmee90cd",
+    nameConsistency: "strong_match",
+    status: "verified",
+    outcome: "verified",
+    method: "passcode_otp_biometric_token",
+    channel: "call",
+    attemptsUsed: 1,
+    maxAttempts: 3,
+    billable: true,
+    cost: 0.05,
+    currency: "USD",
+    createdAt: t(BASE, -45),
+    updatedAt: t(BASE, -40),
+    completedAt: t(BASE, -40),
+    expiresAt: t(BASE, 90),
+    redirectUri: "https://acme.com/auth/verifyme/callback",
+    statePreview: "st_****hr01",
+    noncePreview: "nc_****hr02",
+    authorizationCodeIssued: true,
+    tokenExchangeStatus: "success",
+    idTokenIssued: true,
+    failureReason: null,
+    sessionContextRiskLevel: "High",
+    operatorScenarioNote:
+      "ID Proof Pass with billable session — user risk remains high due to history; a pass does not automatically clear risk.",
+    timeline: successTimeline(t(BASE, -45)),
+  },
+  {
+    sessionId: "vs-acme-240428-14-mismatch-pass",
+    organizationId: "ORG-001",
+    organizationName: "Acme Corporation",
+    clientId: "ACME_CALLCENTER_PROD_001",
+    clientUserId: "jsmith",
+    customerDisplayName: "John Smith",
+    maskedVerifymeId: "vm07f9a2",
+    nameConsistency: "mismatch",
+    status: "verified",
+    outcome: "verified",
+    method: "passcode_otp_biometric_token",
+    channel: "web",
+    attemptsUsed: 1,
+    maxAttempts: 3,
+    billable: true,
+    cost: 0.05,
+    currency: "USD",
+    createdAt: t(BASE, -25),
+    updatedAt: t(BASE, -20),
+    completedAt: t(BASE, -20),
+    expiresAt: t(BASE, 75),
+    redirectUri: "https://acme.com/auth/verifyme/callback",
+    statePreview: "st_****mm01",
+    noncePreview: "nc_****mm02",
+    authorizationCodeIssued: true,
+    tokenExchangeStatus: "success",
+    idTokenIssued: true,
+    failureReason: null,
+    operatorScenarioNote: "ID Proof Pass while name consistency is mismatch — review organization link context.",
+    timeline: successTimeline(t(BASE, -25)),
+  },
+  {
+    sessionId: "vs-global-240428-15-lowrisk-fail",
+    organizationId: "ORG-003",
+    organizationName: "Global Ventures",
+    clientId: "GLOBAL_MESSAGING_PROD_001",
+    clientUserId: "gv-lowfail-01",
+    customerDisplayName: "Sample Customer",
+    maskedVerifymeId: "vm91b3c4",
+    nameConsistency: "strong_match",
+    status: "failed",
+    outcome: "failed",
+    method: "passcode_otp_biometric_token",
+    channel: "web",
+    attemptsUsed: 1,
+    maxAttempts: 3,
+    billable: true,
+    cost: 0.05,
+    currency: "USD",
+    createdAt: t(BASE, -140),
+    updatedAt: t(BASE, -130),
+    completedAt: t(BASE, -130),
+    expiresAt: t(BASE, -100),
+    redirectUri: "https://globalventures.com/vm/callback",
+    statePreview: "st_****lr01",
+    noncePreview: "nc_****lr02",
+    authorizationCodeIssued: false,
+    tokenExchangeStatus: "not_started",
+    idTokenIssued: false,
+    failureReason: "Submitted proof did not validate (single attempt, sample).",
+    sessionContextRiskLevel: "Low",
+    operatorScenarioNote: "ID Proof Fail — isolated attempt with low user risk band in this mock.",
+    timeline: [
+      ...partialTimeline(t(BASE, -140), "Token submitted on Verification Page"),
+      { at: t(BASE, -131), label: "Verification Service returned result" },
+    ],
   },
 ];
 
 export function getVerificationSessionsMock(): MockVerificationSession[] {
-  return rawSessions.map((s) => ({
-    ...s,
-    billable: isOutcomeBillable(s.outcome),
-  }));
+  return rawSessions.map((s) => {
+    const merged = { ...s } as MockVerificationSession;
+    merged.billable = isSessionBillable(merged);
+    return merged;
+  });
 }
 
 export function getOrgVerificationSessions(organizationId: string): MockVerificationSession[] {
@@ -559,6 +740,7 @@ export function lifecycleLabel(status: VerificationSessionLifecycle): string {
   return m[status];
 }
 
+/** Internal / developer-oriented outcome labels (legacy helpers). */
 export function outcomeLabel(outcome: VerificationSessionOutcome): string {
   const m: Record<VerificationSessionOutcome, string> = {
     verified: "Verified",
@@ -570,6 +752,39 @@ export function outcomeLabel(outcome: VerificationSessionOutcome): string {
     pending: "Pending",
   };
   return m[outcome];
+}
+
+/**
+ * Filter / legacy helper: label internal `outcome` enum for UI (ID proof vocabulary for pass/fail).
+ */
+export function verificationOutcomeLabel(outcome: VerificationSessionOutcome): string {
+  const m: Record<VerificationSessionOutcome, string> = {
+    verified: idProofResultLabel("id_proof_pass"),
+    failed: idProofResultLabel("id_proof_fail"),
+    expired: "Expired",
+    error: "Error",
+    indeterminate: idProofResultLabel("indeterminate"),
+    cancelled: "Cancelled",
+    pending: "Pending",
+  };
+  return m[outcome];
+}
+
+/** @deprecated Use sessionStatusLabel(session) */
+export function verificationProcessStatusLabel(session: MockVerificationSession): string {
+  return sessionStatusLabel(session);
+}
+
+export function nameConsistencyLabel(v: VerificationNameConsistency | undefined): string {
+  if (!v || v === "not_evaluated") return "—";
+  const m: Record<VerificationNameConsistency, string> = {
+    strong_match: "Strong match",
+    partial_match: "Partial match",
+    mismatch: "Mismatch",
+    unavailable: "Unavailable",
+    not_evaluated: "—",
+  };
+  return m[v];
 }
 
 export function tokenExchangeLabel(s: VerificationTokenExchangeStatus): string {

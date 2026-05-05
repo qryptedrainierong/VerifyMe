@@ -46,11 +46,15 @@ export enum ActionCategory {
 // ============================================================================
 
 export type AuditAction =
-  // Plan (legacy audit namespace `subscription.*`)
+  // Plan (legacy audit namespace `subscription.*`; UI labels use Plan / Credits wording)
   | "subscription.upgraded"
   | "subscription.downgraded"
   | "subscription.cancelled"
   | "subscription.renewed"
+  | "plan.changed"
+  | "credits.added"
+  | "invoice.generated"
+  | "refund.requested"
   // Billing
   | "billing.invoice_generated"
   | "billing.invoice_sent"
@@ -79,6 +83,8 @@ export type AuditAction =
   | "organization.suspended"
   | "organization.reactivated"
   | "organization.deleted"
+  | "organization.disable_requested"
+  | "organization.archive_requested"
   | "seats.increased"
   | "seats.decreased"
   // Data Management
@@ -98,11 +104,37 @@ export type AuditAction =
   | "system.maintenance_started"
   | "system.maintenance_completed"
   | "admin.login"
-  | "admin.logout";
+  | "admin.logout"
+  // VerifyMe User governance (platform)
+  | "verifyme_user.suspended"
+  | "verifyme_user.reactivated"
+  | "verifyme_user.disabled"
+  | "verifyme_user.restored"
+  | "verifyme_user.recovery_reset_requested"
+  // Client app & redirect URI governance
+  | "client_app.created"
+  | "client_app.secret_rotated"
+  | "client_app.disabled"
+  | "redirect_uri.added"
+  | "redirect_uri.disabled"
+  // Identity links
+  | "identity_link.created"
+  | "identity_link.conflict_reviewed"
+  | "identity_link.revoked"
+  | "identity_link.suspended"
+  // Verification session lifecycle
+  | "verification_session.started"
+  | "verification_session.verified"
+  | "verification_session.failed"
+  | "verification_session.expired"
+  | "verification_session.error";
 
 // ============================================================================
 // BASE INTERFACES
 // ============================================================================
+
+/** Triage level for operators; distinct from outcome `status`. */
+export type AuditSeverityLevel = "info" | "low" | "medium" | "high" | "critical";
 
 export interface BaseAuditLog {
   id: string; // LOG-XXXX format
@@ -117,6 +149,19 @@ export interface BaseAuditLog {
   userAgent?: string;
   details: string; // Human-readable description
   payload?: Record<string, unknown>; // Action-specific data
+  /** Primary subject shown in list/modal Target column (mask IDs where appropriate). */
+  target?: string;
+  /** Operator triage; optional — derived in UI when omitted. */
+  severity?: AuditSeverityLevel;
+  requestRef?: string;
+  sessionRef?: string;
+  /** Deep links on detail modal when ids exist in the sample dataset */
+  relatedVerifymeUserId?: string;
+  /** Public VerifyMe ID for admin navigation (vm…) — preferred over internal UUID in UI. */
+  relatedVerifymeId?: string;
+  relatedClientAppId?: string;
+  relatedIdentityLinkId?: string;
+  relatedVerificationSessionId?: string;
 }
 
 // ============================================================================
@@ -405,23 +450,41 @@ export type AuditLog = BaseAuditLog;
 // ============================================================================
 
 /**
- * Get action category from action type
+ * Get action category from action type (legacy coloring bucket).
+ * Prefer {@link getCategoryColorForAction} for UI accents — unknown namespaces resolve safely.
  */
 export function getActionCategory(action: AuditAction): ActionCategory {
   const [category] = action.split(".");
-  return category as ActionCategory;
+  const legacyMap: Record<string, ActionCategory> = {
+    subscription: ActionCategory.SUBSCRIPTION,
+    billing: ActionCategory.BILLING,
+    plan: ActionCategory.SUBSCRIPTION,
+    credits: ActionCategory.BILLING,
+    invoice: ActionCategory.BILLING,
+    refund: ActionCategory.BILLING,
+    user: ActionCategory.USER,
+    organization: ActionCategory.ORGANIZATION,
+    api_key: ActionCategory.API_KEY,
+    sso: ActionCategory.SSO,
+    mfa: ActionCategory.MFA,
+    admin: ActionCategory.ADMIN,
+    system: ActionCategory.SYSTEM,
+  };
+  return legacyMap[category] ?? ActionCategory.SYSTEM;
 }
 
-/**
- * Get human-readable action name
- */
-export function getActionLabel(action: AuditAction): string {
-  const labels: Record<AuditAction, string> = {
-    "subscription.upgraded": "Plan Upgraded",
-    "subscription.downgraded": "Plan Downgraded",
-    "subscription.cancelled": "Plan Cancelled",
-    "subscription.renewed": "Plan Renewed",
-    "billing.invoice_generated": "Invoice Generated",
+/** Human-readable event label for tables and modal headers. */
+export function getActionLabel(action: string): string {
+  const labels: Record<string, string> = {
+    "subscription.upgraded": "Plan upgraded",
+    "subscription.downgraded": "Plan downgraded",
+    "subscription.cancelled": "Plan cancelled",
+    "subscription.renewed": "Plan renewed",
+    "plan.changed": "Plan changed",
+    "credits.added": "Credits added",
+    "invoice.generated": "Invoice generated",
+    "refund.requested": "Refund requested",
+    "billing.invoice_generated": "Invoice generated",
     "billing.invoice_sent": "Invoice Sent",
     "billing.payment_received": "Payment Received",
     "billing.payment_failed": "Payment Failed",
@@ -440,11 +503,13 @@ export function getActionLabel(action: AuditAction): string {
     "sso.disabled": "SSO Disabled",
     "mfa.enabled": "MFA Enabled",
     "mfa.disabled": "MFA Disabled",
-    "organization.created": "Organization Created",
-    "organization.updated": "Organization Updated",
-    "organization.suspended": "Organization Suspended",
-    "organization.reactivated": "Organization Reactivated",
-    "organization.deleted": "Organization Deleted",
+    "organization.created": "Organization created",
+    "organization.updated": "Organization updated",
+    "organization.suspended": "Organization suspended",
+    "organization.reactivated": "Organization reactivated",
+    "organization.deleted": "Organization deleted",
+    "organization.disable_requested": "Organization disable requested",
+    "organization.archive_requested": "Organization archive requested",
     "seats.increased": "Seats Increased",
     "seats.decreased": "Seats Decreased",
     "data.exported": "Data Exported",
@@ -460,10 +525,129 @@ export function getActionLabel(action: AuditAction): string {
     "system.configuration_changed": "Configuration Changed",
     "system.maintenance_started": "Maintenance Started",
     "system.maintenance_completed": "Maintenance Completed",
-    "admin.login": "Admin Login",
-    "admin.logout": "Admin Logout",
+    "admin.login": "Admin login",
+    "admin.logout": "Admin logout",
+    "verifyme_user.suspended": "VerifyMe user suspended",
+    "verifyme_user.reactivated": "VerifyMe user reactivated",
+    "verifyme_user.disabled": "VerifyMe user disabled",
+    "verifyme_user.restored": "VerifyMe user restored",
+    "verifyme_user.recovery_reset_requested": "VerifyMe recovery reset requested",
+    "client_app.created": "Client app created",
+    "client_app.secret_rotated": "Client secret rotated",
+    "client_app.disabled": "Client app disabled",
+    "redirect_uri.added": "Redirect URI added",
+    "redirect_uri.disabled": "Redirect URI disabled",
+    "identity_link.created": "Identity link created",
+    "identity_link.conflict_reviewed": "Identity link conflict reviewed",
+    "identity_link.revoked": "Identity link revoked",
+    "identity_link.suspended": "Identity link suspended",
+    "verification_session.started": "Verification session started",
+    "verification_session.verified": "Verification session verified",
+    "verification_session.failed": "Verification session failed",
+    "verification_session.expired": "Verification session expired",
+    "verification_session.error": "Verification session error",
   };
-  return labels[action] || action;
+  return labels[action] ?? action.replace(/\./g, " · ");
+}
+
+/** Filter / table facet — product-facing category column. */
+export function getAuditTableCategory(action: string): string {
+  if (action.startsWith("organization.")) return "Organization";
+  if (action.startsWith("verifyme_user.")) return "VerifyMe User";
+  if (action.startsWith("client_app.") || action.startsWith("redirect_uri.")) return "Client app / API";
+  if (action.startsWith("identity_link.")) return "Identity link";
+  if (action.startsWith("verification_session.")) return "Verification session";
+  if (
+    action.startsWith("subscription.") ||
+    action.startsWith("billing.") ||
+    action.startsWith("plan.") ||
+    action.startsWith("credits.") ||
+    action.startsWith("invoice.") ||
+    action.startsWith("refund.")
+  ) {
+    return "Billing & credits";
+  }
+  if (action.startsWith("mfa.") || action.startsWith("api_key.") || action.startsWith("sso.")) return "Security";
+  if (action.startsWith("user.")) return "Org users";
+  if (action.startsWith("admin.") || action.startsWith("system.")) return "System & admin";
+  return "Other";
+}
+
+/** Which summary card on the Audit Logs page (mutually exclusive buckets). */
+export type AuditSummaryBucket = "security" | "admin" | "integration" | "billing";
+
+export function getAuditSummaryBucket(action: string): AuditSummaryBucket {
+  if (/^(subscription\.|billing\.|plan\.|credits\.|invoice\.|refund\.)/.test(action)) return "billing";
+  if (/^(mfa\.|api_key\.|sso\.|admin\.login|admin\.logout)/.test(action)) return "security";
+  if (/^(client_app\.|redirect_uri\.|identity_link\.|verification_session\.)/.test(action)) return "integration";
+  return "admin";
+}
+
+/** Tailwind text color for event label by action namespace. */
+export function getCategoryColorForAction(action: string): string {
+  const prefix = action.split(".")[0] ?? "";
+  const map: Record<string, string> = {
+    subscription: "text-blue-600",
+    billing: "text-emerald-600",
+    plan: "text-blue-600",
+    credits: "text-emerald-600",
+    invoice: "text-emerald-600",
+    refund: "text-emerald-600",
+    user: "text-purple-600",
+    verifyme_user: "text-violet-600",
+    organization: "text-indigo-600",
+    client_app: "text-cyan-600",
+    redirect_uri: "text-cyan-600",
+    identity_link: "text-teal-600",
+    verification_session: "text-sky-600",
+    api_key: "text-red-600",
+    sso: "text-red-600",
+    mfa: "text-red-600",
+    admin: "text-slate-600",
+    system: "text-slate-500",
+    compliance: "text-amber-600",
+    policy: "text-amber-600",
+    seats: "text-indigo-600",
+    data: "text-cyan-600",
+    backup: "text-cyan-600",
+  };
+  return map[prefix] ?? "text-foreground";
+}
+
+const SENSITIVE_PAYLOAD_KEY_PARTS = [
+  "otp",
+  "verification_token",
+  "verificationtoken",
+  "encrypted_auth_cred",
+  "transaction_code",
+  "client_secret",
+  "private_key",
+  "auth_code",
+  "id_token",
+  "qr_payload",
+  "raw_",
+] as const;
+
+export function isSensitivePayloadKey(key: string): boolean {
+  const k = key.toLowerCase();
+  return SENSITIVE_PAYLOAD_KEY_PARTS.some((frag) => k.includes(frag));
+}
+
+export function redactPayloadForDisplay(payload: Record<string, unknown> | undefined): Record<string, unknown> {
+  if (!payload) return {};
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(payload)) {
+    out[key] = isSensitivePayloadKey(key) ? "[redacted]" : value;
+  }
+  return out;
+}
+
+export function deriveAuditSeverity(log: BaseAuditLog): AuditSeverityLevel {
+  if (log.severity) return log.severity;
+  if (log.status === AuditStatus.FAILED) return "high";
+  if (log.status === AuditStatus.WARNING) return "medium";
+  if (log.status === AuditStatus.PENDING) return "low";
+  return "info";
 }
 
 /**

@@ -104,23 +104,14 @@ export function PlatformClientApps() {
       variant="fill"
       rootClassName="h-full"
       title="Client Apps / API"
-      description="Platform-wide view of organization client applications and integration readiness. Client secrets, private keys, and raw QR payloads are never shown."
+      description="OIDC client registrations per organization — not end-user accounts."
       headerExtra={
-        <>
-          {urlOrganizationId ? (
-            <p className="text-xs text-muted-foreground sm:text-sm">
-              URL filter: <span className="font-mono text-foreground">{urlOrganizationId}</span>
-              {!knownOrgIds.has(urlOrganizationId)
-                ? " — unknown organization id in sample set; adjust filters manually."
-                : " — applied when recognized in sample organizations."}
-            </p>
-          ) : (
-            <p className="text-xs text-muted-foreground sm:text-sm">
-              Optional <span className="font-mono">?organizationId=…</span> pre-selects organization when recognized
-              (design-phase).
-            </p>
-          )}
-        </>
+        urlOrganizationId ? (
+          <p className="text-xs text-muted-foreground sm:text-sm">
+            Filter: <span className="font-mono text-foreground">{urlOrganizationId}</span>
+            {!knownOrgIds.has(urlOrganizationId) ? " — not in sample set." : null}
+          </p>
+        ) : null
       }
       bodyClassName="space-y-6"
     >
@@ -211,18 +202,20 @@ export function PlatformClientApps() {
       </div>
 
       <Card className="overflow-hidden border border-border shadow-sm">
-        <div className="min-w-[1100px] overflow-x-auto">
+        <div className="min-w-[1280px] overflow-x-auto">
           <table className="w-full text-[13px]">
             <thead className="border-b border-border bg-accent/5">
               <tr>
                 <th className="p-3 text-left font-medium text-muted-foreground">Organization</th>
                 <th className="p-3 text-left font-medium text-muted-foreground">client_id</th>
-                <th className="p-3 text-left font-medium text-muted-foreground">App name / type</th>
+                <th className="p-3 text-left font-medium text-muted-foreground">App name</th>
+                <th className="p-3 text-left font-medium text-muted-foreground">App type</th>
                 <th className="p-3 text-left font-medium text-muted-foreground">Environment</th>
-                <th className="p-3 text-left font-medium text-muted-foreground">Scopes</th>
-                <th className="p-3 text-left font-medium text-muted-foreground">Redirect URI</th>
+                <th className="p-3 text-left font-medium text-muted-foreground">Integration</th>
+                <th className="p-3 text-left font-medium text-muted-foreground">openid</th>
+                <th className="p-3 text-left font-medium text-muted-foreground">Redirect URIs</th>
                 <th className="p-3 text-left font-medium text-muted-foreground">QR / keys</th>
-                <th className="p-3 text-left font-medium text-muted-foreground">Secret status</th>
+                <th className="p-3 text-left font-medium text-muted-foreground">Secret</th>
                 <th className="p-3 text-left font-medium text-muted-foreground">Last used</th>
               </tr>
             </thead>
@@ -238,30 +231,20 @@ export function PlatformClientApps() {
                 >
                   <td className="p-3 align-top">
                     <p className="font-medium text-foreground">{r.organizationName}</p>
-                    <p className="font-mono text-[11px] text-muted-foreground">{r.organizationId}</p>
                   </td>
                   <td className="max-w-[140px] break-all p-3 align-top font-mono text-[12px]">{r.clientId}</td>
-                  <td className="p-3 align-top">
-                    <p className="font-medium">{r.appName}</p>
-                    <p className="text-[12px] text-muted-foreground">{r.appType}</p>
-                  </td>
+                  <td className="p-3 align-top font-medium">{r.appName}</td>
+                  <td className="p-3 align-top text-muted-foreground">{r.appType}</td>
                   <td className="p-3 align-top capitalize">{r.environment}</td>
                   <td className="p-3 align-top">
-                    <div className="flex flex-wrap gap-1">
-                      {r.enabledScopes.map((s) => (
-                        <span
-                          key={s}
-                          className="inline-flex items-center rounded border border-border bg-muted/40 px-2 py-0.5 font-mono text-[11px] text-foreground"
-                        >
-                          {s}
-                        </span>
-                      ))}
-                    </div>
-                    {r.futureScopes?.length ? (
-                      <p className="mt-1 text-[11px] text-muted-foreground">
-                        Future: {r.futureScopes.join(", ")} (not enabled)
-                      </p>
-                    ) : null}
+                    <UnifiedBadge variant="integration" value={formatIntegrationStatus(r.integrationStatus)} />
+                  </td>
+                  <td className="p-3 align-top">
+                    {r.enabledScopes.includes("openid") ? (
+                      <span className="font-mono text-[11px] text-foreground">openid</span>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
                   </td>
                   <td className="p-3 align-top">
                     <UnifiedBadge variant="status" value={redirectLabel(r.redirectUriStatus)} />

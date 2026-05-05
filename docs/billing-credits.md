@@ -16,19 +16,21 @@ Definitions: [`glossary.md`](./glossary.md). Audit log keys may still use legacy
 
 ## Billable outcomes (final)
 
-Billing is driven by the **final verification outcome** of a **verification session** (not generic “API usage”). The rules are:
+Billing is driven by whether a **verification session** produced a **completed ID proof attempt** (not generic “API usage”). **Session status** (Pending, Awaiting verification, etc.) and **ID proof result** are modeled separately in product UI; credits consume only when the proof result is **ID Proof Pass** or **ID Proof Fail**.
 
-| Outcome | Billable? |
-|---------|-----------|
-| **Verified** | **Yes** |
-| **Failed** | **Yes** |
-| **Expired** | **No** |
-| **Error** | **No** |
-| **Indeterminate** | **No** |
-| **Cancelled** | **No** |
-| **Pending** | **No** |
+| Internal outcome (typical API / row) | ID proof result (UI) | Billable? |
+|--------------------------------------|------------------------|-----------|
+| `verified` | **ID Proof Pass** | **Yes** |
+| `failed` | **ID Proof Fail** | **Yes** |
+| `expired` | **Unavailable** (session **Expired**) | **No** |
+| `error` | **Unavailable** or **Indeterminate** | **No** |
+| `indeterminate` | **Indeterminate** | **No** |
+| `cancelled` | **Unavailable** | **No** |
+| `pending` (in progress) | **Unavailable** | **No** |
 
-Organizations are charged only when a session settles as **Verified** or **Failed**.
+**Rules:** **ID Proof Pass** and **ID Proof Fail** are billable because a proof attempt was completed. **Expired**, **Error**, **Indeterminate**, **Cancelled**, **Pending**, and **Awaiting verification** are **not** billable.
+
+Organizations are charged only when a session settles with **ID Proof Pass** or **ID Proof Fail** (internal `verified` / `failed` when those represent completed proof).
 
 ## Verification pricing (per organization)
 

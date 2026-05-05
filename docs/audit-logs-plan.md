@@ -2,6 +2,8 @@
 
 > **VerifyMe terminology:** Product copy and new specs use **plans**, **credits**, and **verification billing** (see [`billing-credits.md`](./billing-credits.md)). This document still uses historical **audit action keys** such as `subscription.*` in several places; treat those names as **stable log identifiers** until a backend migration aliases or renames them.
 
+**Portal UX (prototype):** Governance-affecting operations are initiated only from **VerifyMe Admin** entity detail pages with **confirmation**; **audit log events** are the accountability trail. The Audit Logs screen is an **immutable, read-only** review surface (modal detail). See [`implementation-notes.md`](./implementation-notes.md) and [`audit-logs-ui.md`](./audit-logs-ui.md).
+
 ## Overview
 This document outlines all audit log types organized by category, with detailed logging requirements for each action.
 
@@ -361,6 +363,76 @@ Action groups:
 - Disabled date & time
 - IP Address
 - Status (success/failed)
+
+### 4.9 verifyme_user.risk_score_calculated
+**Purpose:** Accountability trail when **VerifyMe User** (platform-wide) **risk score** is computed or materially updated.
+
+**Trigger:** Risk engine or batch job writes a `verifyme_user_risk_snapshots` row (see [`risk-scoring.md`](./risk-scoring.md)).
+
+**Items to Log:**
+- Actor (`system` or operator if manual re-run)
+- **VerifyMe ID** (display) / internal user id per retention policy
+- **risk_score**, **risk_level**
+- **Safe factor labels** and **`calculation_version`**
+- **calculated_at**
+- **Do not** include raw cross-org PII, raw name comparisons, secrets, or tokens
+
+> **Note:** There is **no** primary audit action `identity_link.risk_score_calculated`. **Identity links** use **conflict** and **name consistency** workflows; numeric **risk** is owned by the **VerifyMe User**.
+
+### 4.10 verifyme_user.risk_high_risk_detected
+**Purpose:** Escalation signal when VerifyMe User risk crosses a configured threshold (e.g. High/Critical).
+
+**Items to Log:**
+- Threshold name / policy id (if available)
+- **risk_score**, **risk_level**, **calculation_version**, timestamp
+- Safe summary only — no raw secrets
+
+### 4.11 identity_link.conflict_detected
+**Purpose:** A **conflict** state is opened or escalated on an identity link (e.g. pending review).
+
+**Items to Log:**
+- Organization ID & Name, **client_user_id**, link reference
+- **VerifyMe ID** (display) if policy allows
+- Safe **conflict reason** label — not raw name comparison strings
+- Timestamp
+
+### 4.12 identity_link.conflict_reviewed
+**Purpose:** Human or workflow records **review progress** on an identity link conflict (may precede final resolution).
+
+**Items to Log:**
+- Actor (email, type)
+- Organization ID & Name, link reference
+- Review status (safe enum / label)
+- Timestamp; IP optional
+
+### 4.13 identity_link.conflict_resolved
+**Purpose:** Conflict is **closed** with an auditable resolution outcome.
+
+**Items to Log:**
+- Actor (email, type)
+- Organization ID & Name, link reference
+- **Resolution** summary (safe label); **reviewed_at**
+- Timestamp; IP optional
+
+### 4.14 identity_link.name_match_evaluated
+**Purpose:** **`name_match_status`** (or equivalent) derived or updated.
+
+**Items to Log:**
+- Organization ID & Name, **client_user_id**
+- New status enum (e.g. strong_match, partial_match, mismatch)
+- Evaluation timestamp
+- **Do not** log raw org-provided name fields or raw VerifyMe name fields
+
+### 4.15 verifyme_user.risk_reviewed
+**Purpose:** Operator documents review of a **VerifyMe User** risk case (platform scope).
+
+**Items to Log:**
+- Actor (platform admin)
+- **VerifyMe ID** / reference
+- Review notes — **operational**, no raw verification secrets
+- Timestamp
+
+> **Design reference:** risk ownership (VerifyMe User), conflict vs score, privacy boundaries — [`risk-scoring.md`](./risk-scoring.md).
 
 ---
 
@@ -742,4 +814,5 @@ These fields should be present in every audit log entry:
 - [`audit-logs-ui.md`](./audit-logs-ui.md) — UI prototype notes
 - [`billing-credits.md`](./billing-credits.md) — plans, credits, billable **verification session** outcomes
 - [`glossary.md`](./glossary.md) — canonical terminology
+- [`risk-scoring.md`](./risk-scoring.md) — VerifyMe User risk vs link conflict events, audit payload discipline
 

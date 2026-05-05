@@ -34,7 +34,7 @@ export function getPlatformRouter() {
             Component: PlatformOrganizationDetail,
           },
           { path: "verifyme-users", Component: PlatformUsers },
-          { path: "verifyme-users/:verifymeUserId", Component: PlatformVerifyMeUserDetail },
+          { path: "verifyme-users/:verifymeId", Component: PlatformVerifyMeUserDetail },
           { path: "identity-links", Component: PlatformIdentityLinks },
           { path: "identity-links/:identityLinkId", Component: PlatformIdentityLinkDetail },
           { path: "verification-sessions", Component: PlatformVerificationSessions },

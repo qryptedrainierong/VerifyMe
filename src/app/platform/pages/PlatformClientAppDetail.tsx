@@ -95,10 +95,7 @@ export function PlatformClientAppDetail() {
             <div className="min-w-0 flex-1">
               <p className="mb-1 font-mono text-xs text-muted-foreground break-all">{row.clientId}</p>
               <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{row.appName}</h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {row.organizationName}{" "}
-                <span className="font-mono text-xs">({row.organizationId})</span>
-              </p>
+              <p className="mt-1 text-sm text-muted-foreground">{row.organizationName}</p>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <UnifiedBadge variant="status" value={row.environment === "production" ? "Production" : "Sandbox"} />
                 <UnifiedBadge variant="integration" value={formatIntegrationStatus(row.integrationStatus)} />
@@ -126,16 +123,37 @@ export function PlatformClientAppDetail() {
 
             <TabsContent value="details" className="mt-6">
               <Card className="border border-border p-6 shadow-sm">
-                <p className="text-xs font-medium text-muted-foreground">Summary</p>
+                <p className="text-xs font-medium text-muted-foreground">App Details</p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <UnifiedBadge variant="integration" value={formatIntegrationStatus(row.integrationStatus)} />
-                  <UnifiedBadge variant="status" value={redirectLabel(row.redirectUriStatus)} />
-                  <UnifiedBadge variant="status" value={qrLabel(row.qrKeyReadiness)} />
+                  <UnifiedBadge variant="status" value={row.environment === "production" ? "Production" : "Sandbox"} />
                 </div>
                 <dl className="mt-6 space-y-3 text-sm">
                   <div>
+                    <dt className="text-muted-foreground">client_id</dt>
+                    <dd className="font-mono text-[13px] break-all">{row.clientId}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Organization</dt>
+                    <dd className="font-medium">{row.organizationName}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">App name</dt>
+                    <dd className="font-medium">{row.appName}</dd>
+                  </div>
+                  <div>
                     <dt className="text-muted-foreground">App type</dt>
-                    <dd className="font-medium">{row.appType}</dd>
+                    <dd>{row.appType}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Environment</dt>
+                    <dd className="capitalize">{row.environment}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Integration status</dt>
+                    <dd>
+                      <UnifiedBadge variant="integration" value={formatIntegrationStatus(row.integrationStatus)} />
+                    </dd>
                   </div>
                   <div>
                     <dt className="text-muted-foreground">Last used</dt>
@@ -146,28 +164,38 @@ export function PlatformClientAppDetail() {
                     <dd>{secretLabel(row.secretStatus)}</dd>
                   </div>
                 </dl>
-                <p className="mt-6 rounded-md border border-border bg-muted/20 p-3 text-xs text-muted-foreground">
-                  Raw client_secret, private keys, and QR payloads are never displayed.
-                </p>
+                <p className="mt-6 text-xs text-muted-foreground">No raw client_secret is shown.</p>
               </Card>
             </TabsContent>
 
             <TabsContent value="redirect" className="mt-6">
               <Card className="border border-border p-6 shadow-sm">
-                <p className="text-xs font-medium text-muted-foreground">Redirect URI readiness</p>
+                <p className="text-xs font-medium text-muted-foreground">Redirect URIs</p>
                 <div className="mt-3">
                   <UnifiedBadge variant="status" value={redirectLabel(row.redirectUriStatus)} />
+                  <span className="ml-2 text-[12px] capitalize text-muted-foreground">{row.environment}</span>
                 </div>
-                <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-                  Production redirect URIs are configured per environment in the organization portal. Raw callback URLs and
-                  OAuth state are not shown in VerifyMe Admin (mock).
+                {row.registeredRedirectUris.length > 0 ? (
+                  <ul className="mt-4 space-y-2 font-mono text-[12px] text-foreground">
+                    {row.registeredRedirectUris.map((u) => (
+                      <li key={u} className="break-all rounded border border-border bg-muted/30 px-3 py-2">
+                        {u}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-4 text-sm text-muted-foreground">No redirect URIs registered (sample).</p>
+                )}
+                <p className="mt-4 text-[12px] text-muted-foreground">
+                  Only registered redirect URIs may receive authorization codes.
                 </p>
               </Card>
             </TabsContent>
 
             <TabsContent value="scopes" className="mt-6">
               <Card className="border border-border p-6 shadow-sm">
-                <p className="text-xs font-medium text-muted-foreground">Enabled scopes (MVP)</p>
+                <p className="text-xs font-medium text-muted-foreground">Scopes & Integration</p>
+                <p className="mt-2 text-sm text-muted-foreground">Enabled scope</p>
                 <div className="mt-2 flex flex-wrap gap-1">
                   {row.enabledScopes.map((s) => (
                     <span
@@ -183,14 +211,16 @@ export function PlatformClientAppDetail() {
                     Future scopes (not enabled): {row.futureScopes.join(", ")}
                   </p>
                 ) : null}
-                <div className="mt-6 border-t border-border pt-4">
-                  <p className="text-xs font-medium text-muted-foreground">Integration</p>
-                  <div className="mt-2">
-                    <UnifiedBadge variant="integration" value={formatIntegrationStatus(row.integrationStatus)} />
-                  </div>
+                <div className="mt-6 border-t border-border pt-4 space-y-2 text-[13px]">
+                  <p className="text-xs font-medium text-muted-foreground">OIDC endpoints (reference)</p>
+                  <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                    <li>Authorize — start user authorization</li>
+                    <li>Handle Authorization — callback / code issuance</li>
+                    <li>Token — exchange code for tokens</li>
+                  </ul>
                 </div>
                 <div className="mt-4">
-                  <p className="text-xs font-medium text-muted-foreground">QR / keys</p>
+                  <p className="text-xs font-medium text-muted-foreground">QR / keys readiness</p>
                   <div className="mt-2">
                     <UnifiedBadge variant="status" value={qrLabel(row.qrKeyReadiness)} />
                   </div>
@@ -201,15 +231,13 @@ export function PlatformClientAppDetail() {
             <TabsContent value="controls" className="mt-6">
               <Card className="border border-border p-6 shadow-sm">
                 <p className="text-xs font-medium text-muted-foreground">Client App Controls</p>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  Credential-changing actions require confirmation. Raw secrets are never shown.
-                </p>
+                <p className="mt-2 text-sm text-muted-foreground">Confirmation required. No secret values are displayed.</p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   <Button type="button" variant="outline" size="sm" onClick={() => setRotateOpen(true)}>
-                    Rotate secret (mock)…
+                    Rotate secret…
                   </Button>
                   <Button type="button" variant="outline" size="sm" onClick={() => setDisableOpen(true)}>
-                    Disable app (mock)…
+                    Disable app…
                   </Button>
                 </div>
               </Card>

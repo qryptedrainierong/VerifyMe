@@ -4,6 +4,8 @@ VerifyMe exposes **HTTP APIs** and **OIDC-style patterns** so organizations can 
 
 Terms: [`glossary.md`](./glossary.md). Flow detail: [`verification-flow.md`](./verification-flow.md).
 
+**VerifyMe Admin** treats **VerifyMe ID** (`vm…`) as the primary user-facing identifier for VerifyMe Users; internal UUIDs (`verifyme_user_id`) are not displayed as primary identifiers in normal operator UI.
+
 ## OIDC-style flow (summary)
 
 1. Organization initiates **`/authorize`** toward VerifyMe.
@@ -44,6 +46,13 @@ First-class deliverables include integration guides, sequence diagrams, and samp
 ## Verification Service boundary
 
 The **Verification Service** already exists and will be integrated later. Admin portals in this repository do not invoke it during UI/UX phase work.
+
+## Session status, ID proof, billing, and risk (product)
+
+- **Session status** is the operational state of a verification session (e.g. Pending, Verified, Not verified).
+- **ID proof result** states whether the user proved identity for that session (**ID Proof Pass** / **ID Proof Fail** / Unavailable / Indeterminate).
+- **Billing** follows completed proof attempts: **ID Proof Pass** and **ID Proof Fail** are billable; **Expired**, **Error**, **Indeterminate**, **Cancelled**, **Pending**, and **Awaiting verification** are not. See [`billing-credits.md`](./billing-credits.md).
+- **Risk** on the **VerifyMe User** is modeled separately; repeated **ID Proof Fail** may increase platform risk, and **ID Proof Pass** does not automatically clear high risk. See [`risk-scoring.md`](./risk-scoring.md).
 
 ## Related
 

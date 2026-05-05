@@ -17,6 +17,8 @@ export type PlatformClientAppRow = {
   enabledScopes: string[];
   /** Design-phase: additional scopes not yet enabled. */
   futureScopes?: string[];
+  /** Registered callback URLs for this client (sample). */
+  registeredRedirectUris: string[];
   redirectUriStatus: RedirectUriStatus;
   qrKeyReadiness: QrKeyReadiness;
   secretStatus: ClientSecretStatus;
@@ -35,6 +37,7 @@ export const platformClientApps: PlatformClientAppRow[] = [
     environment: "production",
     enabledScopes: ["openid"],
     futureScopes: ["profile", "email"],
+    registeredRedirectUris: ["https://acme.com/auth/verifyme/callback"],
     redirectUriStatus: "configured",
     qrKeyReadiness: "ready",
     secretStatus: "configured",
@@ -50,6 +53,7 @@ export const platformClientApps: PlatformClientAppRow[] = [
     appType: "Web",
     environment: "sandbox",
     enabledScopes: ["openid"],
+    registeredRedirectUris: ["https://app.techstart.io/oauth/callback", "https://sandbox.techstart.io/oauth/callback"],
     redirectUriStatus: "configured",
     qrKeyReadiness: "ready",
     secretStatus: "rotation_due",
@@ -65,6 +69,7 @@ export const platformClientApps: PlatformClientAppRow[] = [
     appType: "Native",
     environment: "production",
     enabledScopes: ["openid"],
+    registeredRedirectUris: [],
     redirectUriStatus: "missing",
     qrKeyReadiness: "ready",
     secretStatus: "configured",
@@ -80,6 +85,7 @@ export const platformClientApps: PlatformClientAppRow[] = [
     appType: "Web",
     environment: "production",
     enabledScopes: ["openid"],
+    registeredRedirectUris: ["https://designstudio.io/app/oauth/cb"],
     redirectUriStatus: "configured",
     qrKeyReadiness: "missing",
     secretStatus: "configured",
@@ -95,6 +101,7 @@ export const platformClientApps: PlatformClientAppRow[] = [
     appType: "Service",
     environment: "production",
     enabledScopes: ["openid"],
+    registeredRedirectUris: ["https://api.cloudscale.io/oauth2/cb"],
     redirectUriStatus: "configured",
     qrKeyReadiness: "ready",
     secretStatus: "rotation_due",
@@ -110,10 +117,28 @@ export const platformClientApps: PlatformClientAppRow[] = [
     appType: "Web",
     environment: "sandbox",
     enabledScopes: ["openid"],
+    registeredRedirectUris: [],
     redirectUriStatus: "missing",
     qrKeyReadiness: "missing",
     secretStatus: "configured",
     lastUsed: null,
     integrationStatus: "not_configured",
+  },
+  {
+    id: "APP-007",
+    organizationId: "ORG-003",
+    organizationName: "Global Ventures",
+    clientId: "GV_LEGACY_WEB_001",
+    appName: "Legacy Web Client",
+    appType: "Web",
+    environment: "production",
+    enabledScopes: ["openid"],
+    futureScopes: ["offline_access"],
+    registeredRedirectUris: ["https://globalventures.com/auth/callback"],
+    redirectUriStatus: "configured",
+    qrKeyReadiness: "ready",
+    secretStatus: "configured",
+    lastUsed: null,
+    integrationStatus: "error",
   },
 ];

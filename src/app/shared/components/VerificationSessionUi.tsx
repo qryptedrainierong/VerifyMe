@@ -1,12 +1,16 @@
+import { Link } from "react-router";
 import { Card } from "./ui/card";
 import { Separator } from "./ui/separator";
 import { UnifiedBadge } from "./UnifiedBadge";
+import { UserRiskStatusBadge, type RiskLevelLabel } from "./RiskSummary";
 import {
-  BILLABLE_OUTCOMES,
   channelLabel,
-  isOutcomeBillable,
-  lifecycleLabel,
-  outcomeLabel,
+  deriveIdProofResult,
+  idProofResultLabel,
+  isSessionBillable,
+  nameConsistencyLabel,
+  sessionStatusLabel,
+  billingStatusLabel,
   tokenExchangeLabel,
   type MockVerificationSession,
 } from "../data/verificationSessionsMock";
@@ -14,27 +18,27 @@ import {
 export function VerificationBillingCallout() {
   return (
     <Card className="p-4 border border-border bg-muted/20 shadow-sm">
-      <p className="text-[13px] font-semibold text-foreground mb-2">Billable outcomes</p>
+      <p className="text-[13px] font-semibold text-foreground mb-2">Billable ID proof results</p>
       <ul className="text-[12px] text-muted-foreground space-y-1 list-disc list-inside mb-3">
         <li>
           <strong className="text-foreground">
-            {BILLABLE_OUTCOMES.map((o) => outcomeLabel(o)).join(" and ")}
+            {idProofResultLabel("id_proof_pass")} and {idProofResultLabel("id_proof_fail")}
           </strong>{" "}
-          are billable.
+          are billable when a proof attempt completed.
         </li>
         <li>
-          <strong className="text-foreground">Expired</strong>, <strong className="text-foreground">Error</strong>,{" "}
-          <strong className="text-foreground">Indeterminate</strong>, and <strong className="text-foreground">Cancelled</strong>{" "}
-          are not billable.
+          <strong className="text-foreground">Unavailable</strong> (e.g. Pending, Awaiting verification, Expired, Error,
+          Cancelled) and <strong className="text-foreground">Indeterminate</strong> proof classification are{" "}
+          <strong className="text-foreground">not billable</strong>.
         </li>
         <li>
-          <strong className="text-foreground">Pending</strong> sessions are not billable until a final outcome is recorded.
+          Session status and ID proof result are separate: a session may complete as <strong className="text-foreground">Not verified</strong>{" "}
+          because <strong className="text-foreground">ID Proof Fail</strong> — not because of a generic system &quot;Failed&quot; label alone.
         </li>
       </ul>
       <p className="text-[12px] text-muted-foreground leading-relaxed border-t border-border pt-3">
-        Failed verifications are billable because VerifyMe delivered a conclusive security decision. Expired, error,
-        indeterminate, and cancelled sessions are not billable because VerifyMe did not deliver a conclusive verification
-        result suitable for billing.
+        <strong className="text-foreground">ID Proof Fail</strong> means the user attempted verification but did not successfully
+        prove identity. Risk status is separate from the current proof result.
       </p>
     </Card>
   );
@@ -46,8 +50,13 @@ export function BillableBadge({ billable }: { billable: boolean }) {
   );
 }
 
-export function OutcomeBadge({ outcome }: { outcome: MockVerificationSession["outcome"] }) {
-  return <UnifiedBadge variant="status" value={outcomeLabel(outcome)} />;
+/** ID proof result (not session operational status). */
+export function OutcomeBadge({ session }: { session: MockVerificationSession }) {
+  return <UnifiedBadge variant="status" value={idProofResultLabel(deriveIdProofResult(session))} />;
+}
+
+export function ProcessStatusBadge({ session }: { session: MockVerificationSession }) {
+  return <UnifiedBadge variant="status" value={sessionStatusLabel(session)} />;
 }
 
 export function SessionTimelineList({ events }: { events: MockVerificationSession["timeline"] }) {
@@ -73,14 +82,26 @@ export function SessionTimelineList({ events }: { events: MockVerificationSessio
 
 type DetailVariant = "platform" | "organization";
 
+export type SessionUserRiskPreview = {
+  level: RiskLevelLabel;
+  /** Platform Admin only; omit in Organization Admin payloads. */
+  score?: number;
+};
+
 export function VerificationSessionDetailBody({
   session,
   variant,
+  userRiskPreview,
+  verifymeUserDetailHref,
 }: {
   session: MockVerificationSession;
   variant: DetailVariant;
+  /** VerifyMe User platform risk (not link-level). Omit when unknown or redacted VerifyMe ID. */
+  userRiskPreview?: SessionUserRiskPreview | null;
+  /** Platform Admin only: deep link to VerifyMe User detail for full risk review. */
+  verifymeUserDetailHref?: string | null;
 }) {
-  const billable = isOutcomeBillable(session.outcome);
+  const billable = isSessionBillable(session);
 
   return (
     <div className="space-y-4 text-[13px] max-h-[70vh] overflow-y-auto pr-1">
@@ -94,7 +115,6 @@ export function VerificationSessionDetailBody({
           <div>
             <p className="text-[11px] text-muted-foreground uppercase">Organization</p>
             <p>{session.organizationName}</p>
-            <p className="text-[11px] font-mono text-muted-foreground">{session.organizationId}</p>
           </div>
           <div>
             <p className="text-[11px] text-muted-foreground uppercase">client_id</p>
@@ -116,14 +136,18 @@ export function VerificationSessionDetailBody({
           <p className="font-mono">{session.clientUserId}</p>
         </div>
         <div>
-          <p className="text-[11px] text-muted-foreground uppercase">Customer name</p>
-          <p>{session.customerName}</p>
+          <p className="text-[11px] text-muted-foreground uppercase">Customer display name (org)</p>
+          <p>{session.customerDisplayName?.trim() ? session.customerDisplayName : "—"}</p>
+          <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+            Customer display information is provided by the organization for reference only. VerifyMe verifies the linked
+            user, not the displayed name.
+          </p>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <p className="text-[11px] text-muted-foreground uppercase">VerifyMe ID (masked)</p>
+          <p className="text-[11px] text-muted-foreground uppercase">VerifyMe ID</p>
           <p className="font-mono">{session.maskedVerifymeId ?? "—"}</p>
         </div>
         <div>
@@ -132,14 +156,89 @@ export function VerificationSessionDetailBody({
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 items-center">
-        <span className="text-[11px] text-muted-foreground uppercase">Lifecycle</span>
-        <UnifiedBadge variant="status" value={lifecycleLabel(session.status)} />
-        <span className="text-[11px] text-muted-foreground uppercase">Outcome</span>
-        <OutcomeBadge outcome={session.outcome} />
-        <span className="text-[11px] text-muted-foreground uppercase">Billable</span>
-        <BillableBadge billable={billable} />
+      {session.nameConsistency && session.nameConsistency !== "not_evaluated" ? (
+        <div>
+          <p className="text-[11px] text-muted-foreground uppercase">Name consistency</p>
+          <p className="text-[13px]">{nameConsistencyLabel(session.nameConsistency)}</p>
+          <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+            Contextual signal for this session only — not proof of identity.
+          </p>
+        </div>
+      ) : null}
+
+      <div className="rounded-md border border-border bg-muted/10 px-3 py-2 text-[12px] leading-relaxed text-muted-foreground">
+        <p>
+          <strong className="text-foreground">Session status</strong> is the operational state.{" "}
+          <strong className="text-foreground">ID proof result</strong> is whether identity was proved for this session.
+        </p>
       </div>
+
+      {userRiskPreview ? (
+        <div className="rounded-md border border-border bg-muted/20 px-3 py-2">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">User risk status</p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <UserRiskStatusBadge level={userRiskPreview.level} />
+            {variant === "platform" && userRiskPreview.score != null ? (
+              <span className="text-[13px] text-muted-foreground">
+                User risk score:{" "}
+                <span className="font-mono font-semibold tabular-nums text-foreground">{userRiskPreview.score}</span>
+              </span>
+            ) : null}
+            {variant === "platform" && verifymeUserDetailHref ? (
+              <Link to={verifymeUserDetailHref} className="text-[13px] font-medium text-primary underline-offset-4 hover:underline">
+                Open VerifyMe User (full platform risk)
+              </Link>
+            ) : null}
+          </div>
+          {variant === "organization" ? (
+            <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+              User risk status is a platform-derived safety indicator. Organization Admin views do not show cross-organization
+              details or full risk factors.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div>
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Session status</p>
+          <div className="mt-1">
+            <ProcessStatusBadge session={session} />
+          </div>
+        </div>
+        <div>
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">ID proof result</p>
+          <div className="mt-1">
+            <OutcomeBadge session={session} />
+          </div>
+        </div>
+        <div>
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Billing</p>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <BillableBadge billable={billable} />
+            <span className="text-[12px] text-muted-foreground">{billingStatusLabel(session)}</span>
+          </div>
+        </div>
+      </div>
+
+      {session.sessionContextRiskLevel ? (
+        <div className="rounded-md border border-border/80 bg-card px-3 py-2">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Context: user risk (sample)</p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <UserRiskStatusBadge level={session.sessionContextRiskLevel} />
+            <span className="text-[12px] text-muted-foreground">
+              Risk status is separate from the current proof result.
+            </span>
+          </div>
+        </div>
+      ) : null}
+
+      {session.operatorScenarioNote?.trim() ? (
+        <div className="rounded-md border border-primary/20 bg-primary/[0.04] px-3 py-2 text-[12px] text-foreground">
+          <p className="text-[11px] font-medium uppercase text-muted-foreground">Scenario note</p>
+          <p className="mt-1 leading-relaxed">{session.operatorScenarioNote}</p>
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -157,8 +256,8 @@ export function VerificationSessionDetailBody({
       </div>
 
       <div>
-        <p className="text-[11px] text-muted-foreground uppercase">Verification method (summary)</p>
-        <p className="text-muted-foreground">End-user completes steps in the VerifyMe mobile app; this portal shows flow milestones only.</p>
+        <p className="text-[11px] text-muted-foreground uppercase">Verification method</p>
+        <p className="text-muted-foreground">End-user completes steps in VerifyMe; milestones only.</p>
       </div>
 
       <div>
@@ -211,8 +310,8 @@ export function VerificationSessionDetailBody({
             <strong className="text-foreground">{tokenExchangeLabel(session.tokenExchangeStatus)}</strong>
           </li>
           <li>
-            id_token issued: <strong className="text-foreground">{session.idTokenIssued ? "Yes" : "No"}</strong> (only{" "}
-            <code className="text-[11px]">openid</code> scope in MVP; raw token not shown)
+            id_token issued: <strong className="text-foreground">{session.idTokenIssued ? "Yes" : "No"}</strong> (
+            <code className="text-[11px]">openid</code> scope only; raw token not shown)
           </li>
         </ul>
       </div>
@@ -231,15 +330,12 @@ export function VerificationSessionDetailBody({
       </div>
 
       <p className="text-[11px] text-muted-foreground leading-relaxed border-t border-border pt-3">
-        Sensitive verification material (passcode, OTP contents, biometric samples, generated verification token value,
-        Encrypted_Auth_Cred, Transaction_Code, raw authorization code, client_secret, private keys, and raw id_token) is
-        never displayed in admin portals.
+        Secrets and raw tokens are never shown in admin portals.
       </p>
 
       {variant === "organization" && (
         <p className="text-[11px] text-muted-foreground">
-          This view is scoped to the current Organization only. Full VerifyMe user email, global profile, and data for
-          other Organizations are not shown.
+          Scoped to this organization only; other organizations are not shown.
         </p>
       )}
     </div>

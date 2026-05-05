@@ -23,6 +23,8 @@ import {
 import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
 import { shouldIgnoreRowOpenClick } from "../utils/tableRowNav";
 import { maskEmail, rowStatusLabel } from "../utils/verifyMeUserFormatters";
+import { UserRiskStatusBadge } from "../../shared/components/RiskSummary";
+import { computePlatformRiskSummary } from "../data/mockPlatformRisk";
 
 export function PlatformUsers() {
   const navigate = useNavigate();
@@ -55,7 +57,6 @@ export function PlatformUsers() {
       const matchesQuery =
         query.length === 0 ||
         user.verifymeId.toLowerCase().includes(query) ||
-        user.verifymeUserId.toLowerCase().includes(query) ||
         user.clientUserId.toLowerCase().includes(query) ||
         user.email.toLowerCase().includes(query) ||
         maskEmail(user.email).toLowerCase().includes(query) ||
@@ -101,7 +102,7 @@ export function PlatformUsers() {
       variant="fill"
       rootClassName="h-full"
       title="VerifyMe Users"
-      description="Global VerifyMe user accounts: public VerifyMe ID, private account email, linked organizations, device state, and verification activity (sample data)."
+      description="VerifyMe ID, masked account email, links per organization, and verification activity."
       headerExtra={
         <>
           {urlOrganizationId ? (
@@ -187,12 +188,7 @@ export function PlatformUsers() {
                 </th>
                 <th className="p-3 text-left text-[12px] font-medium text-muted-foreground">Status</th>
                 <th className="p-3 text-left text-[12px] font-medium text-muted-foreground">Linked orgs</th>
-                <th className="p-3 text-left text-[12px] font-medium text-muted-foreground">
-                  <button type="button" className="flex items-center gap-1 transition-colors hover:text-foreground">
-                    Verification sessions
-                    <ArrowUpDown className="h-3 w-3" />
-                  </button>
-                </th>
+                <th className="p-3 text-left text-[12px] font-medium text-muted-foreground">Risk status</th>
                 <th className="p-3 text-left text-[12px] font-medium text-muted-foreground">
                   <button type="button" className="flex items-center gap-1 transition-colors hover:text-foreground">
                     Last active
@@ -208,7 +204,7 @@ export function PlatformUsers() {
                   className="cursor-pointer transition-colors hover:bg-accent/10"
                   onClick={(e) => {
                     if (shouldIgnoreRowOpenClick(e.target)) return;
-                    navigate(`/verifyme-users/${encodeURIComponent(group.verifymeUserId)}`);
+                    navigate(`/verifyme-users/${encodeURIComponent(group.verifymeId)}`);
                   }}
                 >
                   <td className="p-3 align-middle">
@@ -226,9 +222,7 @@ export function PlatformUsers() {
                     {group.memberships.length}
                   </td>
                   <td className="p-3 align-middle">
-                    <p className="font-medium tabular-nums text-[13px] text-foreground">
-                      {group.totalVerificationSessions.toLocaleString()}
-                    </p>
+                    <UserRiskStatusBadge level={computePlatformRiskSummary(group).level} />
                   </td>
                   <td className="p-3 align-middle">
                     <p className="text-[13px] text-foreground">{formatRelativeTime(group.lastActiveMax)}</p>

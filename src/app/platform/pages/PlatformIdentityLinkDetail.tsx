@@ -1,9 +1,8 @@
 import { ArrowLeft, Link2 } from "lucide-react";
 import { useMemo, useState, useSyncExternalStore } from "react";
-import { useNavigate, useParams } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
 import { Button } from "../../shared/components/ui/button";
 import { Card } from "../../shared/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../shared/components/ui/tabs";
 import { UnifiedBadge } from "../../shared/components/UnifiedBadge";
 import {
   getIdentityLinkById,
@@ -11,7 +10,11 @@ import {
   subscribeIdentityLinksListeners,
   updateIdentityLinkRow,
 } from "../data/platformIdentityLinksSession";
-import type { IdentityLinkConflictStatus, IdentityLinkStatus } from "../data/platformIdentityLinksSample";
+import type {
+  IdentityLinkConflictStatus,
+  IdentityLinkStatus,
+  NameMatchStatus,
+} from "../data/platformIdentityLinksSample";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,12 +25,23 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "../../shared/components/ui/alert-dialog";
+import { UserRiskStatusBadge } from "../../shared/components/RiskSummary";
+import {
+  computePlatformRiskSummaryForVerifymeId,
+} from "../data/mockPlatformRisk";
+import {
+  getEndUserAssociationStoreVersion,
+  getEndUserAssociations,
+  subscribeEndUserAssociationListeners,
+} from "../data/platformEndUserAssociationsSession";
 
 function linkStatusLabel(s: IdentityLinkStatus): string {
   const map: Record<IdentityLinkStatus, string> = {
+    unlinked: "Unlinked",
     linked: "Linked",
     pending: "Pending",
     suspended: "Suspended",
+    revoked: "Revoked",
     disabled: "Disabled",
   };
   return map[s];
@@ -42,6 +56,17 @@ function conflictLabel(c: IdentityLinkConflictStatus): string {
   return map[c];
 }
 
+function nameMatchStatusLabel(status: NameMatchStatus): string {
+  const map: Record<NameMatchStatus, string> = {
+    not_provided: "Not provided",
+    not_checked: "Not checked",
+    strong_match: "Strong match",
+    partial_match: "Partial match",
+    mismatch: "Mismatch",
+  };
+  return map[status];
+}
+
 export function PlatformIdentityLinkDetail() {
   const navigate = useNavigate();
   const { identityLinkId } = useParams();
@@ -53,6 +78,18 @@ export function PlatformIdentityLinkDetail() {
   );
 
   const row = useMemo(() => getIdentityLinkById(identityLinkId), [identityLinkId, version]);
+
+  const assocVersion = useSyncExternalStore(
+    subscribeEndUserAssociationListeners,
+    getEndUserAssociationStoreVersion,
+    getEndUserAssociationStoreVersion,
+  );
+  const platformAssociations = useMemo(() => getEndUserAssociations(), [assocVersion]);
+
+  const userRisk = useMemo(
+    () => (row ? computePlatformRiskSummaryForVerifymeId(row.verifymeId, platformAssociations) : null),
+    [row, platformAssociations],
+  );
 
   const [conflictReviewOpen, setConflictReviewOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -87,6 +124,9 @@ export function PlatformIdentityLinkDetail() {
     );
   }
 
+  const hasActiveConflict = row.conflictStatus === "pending_review";
+  const conflictPrimaryText = row.conflictReason?.trim() || row.riskNotes?.trim() || null;
+
   return (
     <>
       <div className="flex h-full flex-col">
@@ -106,10 +146,7 @@ export function PlatformIdentityLinkDetail() {
             </div>
             <div className="min-w-0 flex-1">
               <p className="mb-1 font-mono text-sm font-medium text-foreground break-all">{row.clientUserId}</p>
-              <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-                {row.organizationName}
-              </h1>
-              <p className="mt-1 font-mono text-xs text-muted-foreground">{row.organizationId}</p>
+              <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{row.organizationName}</h1>
               <div className="mt-3 flex flex-wrap gap-2">
                 <UnifiedBadge variant="status" value={linkStatusLabel(row.linkStatus)} />
                 <UnifiedBadge variant="status" value={conflictLabel(row.conflictStatus)} />
@@ -118,135 +155,230 @@ export function PlatformIdentityLinkDetail() {
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-auto p-8">
-          <Tabs defaultValue="details" className="w-full">
-            <TabsList className="flex h-9 w-full min-w-0 flex-wrap gap-1 bg-muted/40 p-1 sm:flex-nowrap">
-              <TabsTrigger value="details" className="text-[11px] sm:text-xs">
-                Link Details
-              </TabsTrigger>
-              <TabsTrigger value="user" className="text-[11px] sm:text-xs">
-                VerifyMe User
-              </TabsTrigger>
-              <TabsTrigger value="org" className="text-[11px] sm:text-xs">
-                Organization Context
-              </TabsTrigger>
-              <TabsTrigger value="conflict" className="text-[11px] sm:text-xs">
-                Conflict Review / Controls
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="details" className="mt-6">
-              <Card className="border border-border p-6 shadow-sm">
-                <p className="text-xs font-medium text-muted-foreground">Summary</p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <UnifiedBadge variant="status" value={linkStatusLabel(row.linkStatus)} />
-                  <UnifiedBadge variant="status" value={conflictLabel(row.conflictStatus)} />
-                </div>
-                <dl className="mt-6 space-y-3 text-sm">
+        <div className="min-h-0 flex-1 overflow-auto p-8 space-y-6">
+          <Card
+            className={`border p-6 shadow-sm ${hasActiveConflict ? "border-orange-500/40 bg-orange-500/[0.04]" : "border-border"}`}
+          >
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Conflict review / resolution</p>
+            {hasActiveConflict ? (
+              <div className="mt-4 space-y-4 text-sm">
+                <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div>
-                    <dt className="text-muted-foreground">Organization</dt>
-                    <dd className="font-medium">
-                      {row.organizationName}{" "}
-                      <span className="font-mono text-xs text-muted-foreground">({row.organizationId})</span>
+                    <dt className="text-muted-foreground">Conflict status</dt>
+                    <dd className="mt-1">
+                      <UnifiedBadge variant="status" value={conflictLabel(row.conflictStatus)} />
                     </dd>
                   </div>
                   <div>
-                    <dt className="text-muted-foreground">client_user_id</dt>
-                    <dd className="font-mono">{row.clientUserId}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted-foreground">Customer</dt>
-                    <dd>{row.customerDisplayName}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted-foreground">VerifyMe ID (masked)</dt>
-                    <dd className="font-mono">{row.maskedVerifymeId}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted-foreground">Last verified</dt>
-                    <dd className="text-muted-foreground">{row.lastVerified ? formatDateTime(row.lastVerified) : "—"}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted-foreground">Created / linked</dt>
-                    <dd className="text-muted-foreground">{formatDate(row.createdLinkedAt)}</dd>
+                    <dt className="text-muted-foreground">Review status</dt>
+                    <dd className="mt-1 font-medium">Awaiting review</dd>
                   </div>
                 </dl>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="user" className="mt-6">
-              <Card className="border border-border p-6 shadow-sm">
-                <p className="text-sm leading-relaxed text-muted-foreground">
-                  This link associates the organization&apos;s <span className="font-mono text-foreground">client_user_id</span>{" "}
-                  with the customer&apos;s VerifyMe identity. Only masked VerifyMe identifiers are shown in admin tooling.
+                {conflictPrimaryText ? (
+                  <div>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Conflict reason</p>
+                    <p className="mt-1 leading-relaxed text-foreground">{conflictPrimaryText}</p>
+                  </div>
+                ) : null}
+                {row.inviteRiskNotes?.trim() ? (
+                  <div>
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Invite context</p>
+                    <p className="mt-1 text-muted-foreground">{row.inviteRiskNotes}</p>
+                  </div>
+                ) : null}
+                <Button type="button" variant="default" onClick={() => setConflictReviewOpen(true)}>
+                  Review conflict…
+                </Button>
+                <p className="text-[12px] text-muted-foreground">
+                  Confirmation is required. Resolution is auditable in a live system.
                 </p>
-                <div className="mt-4 rounded-md border border-border bg-muted/20 p-4 text-sm">
-                  <p>
-                    <span className="text-muted-foreground">Masked VerifyMe ID:</span>{" "}
-                    <span className="font-mono font-medium">{row.maskedVerifymeId}</span>
-                  </p>
-                  <p className="mt-2">
-                    <span className="text-muted-foreground">Customer display:</span> {row.customerDisplayName}
-                  </p>
-                </div>
-                <p className="mt-4 text-xs text-muted-foreground">
-                  Passcodes, OTPs, biometrics, tokens, and recovery material are never displayed.
-                </p>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="org" className="mt-6">
-              <Card className="border border-border p-6 shadow-sm">
-                <p className="text-sm font-medium text-foreground">{row.organizationName}</p>
-                <p className="font-mono text-xs text-muted-foreground">{row.organizationId}</p>
-                <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-                  Organization-scoped identity linking for enterprise applications. Deep operational tables for this org are
-                  linked from Organization Detail where applicable (design-phase).
-                </p>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="conflict" className="mt-6">
-              <Card className="border border-border p-6 shadow-sm">
-                <p className="text-xs font-medium text-muted-foreground">Conflict Review / Controls</p>
-                <div className="mt-3">
+              </div>
+            ) : row.conflictStatus === "resolved" ? (
+              <div className="mt-4 space-y-3 text-sm">
+                <p className="text-muted-foreground">
                   <UnifiedBadge variant="status" value={conflictLabel(row.conflictStatus)} />
-                </div>
-                <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-                  Mock workflow only. Production would route through compliance review before resolving conflicts.
                 </p>
-                {row.conflictStatus === "pending_review" ? (
-                  <Button type="button" variant="secondary" className="mt-4" onClick={() => setConflictReviewOpen(true)}>
-                    Mark conflict reviewed (mock)…
-                  </Button>
-                ) : (
-                  <p className="mt-4 text-sm text-muted-foreground">No pending conflict actions for this link.</p>
+                {row.conflictResolution?.trim() ? (
+                  <div>
+                    <p className="text-[11px] font-medium uppercase text-muted-foreground">Resolution notes</p>
+                    <p className="mt-1 leading-relaxed">{row.conflictResolution}</p>
+                  </div>
+                ) : null}
+                {(row.conflictReviewedBy || row.conflictReviewedAt) && (
+                  <dl className="grid grid-cols-1 gap-2 sm:grid-cols-2 text-[13px]">
+                    {row.conflictReviewedBy ? (
+                      <div>
+                        <dt className="text-muted-foreground">Reviewed by</dt>
+                        <dd>{row.conflictReviewedBy}</dd>
+                      </div>
+                    ) : null}
+                    {row.conflictReviewedAt ? (
+                      <div>
+                        <dt className="text-muted-foreground">Reviewed at</dt>
+                        <dd>{formatDateTime(row.conflictReviewedAt)}</dd>
+                      </div>
+                    ) : null}
+                  </dl>
                 )}
-              </Card>
-            </TabsContent>
-          </Tabs>
+              </div>
+            ) : (
+              <p className="mt-3 text-sm text-muted-foreground">No active conflict for this link.</p>
+            )}
+          </Card>
+
+          <Card className="border border-border p-6 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Link summary</p>
+            <dl className="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+              <div>
+                <dt className="text-muted-foreground">Link status</dt>
+                <dd className="mt-1">
+                  <UnifiedBadge variant="status" value={linkStatusLabel(row.linkStatus)} />
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Organization</dt>
+                <dd className="font-medium">{row.organizationName}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">client_user_id</dt>
+                <dd className="font-mono">{row.clientUserId}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">VerifyMe ID</dt>
+                <dd className="font-mono font-medium">{row.verifymeId}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Linked date</dt>
+                <dd>{formatDate(row.createdLinkedAt)}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Last verified</dt>
+                <dd>{row.lastVerified ? formatDateTime(row.lastVerified) : "—"}</dd>
+              </div>
+            </dl>
+          </Card>
+
+          <Card className="border border-border p-6 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Organization customer</p>
+            <dl className="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+              <div>
+                <dt className="text-muted-foreground">client_user_id</dt>
+                <dd className="font-mono">{row.clientUserId}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Customer display name</dt>
+                <dd>{row.customerDisplayName?.trim() ? row.customerDisplayName : "—"}</dd>
+              </div>
+              <div className="sm:col-span-2">
+                <dt className="text-muted-foreground">Customer reference</dt>
+                <dd>{row.customerReference?.trim() ? row.customerReference : "—"}</dd>
+              </div>
+            </dl>
+            <p className="mt-4 text-[12px] text-muted-foreground">Display names and references are supplied by the organization.</p>
+          </Card>
+
+          <Card className="border border-border p-6 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">VerifyMe reference</p>
+            <dl className="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+              <div>
+                <dt className="text-muted-foreground">VerifyMe ID</dt>
+                <dd className="font-mono font-medium">{row.verifymeId}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">User status</dt>
+                <dd>
+                  <UnifiedBadge variant="status" value={row.verifymeAccountStatus} />
+                </dd>
+              </div>
+              <div className="sm:col-span-2">
+                <dt className="text-muted-foreground">Device status</dt>
+                <dd>{row.deviceStatusSummary}</dd>
+              </div>
+            </dl>
+          </Card>
+
+          <Card className="border border-border p-6 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Name consistency</p>
+            <dl className="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+              <div>
+                <dt className="text-muted-foreground">name_match_status</dt>
+                <dd className="mt-1">
+                  <UnifiedBadge variant="status" value={nameMatchStatusLabel(row.nameMatchStatus)} />
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">name_match_score (sample)</dt>
+                <dd className="tabular-nums">
+                  {row.nameMatchScore != null ? row.nameMatchScore.toFixed(2) : "—"}
+                </dd>
+              </div>
+            </dl>
+            <p className="mt-4 text-[12px] leading-relaxed text-muted-foreground">
+              Name consistency is a risk and conflict signal only. It is not proof of legal identity and must not be treated as
+              a verification outcome.
+            </p>
+          </Card>
+
+          <Card className="border border-border p-6 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Related user risk</p>
+            <p className="mt-2 text-[12px] text-muted-foreground">
+              Risk score and level belong to the <strong className="text-foreground">VerifyMe User</strong> (platform-wide). This
+              link does not have a separate link risk score.
+            </p>
+            {userRisk ? (
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <UserRiskStatusBadge level={userRisk.level} />
+                <span className="text-sm text-muted-foreground">
+                  User risk score:{" "}
+                  <span className="font-mono font-semibold tabular-nums text-foreground">{userRisk.score}</span>
+                </span>
+                <Link to={`/verifyme-users/${encodeURIComponent(row.verifymeId)}`}>
+                  <Button variant="outline" size="sm" type="button">
+                    Open VerifyMe User
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              <p className="mt-4 text-sm text-muted-foreground">
+                No platform user risk snapshot in sample data for this VerifyMe ID (e.g. user not in VerifyMe Users sample).
+              </p>
+            )}
+          </Card>
+
+          <details className="rounded-lg border border-border bg-muted/10 p-4 text-[12px] text-muted-foreground">
+            <summary className="cursor-pointer font-medium text-foreground">Technical reference</summary>
+            <p className="mt-2 font-mono">Link record: {row.id}</p>
+          </details>
         </div>
       </div>
 
       <AlertDialog open={conflictReviewOpen} onOpenChange={setConflictReviewOpen}>
         <AlertDialogContent className="sm:max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle>Mark conflict reviewed?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Updates sample data only. This action would be recorded in audit logs in production. Link{" "}
-              <span className="font-mono text-foreground">{row.id}</span>.
+            <AlertDialogTitle>Resolve conflict for this link?</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <span className="block">Updates sample data for client_user_id {row.clientUserId} at {row.organizationName}.</span>
+              <span className="block rounded-md border border-border/80 bg-muted/30 px-3 py-2 text-[12px] text-muted-foreground">
+                This action will be recorded in audit logs.
+              </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                updateIdentityLinkRow(row.id, { conflictStatus: "resolved" });
+                const reviewedAt = new Date().toISOString();
+                updateIdentityLinkRow(row.id, {
+                  conflictStatus: "resolved",
+                  conflictReviewedBy: "platform.operator@verifyme.com (mock)",
+                  conflictReviewedAt: reviewedAt,
+                  conflictResolution: "Conflict reviewed and cleared in VerifyMe Admin (sample).",
+                });
                 setConflictReviewOpen(false);
-                setMessage(`Conflict for ${row.clientUserId} marked reviewed (mock).`);
+                setMessage(`Conflict resolved for ${row.clientUserId} (mock).`);
               }}
             >
-              Confirm
+              Confirm resolution
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

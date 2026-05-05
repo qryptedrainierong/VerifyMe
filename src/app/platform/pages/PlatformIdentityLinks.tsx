@@ -17,16 +17,25 @@ import {
   getIdentityLinkRows,
   subscribeIdentityLinksListeners,
 } from "../data/platformIdentityLinksSession";
-import type { IdentityLinkConflictStatus, IdentityLinkStatus } from "../data/platformIdentityLinksSample";
+import type { IdentityLinkConflictStatus, IdentityLinkStatus, NameMatchStatus } from "../data/platformIdentityLinksSample";
 import { buildInitialOrganizations } from "../data/platformOrganizationsSample";
+import {
+  getEndUserAssociationStoreVersion,
+  getEndUserAssociations,
+  subscribeEndUserAssociationListeners,
+} from "../data/platformEndUserAssociationsSession";
+import { computePlatformRiskSummaryForVerifymeId } from "../data/mockPlatformRisk";
+import { UserRiskStatusBadge } from "../../shared/components/RiskSummary";
 import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
 import { shouldIgnoreRowOpenClick } from "../utils/tableRowNav";
 
 function linkStatusLabel(s: IdentityLinkStatus): string {
   const map: Record<IdentityLinkStatus, string> = {
+    unlinked: "Unlinked",
     linked: "Linked",
     pending: "Pending",
     suspended: "Suspended",
+    revoked: "Revoked",
     disabled: "Disabled",
   };
   return map[s];
@@ -41,6 +50,17 @@ function conflictLabel(c: IdentityLinkConflictStatus): string {
   return map[c];
 }
 
+function nameMatchLabel(s: NameMatchStatus): string {
+  const map: Record<NameMatchStatus, string> = {
+    not_provided: "Not provided",
+    not_checked: "Not checked",
+    strong_match: "Strong match",
+    partial_match: "Partial match",
+    mismatch: "Mismatch",
+  };
+  return map[s];
+}
+
 export function PlatformIdentityLinks() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -53,6 +73,13 @@ export function PlatformIdentityLinks() {
   );
 
   const rows = useMemo(() => getIdentityLinkRows(), [version]);
+
+  const assocVersion = useSyncExternalStore(
+    subscribeEndUserAssociationListeners,
+    getEndUserAssociationStoreVersion,
+    getEndUserAssociationStoreVersion,
+  );
+  const platformAssociations = useMemo(() => getEndUserAssociations(), [assocVersion]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [organizationFilter, setOrganizationFilter] = useState("all-orgs");
@@ -82,7 +109,7 @@ export function PlatformIdentityLinks() {
         r.organizationName.toLowerCase().includes(q) ||
         r.organizationId.toLowerCase().includes(q) ||
         r.customerDisplayName.toLowerCase().includes(q) ||
-        r.maskedVerifymeId.toLowerCase().includes(q);
+        r.verifymeId.toLowerCase().includes(q);
       const matchesOrg = organizationFilter === "all-orgs" || r.organizationId === organizationFilter;
       const matchesStatus = statusFilter === "all" || r.linkStatus === statusFilter;
       const matchesConflict = conflictFilter === "all" || r.conflictStatus === conflictFilter;
@@ -96,7 +123,9 @@ export function PlatformIdentityLinks() {
       total: base.length,
       linked: base.filter((r) => r.linkStatus === "linked").length,
       pending: base.filter((r) => r.linkStatus === "pending").length,
-      suspendedDisabled: base.filter((r) => r.linkStatus === "suspended" || r.linkStatus === "disabled").length,
+      suspendedDisabled: base.filter((r) =>
+        ["suspended", "disabled", "revoked"].includes(r.linkStatus),
+      ).length,
       conflicts: base.filter((r) => r.conflictStatus === "pending_review").length,
     };
   }, [filtered]);
@@ -124,12 +153,7 @@ export function PlatformIdentityLinks() {
       variant="fill"
       rootClassName="h-full"
       title="Identity Links"
-      description={
-        <>
-          Platform-wide view of organization <span className="font-mono text-foreground">client_user_id</span> to VerifyMe
-          identity links. Values are sample data only; no secrets or raw payloads are shown.
-        </>
-      }
+      description="Organization customer identifiers linked to VerifyMe accounts (sample)."
       headerExtra={
         <>
           {urlOrganizationId ? (
@@ -139,12 +163,7 @@ export function PlatformIdentityLinks() {
                 ? " — unknown organization id in sample set; adjust filters manually."
                 : " — applied when recognized in sample organizations."}
             </p>
-          ) : (
-            <p className="text-xs text-muted-foreground sm:text-sm">
-              Optional <span className="font-mono">?organizationId=…</span> pre-selects organization when recognized
-              (design-phase).
-            </p>
-          )}
+          ) : null}
         </>
       }
       bodyClassName="space-y-6"
@@ -163,7 +182,7 @@ export function PlatformIdentityLinks() {
           <p className="mt-1 text-xl font-semibold tabular-nums">{summary.pending}</p>
         </Card>
         <Card className="border border-border p-4 shadow-sm">
-          <p className="text-xs text-muted-foreground">Suspended / disabled</p>
+          <p className="text-xs text-muted-foreground">Suspended / disabled / revoked</p>
           <p className="mt-1 text-xl font-semibold tabular-nums">{summary.suspendedDisabled}</p>
         </Card>
         <Card className="border border-border p-4 shadow-sm">
@@ -176,7 +195,7 @@ export function PlatformIdentityLinks() {
         <div className="relative min-w-[200px] max-w-md flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search client_user_id, org, masked VerifyMe ID…"
+            placeholder="Search client_user_id, org, VerifyMe ID…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="h-10 bg-background pl-10"
@@ -203,7 +222,9 @@ export function PlatformIdentityLinks() {
             <SelectItem value="all">All statuses</SelectItem>
             <SelectItem value="linked">Linked</SelectItem>
             <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="unlinked">Unlinked</SelectItem>
             <SelectItem value="suspended">Suspended</SelectItem>
+            <SelectItem value="revoked">Revoked</SelectItem>
             <SelectItem value="disabled">Disabled</SelectItem>
           </SelectContent>
         </Select>
@@ -234,16 +255,21 @@ export function PlatformIdentityLinks() {
       </div>
 
       <Card className="overflow-hidden border border-border shadow-sm">
-        <div className="min-w-[960px] overflow-x-auto">
+        <div className="min-w-[1120px] overflow-x-auto">
           <table className="w-full text-[13px]">
             <thead className="border-b border-border bg-accent/5">
               <tr>
                 <th className="p-3 text-left font-medium text-muted-foreground">Organization</th>
                 <th className="p-3 text-left font-medium text-muted-foreground">client_user_id</th>
                 <th className="p-3 text-left font-medium text-muted-foreground">Customer</th>
-                <th className="p-3 text-left font-medium text-muted-foreground">VerifyMe ID (masked)</th>
+                <th className="p-3 text-left font-medium text-muted-foreground">VerifyMe ID</th>
                 <th className="p-3 text-left font-medium text-muted-foreground">Link status</th>
                 <th className="p-3 text-left font-medium text-muted-foreground">Conflict status</th>
+                <th className="p-3 text-left font-medium text-muted-foreground">Name consistency</th>
+                <th className="p-3 text-left font-medium text-muted-foreground">
+                  <span className="block">User risk</span>
+                  <span className="block text-[10px] font-normal normal-case text-muted-foreground">(VerifyMe User)</span>
+                </th>
                 <th className="p-3 text-left font-medium text-muted-foreground">Last verified</th>
                 <th className="p-3 text-left font-medium text-muted-foreground">Created / linked</th>
               </tr>
@@ -260,16 +286,28 @@ export function PlatformIdentityLinks() {
                 >
                   <td className="p-3 align-top">
                     <p className="font-medium text-foreground">{r.organizationName}</p>
-                    <p className="font-mono text-[11px] text-muted-foreground">{r.organizationId}</p>
                   </td>
                   <td className="p-3 align-top font-mono text-[12px]">{r.clientUserId}</td>
                   <td className="p-3 align-top">{r.customerDisplayName}</td>
-                  <td className="p-3 align-top font-mono text-[12px]">{r.maskedVerifymeId}</td>
+                  <td className="p-3 align-top font-mono text-[12px]">{r.verifymeId}</td>
                   <td className="p-3 align-top">
                     <UnifiedBadge variant="status" value={linkStatusLabel(r.linkStatus)} />
                   </td>
                   <td className="p-3 align-top">
                     <UnifiedBadge variant="status" value={conflictLabel(r.conflictStatus)} />
+                  </td>
+                  <td className="p-3 align-top">
+                    <UnifiedBadge variant="status" value={nameMatchLabel(r.nameMatchStatus)} />
+                  </td>
+                  <td className="p-3 align-top">
+                    {(() => {
+                      const ur = computePlatformRiskSummaryForVerifymeId(r.verifymeId, platformAssociations);
+                      return ur ? (
+                        <UserRiskStatusBadge level={ur.level} />
+                      ) : (
+                        <span className="text-[12px] text-muted-foreground">—</span>
+                      );
+                    })()}
                   </td>
                   <td className="p-3 align-top text-muted-foreground">
                     {r.lastVerified ? formatDateTime(r.lastVerified) : "—"}
