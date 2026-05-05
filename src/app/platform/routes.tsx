@@ -4,11 +4,14 @@ import { PlatformDashboard } from "./pages/PlatformDashboard";
 import { PlatformOrganizations } from "./pages/PlatformOrganizations";
 import { PlatformOrganizationDetail } from "./pages/PlatformOrganizationDetail";
 import { PlatformUsers } from "./pages/PlatformUsers";
+import { PlatformVerifyMeUserDetail } from "./pages/PlatformVerifyMeUserDetail";
 import { PlatformBilling } from "./pages/PlatformBilling";
 import { PlatformAuditLogs } from "./pages/PlatformAuditLogs";
 import { PlatformSettings } from "./pages/PlatformSettings";
 import { PlatformClientApps } from "./pages/PlatformClientApps";
+import { PlatformClientAppDetail } from "./pages/PlatformClientAppDetail";
 import { PlatformIdentityLinks } from "./pages/PlatformIdentityLinks";
+import { PlatformIdentityLinkDetail } from "./pages/PlatformIdentityLinkDetail";
 import { PlatformVerificationSessions } from "./pages/PlatformVerificationSessions";
 import { PortalNotFound } from "../shared/components/PortalNotFound";
 
@@ -31,9 +34,12 @@ export function getPlatformRouter() {
             Component: PlatformOrganizationDetail,
           },
           { path: "verifyme-users", Component: PlatformUsers },
+          { path: "verifyme-users/:verifymeUserId", Component: PlatformVerifyMeUserDetail },
           { path: "identity-links", Component: PlatformIdentityLinks },
+          { path: "identity-links/:identityLinkId", Component: PlatformIdentityLinkDetail },
           { path: "verification-sessions", Component: PlatformVerificationSessions },
           { path: "client-apps", Component: PlatformClientApps },
+          { path: "client-apps/:clientAppId", Component: PlatformClientAppDetail },
           { path: "billing", Component: PlatformBilling },
           { path: "audit-logs", Component: PlatformAuditLogs },
           { path: "settings", Component: PlatformSettings },

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ListChecks, MoreVertical, Search } from "lucide-react";
+import { Filter, ListChecks, Search } from "lucide-react";
 import { Button } from "../../shared/components/ui/button";
 import { Card } from "../../shared/components/ui/card";
 import { Input } from "../../shared/components/ui/input";
@@ -18,12 +18,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../../shared/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "../../shared/components/ui/dropdown-menu";
 import { UnifiedBadge } from "../../shared/components/UnifiedBadge";
 import {
   VerificationBillingCallout,
@@ -40,6 +34,7 @@ import {
 } from "../../shared/data/verificationSessionsMock";
 import { buildInitialOrganizations } from "../data/platformOrganizationsSample";
 import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
+import { shouldIgnoreRowOpenClick } from "../utils/tableRowNav";
 
 type OutcomeFilter = "all" | VerificationSessionOutcome;
 type BillableFilter = "all" | "billable" | "not_billable";
@@ -100,49 +95,51 @@ export function PlatformVerificationSessions() {
   return (
     <>
       <PortalPageFrame
+        variant="fill"
+        rootClassName="h-full"
         title="Verification Sessions"
         description="Monitor platform-wide verification attempts, outcomes, billable decisions, and OIDC-style completion state."
         bodyClassName="space-y-6"
       >
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
-        <Card className="p-4 border border-border shadow-sm">
-          <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Total sessions</p>
-          <p className="text-xl font-semibold mt-1">{stats.total}</p>
+        <Card className="border border-border p-4 shadow-sm">
+          <p className="text-xs text-muted-foreground">Total sessions</p>
+          <p className="mt-1 text-xl font-semibold tabular-nums">{stats.total}</p>
         </Card>
-        <Card className="p-4 border border-border shadow-sm">
-          <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Verified</p>
-          <p className="text-xl font-semibold mt-1 text-green-700">{stats.verified}</p>
+        <Card className="border border-border p-4 shadow-sm">
+          <p className="text-xs text-muted-foreground">Verified</p>
+          <p className="mt-1 text-xl font-semibold tabular-nums text-green-700">{stats.verified}</p>
         </Card>
-        <Card className="p-4 border border-border shadow-sm">
-          <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Failed</p>
-          <p className="text-xl font-semibold mt-1 text-red-700">{stats.failed}</p>
+        <Card className="border border-border p-4 shadow-sm">
+          <p className="text-xs text-muted-foreground">Failed</p>
+          <p className="mt-1 text-xl font-semibold tabular-nums text-red-700">{stats.failed}</p>
         </Card>
-        <Card className="p-4 border border-border shadow-sm">
-          <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Expired / cancelled</p>
-          <p className="text-xl font-semibold mt-1">{stats.expiredCancelled}</p>
+        <Card className="border border-border p-4 shadow-sm">
+          <p className="text-xs text-muted-foreground">Expired / cancelled</p>
+          <p className="mt-1 text-xl font-semibold tabular-nums">{stats.expiredCancelled}</p>
         </Card>
-        <Card className="p-4 border border-border shadow-sm">
-          <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Errors / indeterminate</p>
-          <p className="text-xl font-semibold mt-1 text-orange-700">{stats.errInd}</p>
+        <Card className="border border-border p-4 shadow-sm">
+          <p className="text-xs text-muted-foreground">Errors / indeterminate</p>
+          <p className="mt-1 text-xl font-semibold tabular-nums text-orange-700">{stats.errInd}</p>
         </Card>
-        <Card className="p-4 border border-border shadow-sm">
-          <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Billable amount</p>
-          <p className="text-xl font-semibold mt-1">${stats.billableAmt.toFixed(2)}</p>
+        <Card className="border border-border p-4 shadow-sm">
+          <p className="text-xs text-muted-foreground">Billable amount</p>
+          <p className="mt-1 text-xl font-semibold tabular-nums">${stats.billableAmt.toFixed(2)}</p>
         </Card>
-        <Card className="p-4 border border-border shadow-sm">
-          <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Avg attempts</p>
-          <p className="text-xl font-semibold mt-1">{stats.avgAttempts.toFixed(2)}</p>
+        <Card className="border border-border p-4 shadow-sm">
+          <p className="text-xs text-muted-foreground">Avg attempts</p>
+          <p className="mt-1 text-xl font-semibold tabular-nums">{stats.avgAttempts.toFixed(2)}</p>
         </Card>
       </div>
 
       <VerificationBillingCallout />
 
-      <div className="flex flex-col xl:flex-row gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[200px] max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+      <div className="flex flex-col flex-wrap gap-3 xl:flex-row">
+        <div className="relative min-w-[200px] max-w-md flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search session ID, organization, client_user_id, VerifyMe ID…"
-            className="pl-10 h-10"
+            className="h-10 bg-background pl-10"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -197,7 +194,7 @@ export function PlatformVerificationSessions() {
           </SelectContent>
         </Select>
         <Select value={timeFilter} onValueChange={(v) => setTimeFilter(v as TimeFilter)}>
-          <SelectTrigger className="w-[160px] h-10">
+          <SelectTrigger className="h-10 w-[160px]">
             <SelectValue placeholder="Time" />
           </SelectTrigger>
           <SelectContent>
@@ -207,29 +204,56 @@ export function PlatformVerificationSessions() {
             <SelectItem value="30d">Last 30 days (mock)</SelectItem>
           </SelectContent>
         </Select>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="h-10 w-10 shrink-0"
+          aria-label="Clear filters"
+          onClick={() => {
+            setSearch("");
+            setOrgFilter("all");
+            setOutcomeFilter("all");
+            setBillableFilter("all");
+            setChannelFilter("all");
+            setTimeFilter("all");
+          }}
+        >
+          <Filter className="h-4 w-4" />
+        </Button>
       </div>
 
       <Card className="border border-border shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1280px] text-sm">
+          <table className="w-full min-w-[1100px] text-sm">
             <thead className="border-b border-border bg-accent/40">
               <tr>
-                <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">Session ID</th>
-                <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">Organization</th>
-                <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">client_user_id / customer</th>
-                <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">VerifyMe ID (masked)</th>
-                <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">Channel</th>
-                <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">Status / outcome</th>
-                <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">Attempts</th>
-                <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">Billable</th>
-                <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">Cost</th>
-                <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">Created</th>
-                <th className="text-right p-3 font-semibold text-muted-foreground uppercase text-[11px] w-[72px]">Actions</th>
+                <th className="p-3 text-left text-[11px] font-semibold uppercase text-muted-foreground">Session ID</th>
+                <th className="p-3 text-left text-[11px] font-semibold uppercase text-muted-foreground">Organization</th>
+                <th className="p-3 text-left text-[11px] font-semibold uppercase text-muted-foreground">
+                  client_user_id / customer
+                </th>
+                <th className="p-3 text-left text-[11px] font-semibold uppercase text-muted-foreground">
+                  VerifyMe ID (masked)
+                </th>
+                <th className="p-3 text-left text-[11px] font-semibold uppercase text-muted-foreground">Channel</th>
+                <th className="p-3 text-left text-[11px] font-semibold uppercase text-muted-foreground">Status / outcome</th>
+                <th className="p-3 text-left text-[11px] font-semibold uppercase text-muted-foreground">Attempts</th>
+                <th className="p-3 text-left text-[11px] font-semibold uppercase text-muted-foreground">Billable</th>
+                <th className="p-3 text-left text-[11px] font-semibold uppercase text-muted-foreground">Cost</th>
+                <th className="p-3 text-left text-[11px] font-semibold uppercase text-muted-foreground">Created</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {filtered.map((s) => (
-                <tr key={s.sessionId} className="hover:bg-accent/30">
+                <tr
+                  key={s.sessionId}
+                  className="cursor-pointer transition-colors hover:bg-accent/30"
+                  onClick={(e) => {
+                    if (shouldIgnoreRowOpenClick(e.target)) return;
+                    setDetail(s);
+                  }}
+                >
                   <td className="p-3 font-mono text-[12px]">{s.sessionId}</td>
                   <td className="p-3">
                     <p className="font-medium text-[13px]">{s.organizationName}</p>
@@ -254,25 +278,13 @@ export function PlatformVerificationSessions() {
                   <td className="p-3 tabular-nums">
                     {s.currency} {s.cost.toFixed(2)}
                   </td>
-                  <td className="p-3 text-muted-foreground text-[12px]">
+                  <td className="p-3 text-[12px] text-muted-foreground">
                     {new Date(s.createdAt).toLocaleString("en-US", {
                       month: "short",
                       day: "numeric",
                       hour: "numeric",
                       minute: "2-digit",
                     })}
-                  </td>
-                  <td className="p-3 text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreVertical className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setDetail(s)}>View details</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
                   </td>
                 </tr>
               ))}
@@ -286,18 +298,26 @@ export function PlatformVerificationSessions() {
       </PortalPageFrame>
 
       <Dialog open={detail !== null} onOpenChange={(o) => !o && setDetail(null)}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <ListChecks className="w-5 h-5 text-primary" />
+        <DialogContent className="flex max-h-[min(92vh,calc(100dvh-2rem))] w-full max-w-[calc(100%-1.5rem)] flex-col gap-0 overflow-hidden border bg-background p-0 shadow-lg sm:max-w-3xl">
+          <DialogHeader className="shrink-0 space-y-1 border-b border-border px-6 pb-4 pt-6 text-left">
+            <DialogTitle className="flex items-center gap-2 text-xl font-semibold tracking-tight">
+              <ListChecks className="h-5 w-5 text-primary" />
               Session details
             </DialogTitle>
-            <DialogDescription>Platform-wide view — OIDC-style milestones only.</DialogDescription>
+            <DialogDescription>
+              {detail ? `${detail.sessionId} · ${detail.organizationName}` : "Platform-wide view — OIDC-style milestones only."}
+            </DialogDescription>
           </DialogHeader>
           {detail && (
             <>
-              <VerificationSessionDetailBody session={detail} variant="platform" />
-              <DialogFooter>
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-4">
+                <div className="mb-4 rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground">Summary</span> — outcome, channel, and billing flags (sample).
+                  Raw tokens and OTP values are never shown.
+                </div>
+                <VerificationSessionDetailBody session={detail} variant="platform" />
+              </div>
+              <DialogFooter className="shrink-0 border-t border-border px-6 py-4">
                 <Button variant="outline" onClick={() => setDetail(null)}>
                   Close
                 </Button>

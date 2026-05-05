@@ -1058,7 +1058,7 @@ function AuditLogDetailsModal({
 
     return (
       <div className="space-y-4">
-        <h3 className="text-sm font-semibold text-foreground">Details</h3>
+        <h3 className="text-sm font-semibold text-foreground">Payload</h3>
         <div className="grid grid-cols-2 gap-4">
           {Object.entries(log.payload).map(([key, value]) => {
             let displayValue: React.ReactNode = value as React.ReactNode;
@@ -1102,11 +1102,11 @@ function AuditLogDetailsModal({
         onClick={onClose}
       >
         <Card
-          className="w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col border border-border shadow-lg"
+          className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden border border-border shadow-lg"
           onClick={(event) => event.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-start justify-between p-6 border-b border-border bg-accent/5 flex-shrink-0">
+          <div className="flex shrink-0 items-start justify-between border-b border-border bg-accent/5 p-6">
             <div>
               <div className="flex items-center gap-3 mb-2">
 
@@ -1132,7 +1132,15 @@ function AuditLogDetailsModal({
           </div>
 
           {/* Content */}
-          <div className="overflow-y-auto flex-1 p-6 space-y-6">
+          <div className="flex-1 space-y-6 overflow-y-auto p-6">
+            <div className="rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+              <span className="font-medium text-foreground">Summary</span> — {getActionLabel(log.action)} ·{" "}
+              {log.organization} · {formatDateTime(log.timestamp)} · {getStatusLabel(log.status)}. Payload keys below are
+              mock-only; production views would redact or omit sensitive fields.
+            </div>
+
+            <div className="space-y-6">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Details</p>
             {/* Status */}
             <div>
               <p className="text-xs text-muted-foreground mb-2">Status</p>
@@ -1204,10 +1212,13 @@ function AuditLogDetailsModal({
 
             {/* Payload Details */}
             {renderPayloadDetails()}
+            </div>
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-end gap-3 p-6 border-t border-border bg-accent/5 flex-shrink-0">
+          <div className="flex flex-shrink-0 flex-col gap-2 border-t border-border bg-accent/5 p-6">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Controls</p>
+            <div className="flex items-center justify-end gap-3">
             <Button
               variant="outline"
               size="sm"
@@ -1220,6 +1231,7 @@ function AuditLogDetailsModal({
             <Button variant="outline" size="sm" onClick={onClose}>
               Close
             </Button>
+            </div>
           </div>
         </Card>
       </div>

@@ -1,3 +1,4 @@
+/* LEGACY / not currently routed — see `src/app/platform/routes.tsx`. Do not extend UI patterns from this file into active routes. */
 import { Building2, Plus, Download } from "lucide-react";
 import { DataTable } from "../../shared/components/DataTable";
 import { StatusBadge } from "../../shared/components/StatusBadge";

@@ -1,3 +1,4 @@
+/* LEGACY / not currently routed — see `src/app/platform/routes.tsx`. Do not extend UI patterns from this file into active routes. */
 import { BarChart3, TrendingUp, Users, AlertCircle, Database, Activity } from "lucide-react";
 import { useMemo } from "react";
 import { Card } from "../../shared/components/ui/card";

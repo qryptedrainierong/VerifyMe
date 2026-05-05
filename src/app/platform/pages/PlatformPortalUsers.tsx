@@ -1,3 +1,4 @@
+/* LEGACY / not currently routed — see `src/app/platform/routes.tsx`. Do not extend UI patterns from this file into active routes. */
 import { UserPlus, Search, Filter, MoreVertical, ArrowUpDown } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "../../shared/components/ui/button";

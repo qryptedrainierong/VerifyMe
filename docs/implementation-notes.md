@@ -41,9 +41,17 @@ Organization Detail shows organization-specific summary (info, status), usage hi
 
 VerifyMe Users (`/verifyme-users`), Identity Links (`/identity-links`), and Client Apps / API (`/client-apps`) read `organizationId` from the query string when it matches a sample organization id and pre-select the organization filter; otherwise they show a short design-phase note without breaking navigation. The same pattern should extend to Verification Sessions, Billing, and Audit Logs when those screens add query-aware filtering.
 
+### Detail presentation — full page vs modal
+
+Major entities use **full-page** detail views (Organizations, VerifyMe Users, Client Apps / API, Identity Links). Event, transaction, and log records use **modal/dialog** details (verification sessions, billing invoices / credit flows, audit log events).
+
 ## Design system
 
 Tokens live in `src/styles/theme.css` with Tailwind mapping. Prefer token changes over per-page color overrides.
+
+### VerifyMe Admin list pages (UI pattern)
+
+VerifyMe Admin list pages should be **summary-first**: the table is a filterable overview. **Row click** navigates to a **full-page detail** for major entities or opens a **detail dialog** for event/transaction/log rows (see “Detail presentation” above). **Destructive or security-sensitive actions** (refunds, credential rotation, account disable, conflict resolution, etc.) must live **inside** detail **controls** and use **explicit confirmation** (e.g. alert/confirm flow), not row-level menus or ad-hoc list buttons.
 
 ## Data and state
 

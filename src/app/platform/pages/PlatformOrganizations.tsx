@@ -203,21 +203,29 @@ export function PlatformOrganizations() {
             ) : null}
 
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <Card className="p-4 border border-border/70 shadow-none min-h-[92px]">
+          <Card className="min-h-[92px] border border-border p-4 shadow-sm">
             <p className="text-xs text-muted-foreground">Total organizations</p>
-            <p className="text-xl font-semibold text-foreground mt-1">{formatNumber(overviewStats.totalOrganizations)}</p>
+            <p className="mt-1 text-xl font-semibold tabular-nums text-foreground">
+              {formatNumber(overviewStats.totalOrganizations)}
+            </p>
           </Card>
-          <Card className="p-4 border border-border/70 shadow-none min-h-[92px]">
+          <Card className="min-h-[92px] border border-border p-4 shadow-sm">
             <p className="text-xs text-muted-foreground">Active organizations</p>
-            <p className="text-xl font-semibold text-foreground mt-1">{formatNumber(overviewStats.activeOrganizations)}</p>
+            <p className="mt-1 text-xl font-semibold tabular-nums text-foreground">
+              {formatNumber(overviewStats.activeOrganizations)}
+            </p>
           </Card>
-          <Card className="p-4 border border-border/70 shadow-none min-h-[92px]">
+          <Card className="min-h-[92px] border border-border p-4 shadow-sm">
             <p className="text-xs text-muted-foreground">Credit utilization (billable sessions)</p>
-            <p className="text-xl font-semibold text-foreground mt-1">{overviewStats.utilizationRate.toFixed(1)}%</p>
+            <p className="mt-1 text-xl font-semibold tabular-nums text-foreground">
+              {overviewStats.utilizationRate.toFixed(1)}%
+            </p>
           </Card>
-          <Card className="p-4 border border-border/70 shadow-none min-h-[92px]">
+          <Card className="min-h-[92px] border border-border p-4 shadow-sm">
             <p className="text-xs text-muted-foreground">Credits remaining</p>
-            <p className="text-xl font-semibold text-foreground mt-1">{formatCurrency(overviewStats.totalCreditRemaining)}</p>
+            <p className="mt-1 text-xl font-semibold tabular-nums text-foreground">
+              {formatCurrency(overviewStats.totalCreditRemaining)}
+            </p>
           </Card>
         </div>
 
@@ -228,7 +236,7 @@ export function PlatformOrganizations() {
               placeholder="Search name, code, client_id, domain…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-10 rounded-md border-border bg-input-background pl-9 text-sm text-foreground placeholder:text-muted-foreground"
+              className="h-10 bg-background pl-10 text-sm text-foreground placeholder:text-muted-foreground"
             />
           </div>
 
