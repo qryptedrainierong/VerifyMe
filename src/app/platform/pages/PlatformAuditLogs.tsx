@@ -1,9 +1,10 @@
 import { Search, Filter, Download, Calendar, ArrowUpDown, X } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
-import { Link } from "react-router";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { Link, useSearchParams } from "react-router";
 import { Button } from "../../shared/components/ui/button";
 import { Input } from "../../shared/components/ui/input";
 import { Card } from "../../shared/components/ui/card";
+import { Label } from "../../shared/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -15,12 +16,18 @@ import {
   AuditLog,
   ActorType,
   AuditStatus,
-  AuditSeverityLevel,
   deriveAuditSeverity,
+  deriveAuditEntityType,
+  deriveGovernanceSeverityLabel,
   getActionLabel,
   getAuditSummaryBucket,
   getAuditTableCategory,
   getCategoryColorForAction,
+  getGovernanceCategoryForLog,
+  governanceSeverityBadgeClass,
+  isConflictWorkflowAuditEvent,
+  isRiskGovernanceAuditEvent,
+  type GovernanceCategory,
   redactPayloadForDisplay,
 } from "../../shared/types/auditLog";
 import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
@@ -30,7 +37,7 @@ import { shouldIgnoreRowOpenClick } from "../utils/tableRowNav";
 
 const AUDIT_LOGS_PER_PAGE = 10;
 
-/** Prototype “current time” so mock date-range filters stay meaningful. */
+/** Fixed anchor for relative date-range filtering against static seeded timestamps. See docs/implementation-notes.md. */
 const ANCHOR_NOW_MS = Date.parse("2024-04-12T23:59:59Z");
 
 const DATE_RANGE_MS: Record<string, number> = {
@@ -41,15 +48,38 @@ const DATE_RANGE_MS: Record<string, number> = {
   "90days": 90 * 24 * 60 * 60 * 1000,
 };
 
-const formatDateTime = (dateString: string) =>
-  new Date(dateString).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    second: "2-digit",
-    timeZone: "UTC",
-  }) + " UTC";
+const GOVERNANCE_CATEGORIES: GovernanceCategory[] = [
+  "Risk",
+  "Identity",
+  "Security",
+  "Verification",
+  "Governance",
+  "Billing",
+];
+
+const ENTITY_TYPES: Array<{ value: string; label: string }> = [
+  { value: "all", label: "All subjects" },
+  { value: "organization", label: "Organization" },
+  { value: "verifyme_user", label: "VerifyMe user" },
+  { value: "identity_link", label: "Identity link" },
+  { value: "client_app", label: "Client app" },
+  { value: "verification_session", label: "Verification session" },
+  { value: "billing", label: "Billing" },
+  { value: "other", label: "Other" },
+];
+
+function formatDateTime(dateString: string) {
+  return (
+    new Date(dateString).toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      second: "2-digit",
+      timeZone: "UTC",
+    }) + " UTC"
+  );
+}
 
 const getStatusBadgeColor = (status: AuditStatus) => {
   switch (status) {
@@ -76,19 +106,9 @@ const getStatusLabel = (status: AuditStatus) => {
   return labels[status];
 };
 
-const severityBadge = (s: AuditSeverityLevel) => {
-  const map: Record<AuditSeverityLevel, string> = {
-    info: "bg-slate-500/10 text-slate-700 border-slate-200",
-    low: "bg-blue-500/10 text-blue-800 border-blue-200",
-    medium: "bg-amber-500/10 text-amber-800 border-amber-200",
-    high: "bg-orange-500/10 text-orange-800 border-orange-200",
-    critical: "bg-red-500/10 text-red-800 border-red-200",
-  };
-  return map[s];
-};
-
-const severityLabel = (s: AuditSeverityLevel) =>
-  s.charAt(0).toUpperCase() + s.slice(1);
+function severityLabelInternal(s: ReturnType<typeof deriveAuditSeverity>) {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
 
 function actorFilterMatches(log: AuditLog, filter: string): boolean {
   if (filter === "all") return true;
@@ -102,19 +122,77 @@ function actorFilterMatches(log: AuditLog, filter: string): boolean {
   return log.actorType === map[filter];
 }
 
+function patchParams(prev: URLSearchParams, updates: Record<string, string | null>) {
+  const next = new URLSearchParams(prev);
+  for (const [k, v] of Object.entries(updates)) {
+    if (!v || v === "all") next.delete(k);
+    else next.set(k, v);
+  }
+  return next;
+}
+
+function entityTypeShort(log: AuditLog): string {
+  const t = deriveAuditEntityType(log);
+  const map: Record<string, string> = {
+    organization: "Organization",
+    verifyme_user: "VerifyMe user",
+    identity_link: "Identity link",
+    client_app: "Client app",
+    verification_session: "Verification",
+    billing: "Billing",
+    other: "Other",
+  };
+  return map[t] ?? "Other";
+}
+
+function parseGovernanceSeverityParam(
+  v: string | null,
+): "Informational" | "Warning" | "High" | "Critical" | "all" {
+  if (!v) return "all";
+  const m: Record<string, "Informational" | "Warning" | "High" | "Critical"> = {
+    informational: "Informational",
+    warning: "Warning",
+    high: "High",
+    critical: "Critical",
+  };
+  return m[v.toLowerCase()] ?? "all";
+}
+
 export function PlatformAuditLogs() {
   const knownOrgIds = useMemo(() => new Set(buildInitialOrganizations().map((o) => o.id)), []);
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [actorFilter, setActorFilter] = useState<string>("all");
-  const [organizationFilter, setOrganizationFilter] = useState<string>("all");
-  const [severityFilter, setSeverityFilter] = useState<string>("all");
-  const [dateRange, setDateRange] = useState<string>("all");
+  const searchQuery = searchParams.get("search") ?? "";
+
+  const govParam = searchParams.get("governanceCategory");
+  const governanceCategory: GovernanceCategory | "all" =
+    govParam && (GOVERNANCE_CATEGORIES as readonly string[]).includes(govParam) ? (govParam as GovernanceCategory) : "all";
+
+  const entParam = searchParams.get("entityType") ?? "all";
+  const entityType = ENTITY_TYPES.some((t) => t.value === entParam) ? entParam : "all";
+  const actorFilter = searchParams.get("actor") ?? "all";
+  const organizationFilter = searchParams.get("organizationId") ?? "all";
+  const severityGov = parseGovernanceSeverityParam(searchParams.get("severity"));
+  const dateRange = searchParams.get("dateRange") ?? "all";
+  const verifymeIdFilter = searchParams.get("verifymeId") ?? "";
+  const identityLinkFilter = searchParams.get("identityLinkId") ?? "";
+  const clientAppFilter = searchParams.get("clientAppId") ?? "";
+  const verificationSessionFilter = searchParams.get("verificationSessionId") ?? "";
+  const rawFocus = searchParams.get("focus") ?? "all";
+  const governanceFocus = rawFocus === "risk" || rawFocus === "conflict" ? rawFocus : "all";
+
+  const patch = (updates: Record<string, string | null>) => {
+    setSearchParams((prev) => patchParams(prev, updates), { replace: true });
+    setCurrentPage(1);
+  };
 
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchParams.toString()]);
 
   const sortedLogs = useMemo(
     () => [...platformAuditLogsSample].sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp)),
@@ -130,6 +208,8 @@ export function PlatformAuditLogs() {
   const filteredLogs = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     const rangeMs = DATE_RANGE_MS[dateRange] ?? Infinity;
+    const riskOnly = governanceFocus === "risk";
+    const conflictOnly = governanceFocus === "conflict";
 
     return sortedLogs.filter((log) => {
       if (q.length > 0) {
@@ -137,6 +217,7 @@ export function PlatformAuditLogs() {
           log.action,
           getActionLabel(log.action),
           getAuditTableCategory(log.action),
+          getGovernanceCategoryForLog(log),
           log.actor,
           log.organization,
           log.details,
@@ -145,20 +226,46 @@ export function PlatformAuditLogs() {
           log.target ?? "",
           log.sessionRef ?? "",
           log.requestRef ?? "",
+          log.relatedVerifymeId ?? "",
+          log.relatedIdentityLinkId ?? "",
+          log.relatedClientAppId ?? "",
+          log.relatedVerificationSessionId ?? "",
         ]
           .join(" ")
           .toLowerCase();
         if (!hay.includes(q)) return false;
       }
 
-      if (categoryFilter !== "all" && getAuditTableCategory(log.action) !== categoryFilter) return false;
+      if (governanceCategory !== "all" && getGovernanceCategoryForLog(log) !== governanceCategory) return false;
+
+      if (entityType !== "all" && deriveAuditEntityType(log) !== entityType) return false;
 
       if (!actorFilterMatches(log, actorFilter)) return false;
 
       if (organizationFilter !== "all" && log.organizationId !== organizationFilter) return false;
 
-      const sev = deriveAuditSeverity(log);
-      if (severityFilter !== "all" && sev !== severityFilter) return false;
+      const govSev = deriveGovernanceSeverityLabel(log);
+      if (severityGov !== "all" && govSev !== severityGov) return false;
+
+      if (verifymeIdFilter.trim()) {
+        const vm = verifymeIdFilter.trim();
+        const matchesVm =
+          log.relatedVerifymeId === vm || log.target === vm || (log.details && log.details.includes(vm));
+        if (!matchesVm) return false;
+      }
+
+      if (identityLinkFilter.trim() && log.relatedIdentityLinkId !== identityLinkFilter.trim()) return false;
+
+      if (clientAppFilter.trim() && log.relatedClientAppId !== clientAppFilter.trim()) return false;
+
+      if (verificationSessionFilter.trim()) {
+        const vs = verificationSessionFilter.trim();
+        if (log.relatedVerificationSessionId !== vs && log.sessionRef !== vs) return false;
+      }
+
+      if (riskOnly && !isRiskGovernanceAuditEvent(log)) return false;
+
+      if (conflictOnly && !isConflictWorkflowAuditEvent(log)) return false;
 
       if (dateRange !== "all" && rangeMs !== Infinity) {
         const t = Date.parse(log.timestamp);
@@ -170,11 +277,17 @@ export function PlatformAuditLogs() {
   }, [
     sortedLogs,
     searchQuery,
-    categoryFilter,
+    governanceCategory,
+    entityType,
     actorFilter,
     organizationFilter,
-    severityFilter,
+    severityGov,
     dateRange,
+    verifymeIdFilter,
+    identityLinkFilter,
+    clientAppFilter,
+    verificationSessionFilter,
+    governanceFocus,
   ]);
 
   const summary = useMemo(() => {
@@ -225,14 +338,11 @@ export function PlatformAuditLogs() {
   };
 
   const resetFilters = () => {
-    setSearchQuery("");
-    setCategoryFilter("all");
-    setActorFilter("all");
-    setOrganizationFilter("all");
-    setSeverityFilter("all");
-    setDateRange("all");
+    setSearchParams(new URLSearchParams(), { replace: true });
     setCurrentPage(1);
   };
+
+  const sessionRef = selectedLog?.sessionRef ?? selectedLog?.relatedVerificationSessionId;
 
   return (
     <>
@@ -240,7 +350,7 @@ export function PlatformAuditLogs() {
         variant="fill"
         rootClassName="h-full"
         title="Audit Logs"
-        description="Platform-wide governance and operational events. Detail opens in a modal; destructive controls stay on entity detail pages."
+        description="Governance-aligned audit trail across VerifyMe Users, identity links, organizations, client apps, verification sessions, and billing. Filters support deep links from entity pages."
         headerActions={
           <Button variant="outline" type="button">
             <Download className="mr-2 h-4 w-4" />
@@ -248,97 +358,162 @@ export function PlatformAuditLogs() {
           </Button>
         }
         headerExtra={
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative max-w-md flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search events, actors, targets, organizations…"
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="h-10 bg-background pl-10"
-              />
+          <div className="flex w-full flex-col gap-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="relative max-w-md min-w-[200px] flex-1">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search events, IDs, governance fields…"
+                  value={searchQuery}
+                  onChange={(e) => patch({ search: e.target.value || null })}
+                  className="h-10 bg-background pl-10"
+                />
+              </div>
+
+              <Select value={governanceCategory} onValueChange={(v) => patch({ governanceCategory: v })}>
+                <SelectTrigger className="h-10 w-[200px]">
+                  <SelectValue placeholder="Governance category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All governance categories</SelectItem>
+                  {GOVERNANCE_CATEGORIES.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={entityType} onValueChange={(v) => patch({ entityType: v })}>
+                <SelectTrigger className="h-10 w-[200px]">
+                  <SelectValue placeholder="Subject" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ENTITY_TYPES.map((e) => (
+                    <SelectItem key={e.value} value={e.value}>
+                      {e.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={governanceFocus} onValueChange={(v) => patch({ focus: v })}>
+                <SelectTrigger className="h-10 w-[220px]">
+                  <SelectValue placeholder="Workflow" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All events</SelectItem>
+                  <SelectItem value="risk">Risk events only</SelectItem>
+                  <SelectItem value="conflict">Conflict workflow only</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
-            <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); setCurrentPage(1); }}>
-              <SelectTrigger className="h-10 w-[200px]">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All categories</SelectItem>
-                <SelectItem value="Organization">Organization</SelectItem>
-                <SelectItem value="VerifyMe User">VerifyMe User</SelectItem>
-                <SelectItem value="Client app / API">Client app / API</SelectItem>
-                <SelectItem value="Identity link">Identity link</SelectItem>
-                <SelectItem value="Verification session">Verification session</SelectItem>
-                <SelectItem value="Billing & credits">Billing & credits</SelectItem>
-                <SelectItem value="Security">Security</SelectItem>
-                <SelectItem value="Org users">Org users</SelectItem>
-                <SelectItem value="System & admin">System & admin</SelectItem>
-                <SelectItem value="Other">Other</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="flex min-w-[140px] max-w-[200px] flex-col gap-1">
+                <Label className="text-[11px] text-muted-foreground">VerifyMe ID</Label>
+                <Input
+                  placeholder="vm…"
+                  value={verifymeIdFilter}
+                  onChange={(e) => patch({ verifymeId: e.target.value || null })}
+                  className="h-10 font-mono text-[13px]"
+                />
+              </div>
+              <div className="flex min-w-[140px] max-w-[200px] flex-col gap-1">
+                <Label className="text-[11px] text-muted-foreground">Identity link</Label>
+                <Input
+                  placeholder="IL-…"
+                  value={identityLinkFilter}
+                  onChange={(e) => patch({ identityLinkId: e.target.value || null })}
+                  className="h-10 font-mono text-[13px]"
+                />
+              </div>
+              <div className="flex min-w-[140px] max-w-[200px] flex-col gap-1">
+                <Label className="text-[11px] text-muted-foreground">Client app</Label>
+                <Input
+                  placeholder="APP-…"
+                  value={clientAppFilter}
+                  onChange={(e) => patch({ clientAppId: e.target.value || null })}
+                  className="h-10 font-mono text-[13px]"
+                />
+              </div>
+              <div className="flex min-w-[160px] max-w-[220px] flex-col gap-1">
+                <Label className="text-[11px] text-muted-foreground">Verification session</Label>
+                <Input
+                  placeholder="Session id"
+                  value={verificationSessionFilter}
+                  onChange={(e) => patch({ verificationSessionId: e.target.value || null })}
+                  className="h-10 font-mono text-[13px]"
+                />
+              </div>
 
-            <Select value={actorFilter} onValueChange={(v) => { setActorFilter(v); setCurrentPage(1); }}>
-              <SelectTrigger className="h-10 w-[180px]">
-                <SelectValue placeholder="Actor" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All actors</SelectItem>
-                <SelectItem value="platform-admin">Platform Admin</SelectItem>
-                <SelectItem value="org-owner">Organization Owner</SelectItem>
-                <SelectItem value="org-admin">Organization Admin</SelectItem>
-                <SelectItem value="org-member">Organization Member</SelectItem>
-                <SelectItem value="system">System</SelectItem>
-              </SelectContent>
-            </Select>
+              <Select value={actorFilter} onValueChange={(v) => patch({ actor: v })}>
+                <SelectTrigger className="h-10 w-[180px]">
+                  <SelectValue placeholder="Actor" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All actors</SelectItem>
+                  <SelectItem value="platform-admin">Platform Admin</SelectItem>
+                  <SelectItem value="org-owner">Organization Owner</SelectItem>
+                  <SelectItem value="org-admin">Organization Admin</SelectItem>
+                  <SelectItem value="org-member">Organization Member</SelectItem>
+                  <SelectItem value="system">System</SelectItem>
+                </SelectContent>
+              </Select>
 
-            <Select value={organizationFilter} onValueChange={(v) => { setOrganizationFilter(v); setCurrentPage(1); }}>
-              <SelectTrigger className="h-10 w-[220px]">
-                <SelectValue placeholder="Organization" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All organizations</SelectItem>
-                {organizationOptions.map(([id, name]) => (
-                  <SelectItem key={id} value={id}>
-                    {name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <Select value={organizationFilter} onValueChange={(v) => patch({ organizationId: v })}>
+                <SelectTrigger className="h-10 w-[220px]">
+                  <SelectValue placeholder="Organization" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All organizations</SelectItem>
+                  {organizationOptions.map(([id, name]) => (
+                    <SelectItem key={id} value={id}>
+                      {name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-            <Select value={severityFilter} onValueChange={(v) => { setSeverityFilter(v); setCurrentPage(1); }}>
-              <SelectTrigger className="h-10 w-[160px]">
-                <SelectValue placeholder="Severity" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All severity</SelectItem>
-                <SelectItem value="info">Info</SelectItem>
-                <SelectItem value="low">Low</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-                <SelectItem value="critical">Critical</SelectItem>
-              </SelectContent>
-            </Select>
+              <Select
+                value={
+                  severityGov === "all"
+                    ? "all"
+                    : severityGov === "Informational"
+                      ? "informational"
+                      : severityGov.toLowerCase()
+                }
+                onValueChange={(v) => patch({ severity: v === "all" ? null : v })}
+              >
+                <SelectTrigger className="h-10 w-[200px]">
+                  <SelectValue placeholder="Severity" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All severity levels</SelectItem>
+                  <SelectItem value="informational">Informational</SelectItem>
+                  <SelectItem value="warning">Warning</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                  <SelectItem value="critical">Critical</SelectItem>
+                </SelectContent>
+              </Select>
 
-            <Select value={dateRange} onValueChange={(v) => { setDateRange(v); setCurrentPage(1); }}>
-              <SelectTrigger className="h-10 w-[180px]">
-                <SelectValue placeholder="Date range" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All dates (sample)</SelectItem>
-                <SelectItem value="1day">Last 24 hours (mock)</SelectItem>
-                <SelectItem value="7days">Last 7 days (mock)</SelectItem>
-                <SelectItem value="30days">Last 30 days (mock)</SelectItem>
-                <SelectItem value="90days">Last 90 days (mock)</SelectItem>
-              </SelectContent>
-            </Select>
+              <Select value={dateRange} onValueChange={(v) => patch({ dateRange: v })}>
+                <SelectTrigger className="h-10 w-[180px]">
+                  <SelectValue placeholder="Date range" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All dates</SelectItem>
+                  <SelectItem value="1day">Last 24 hours</SelectItem>
+                  <SelectItem value="7days">Last 7 days</SelectItem>
+                  <SelectItem value="30days">Last 30 days</SelectItem>
+                  <SelectItem value="90days">Last 90 days</SelectItem>
+                </SelectContent>
+              </Select>
 
-            <Button variant="outline" size="icon" className="h-10 w-10" type="button" onClick={resetFilters}>
-              <Filter className="h-4 w-4" />
-            </Button>
+              <Button variant="outline" size="icon" className="h-10 w-10" type="button" onClick={resetFilters}>
+                <Filter className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         }
         bodyClassName="space-y-6"
@@ -398,7 +573,7 @@ export function PlatformAuditLogs() {
             </div>
           </div>
 
-          <div className="min-w-[1100px] overflow-x-auto">
+          <div className="min-w-[1200px] overflow-x-auto">
             <table className="w-full text-[13px]">
               <thead className="sticky top-0 border-b border-border bg-accent/5">
                 <tr>
@@ -409,7 +584,8 @@ export function PlatformAuditLogs() {
                     </span>
                   </th>
                   <th className="p-4 text-left font-medium text-muted-foreground">Event</th>
-                  <th className="p-4 text-left font-medium text-muted-foreground">Category</th>
+                  <th className="p-4 text-left font-medium text-muted-foreground">Governance</th>
+                  <th className="p-4 text-left font-medium text-muted-foreground">Subject</th>
                   <th className="p-4 text-left font-medium text-muted-foreground">Actor</th>
                   <th className="p-4 text-left font-medium text-muted-foreground">Target</th>
                   <th className="p-4 text-left font-medium text-muted-foreground">Organization</th>
@@ -417,54 +593,55 @@ export function PlatformAuditLogs() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {visibleLogs.map((log) => (
-                  <tr
-                    key={log.id}
-                    className="cursor-pointer transition-colors hover:bg-accent/10"
-                    onClick={(e) => {
-                      if (shouldIgnoreRowOpenClick(e.target)) return;
-                      handleLogClick(log);
-                    }}
-                  >
-                    <td className="p-4 align-top">
-                      <div className="flex items-start gap-2">
-                        <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                        <div>
-                          <p className="text-foreground">{formatDateTime(log.timestamp)}</p>
-                          <p className="font-mono text-[11px] text-muted-foreground">{log.id}</p>
+                {visibleLogs.map((log) => {
+                  const govSev = deriveGovernanceSeverityLabel(log);
+                  return (
+                    <tr
+                      key={log.id}
+                      className="cursor-pointer transition-colors hover:bg-accent/10"
+                      onClick={(e) => {
+                        if (shouldIgnoreRowOpenClick(e.target)) return;
+                        handleLogClick(log);
+                      }}
+                    >
+                      <td className="p-4 align-top">
+                        <div className="flex items-start gap-2">
+                          <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                          <div>
+                            <p className="text-foreground">{formatDateTime(log.timestamp)}</p>
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="p-4 align-top">
-                      <p className={`font-medium ${getCategoryColorForAction(log.action)}`}>
-                        {getActionLabel(log.action)}
-                      </p>
-                      <p className="font-mono text-[11px] text-muted-foreground">{log.action}</p>
-                    </td>
-                    <td className="p-4 align-top text-muted-foreground">{getAuditTableCategory(log.action)}</td>
-                    <td className="p-4 align-top">
-                      <p className="text-foreground">{log.actor}</p>
-                      <p className="text-[11px] text-muted-foreground">{log.actorType}</p>
-                    </td>
-                    <td className="max-w-[220px] p-4 align-top break-words text-foreground">{log.target ?? "—"}</td>
-                    <td className="p-4 align-top">
-                      <p className="text-foreground">{log.organization}</p>
-                      <p className="font-mono text-[11px] text-muted-foreground">{log.organizationId}</p>
-                    </td>
-                    <td className="p-4 align-top">
-                      <span
-                        className={`inline-flex items-center rounded-md border px-2 py-1 text-[12px] font-medium ${severityBadge(
-                          deriveAuditSeverity(log),
-                        )}`}
-                      >
-                        {severityLabel(deriveAuditSeverity(log))}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="p-4 align-top">
+                        <p className={`font-medium ${getCategoryColorForAction(log.action)}`}>
+                          {getActionLabel(log.action)}
+                        </p>
+                      </td>
+                      <td className="p-4 align-top text-muted-foreground">{getGovernanceCategoryForLog(log)}</td>
+                      <td className="p-4 align-top text-muted-foreground">{entityTypeShort(log)}</td>
+                      <td className="p-4 align-top">
+                        <p className="text-foreground">{log.actor}</p>
+                        <p className="text-[11px] text-muted-foreground">{log.actorType}</p>
+                      </td>
+                      <td className="max-w-[200px] p-4 align-top break-words text-foreground">{log.target ?? "—"}</td>
+                      <td className="p-4 align-top">
+                        <p className="text-foreground">{log.organization}</p>
+                      </td>
+                      <td className="p-4 align-top">
+                        <span
+                          className={`inline-flex items-center rounded-md border px-2 py-1 text-[12px] font-medium ${governanceSeverityBadgeClass(
+                            govSev,
+                          )}`}
+                        >
+                          {govSev}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
                 {visibleLogs.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center text-sm text-muted-foreground">
+                    <td colSpan={8} className="px-6 py-12 text-center text-sm text-muted-foreground">
                       No audit logs match the current filters.
                     </td>
                   </tr>
@@ -497,8 +674,10 @@ interface AuditLogDetailsModalProps {
 function AuditLogDetailsModal({ log, isOpen, onClose, knownOrgIds }: AuditLogDetailsModalProps) {
   if (!isOpen) return null;
 
-  const sev = deriveAuditSeverity(log);
+  const internalSev = deriveAuditSeverity(log);
+  const govSev = deriveGovernanceSeverityLabel(log);
   const safePayload = redactPayloadForDisplay(log.payload);
+  const sessionRef = log.sessionRef ?? log.relatedVerificationSessionId;
 
   const renderPayloadDetails = () => {
     if (!log.payload || Object.keys(safePayload).length === 0) return null;
@@ -545,6 +724,12 @@ function AuditLogDetailsModal({ log, isOpen, onClose, knownOrgIds }: AuditLogDet
     void navigator.clipboard.writeText(JSON.stringify(exportLog, null, 2));
   };
 
+  const hasEntityLinks =
+    Boolean(log.relatedVerifymeId) ||
+    Boolean(log.relatedClientAppId) ||
+    Boolean(log.relatedIdentityLinkId) ||
+    Boolean(sessionRef);
+
   return (
     <>
       <div className="fixed inset-0 z-40 bg-black/50" onClick={onClose} aria-hidden />
@@ -561,8 +746,7 @@ function AuditLogDetailsModal({ log, isOpen, onClose, knownOrgIds }: AuditLogDet
                   {getActionLabel(log.action)}
                 </span>
               </div>
-              <span className="font-mono text-sm text-muted-foreground">{log.id}</span>
-              <span className="px-3 text-sm text-muted-foreground">{formatDateTime(log.timestamp)}</span>
+              <p className="text-sm text-muted-foreground">{formatDateTime(log.timestamp)}</p>
             </div>
             <button type="button" onClick={onClose} className="rounded p-1 transition-colors hover:bg-accent">
               <X className="h-5 w-5" />
@@ -572,22 +756,35 @@ function AuditLogDetailsModal({ log, isOpen, onClose, knownOrgIds }: AuditLogDet
           <div className="flex-1 space-y-6 overflow-y-auto p-6">
             <div className="rounded-lg border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
               <span className="font-medium text-foreground">Summary</span> — {getActionLabel(log.action)} ·{" "}
-              {log.organization} · {formatDateTime(log.timestamp)} · outcome {getStatusLabel(log.status)} · severity{" "}
-              {severityLabel(sev)}. Related entities link only when sample ids match platform mock data.
+              {getGovernanceCategoryForLog(log)} · {log.organization} · {formatDateTime(log.timestamp)} · outcome{" "}
+              {getStatusLabel(log.status)} · governance severity {govSev} (internal {severityLabelInternal(internalSev)}).
             </div>
 
             <div className="space-y-6">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Details</p>
 
               <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <p className="mb-1 text-xs text-muted-foreground">Log ID</p>
+                  <p className="font-mono text-sm text-foreground">{log.id}</p>
+                </div>
                 <div>
                   <p className="mb-1 text-xs text-muted-foreground">Event</p>
                   <p className="text-sm font-medium text-foreground">{getActionLabel(log.action)}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Event key</p>
                   <p className="font-mono text-xs text-muted-foreground">{log.action}</p>
                 </div>
                 <div>
-                  <p className="mb-1 text-xs text-muted-foreground">Category</p>
+                  <p className="mb-1 text-xs text-muted-foreground">Governance category</p>
+                  <p className="text-sm text-foreground">{getGovernanceCategoryForLog(log)}</p>
+                </div>
+                <div>
+                  <p className="mb-1 text-xs text-muted-foreground">Event area (legacy facet)</p>
                   <p className="text-sm text-foreground">{getAuditTableCategory(log.action)}</p>
+                </div>
+                <div>
+                  <p className="mb-1 text-xs text-muted-foreground">Subject</p>
+                  <p className="text-sm text-foreground">{entityTypeShort(log)}</p>
                 </div>
                 <div>
                   <p className="mb-1 text-xs text-muted-foreground">Actor</p>
@@ -601,6 +798,7 @@ function AuditLogDetailsModal({ log, isOpen, onClose, knownOrgIds }: AuditLogDet
                 <div className="col-span-2">
                   <p className="mb-1 text-xs text-muted-foreground">Organization</p>
                   <p className="text-sm font-medium text-foreground">{log.organization}</p>
+                  <p className="mt-2 text-xs text-muted-foreground">Organization ID</p>
                   <p className="font-mono text-xs text-muted-foreground">{log.organizationId}</p>
                   {orgLinkable ? (
                     <Link
@@ -610,7 +808,7 @@ function AuditLogDetailsModal({ log, isOpen, onClose, knownOrgIds }: AuditLogDet
                       Open organization detail
                     </Link>
                   ) : (
-                    <p className="mt-2 text-[11px] text-muted-foreground">No organization detail route for this sample id.</p>
+                    <p className="mt-2 text-[11px] text-muted-foreground">Organization detail is not available for this record.</p>
                   )}
                 </div>
                 <div>
@@ -624,20 +822,22 @@ function AuditLogDetailsModal({ log, isOpen, onClose, knownOrgIds }: AuditLogDet
                   </span>
                 </div>
                 <div>
-                  <p className="mb-1 text-xs text-muted-foreground">Severity</p>
+                  <p className="mb-1 text-xs text-muted-foreground">Governance severity</p>
                   <span
-                    className={`inline-flex items-center rounded-md border px-3 py-1 text-sm font-medium ${severityBadge(sev)}`}
+                    className={`inline-flex items-center rounded-md border px-3 py-1 text-sm font-medium ${governanceSeverityBadgeClass(
+                      govSev,
+                    )}`}
                   >
-                    {severityLabel(sev)}
+                    {govSev}
                   </span>
                 </div>
                 <div>
-                  <p className="mb-1 text-xs text-muted-foreground">Source IP (mock)</p>
+                  <p className="mb-1 text-xs text-muted-foreground">Source IP</p>
                   <p className="font-mono text-sm text-foreground">{log.ipAddress}</p>
                 </div>
                 {log.userAgent ? (
                   <div>
-                    <p className="mb-1 text-xs text-muted-foreground">User agent (mock)</p>
+                    <p className="mb-1 text-xs text-muted-foreground">User agent</p>
                     <p className="truncate text-xs text-foreground">{log.userAgent}</p>
                   </div>
                 ) : null}
@@ -647,16 +847,40 @@ function AuditLogDetailsModal({ log, isOpen, onClose, knownOrgIds }: AuditLogDet
                     <p className="font-mono text-sm text-foreground">{log.requestRef}</p>
                   </div>
                 ) : null}
-                {(log.sessionRef ?? log.relatedVerificationSessionId) ? (
+                {sessionRef ? (
                   <div className="col-span-2">
                     <p className="mb-1 text-xs text-muted-foreground">Verification session reference</p>
-                    <p className="font-mono text-sm text-foreground">
-                      {log.sessionRef ?? log.relatedVerificationSessionId}
-                    </p>
-                    <p className="mt-1 text-[11px] text-muted-foreground">Open Verification Sessions to match this id.</p>
+                    <p className="font-mono text-sm text-foreground">{sessionRef}</p>
+                    <Link
+                      className="mt-2 inline-block text-sm text-primary underline-offset-4 hover:underline"
+                      to={`/verification-sessions?sessionId=${encodeURIComponent(sessionRef)}`}
+                    >
+                      Open verification session detail
+                    </Link>
                   </div>
                 ) : null}
               </div>
+
+              {log.changeTracking && log.changeTracking.length > 0 ? (
+                <div className="rounded-lg border border-border bg-muted/10 p-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Changes</p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    High-level state transitions only — no raw credentials or comparison payloads.
+                  </p>
+                  <ul className="mt-3 space-y-3">
+                    {log.changeTracking.map((c, i) => (
+                      <li key={i} className="rounded-md border border-border/80 bg-background/60 px-3 py-2 text-sm">
+                        <p className="font-medium text-foreground">{c.label}</p>
+                        <p className="mt-1 text-[13px] text-muted-foreground">
+                          <span className="text-foreground/80">{c.before}</span>
+                          <span className="mx-2 text-muted-foreground">→</span>
+                          <span className="text-foreground/80">{c.after}</span>
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
 
               <div className="rounded-lg border border-border bg-muted/15 p-4">
                 <p className="text-xs font-medium text-muted-foreground">Related entities</p>
@@ -677,7 +901,7 @@ function AuditLogDetailsModal({ log, isOpen, onClose, knownOrgIds }: AuditLogDet
                         className="text-primary underline-offset-4 hover:underline"
                         to={`/client-apps/${encodeURIComponent(log.relatedClientAppId)}`}
                       >
-                        Client app ({log.relatedClientAppId})
+                        Client app {log.relatedClientAppId}
                       </Link>
                     </li>
                   ) : null}
@@ -687,13 +911,21 @@ function AuditLogDetailsModal({ log, isOpen, onClose, knownOrgIds }: AuditLogDet
                         className="text-primary underline-offset-4 hover:underline"
                         to={`/identity-links/${encodeURIComponent(log.relatedIdentityLinkId)}`}
                       >
-                        Identity link ({log.relatedIdentityLinkId})
+                        Identity link {log.relatedIdentityLinkId}
                       </Link>
                     </li>
                   ) : null}
-                  {!log.relatedVerifymeId && !log.relatedClientAppId && !log.relatedIdentityLinkId ? (
-                    <li className="text-muted-foreground">No entity links for this row.</li>
+                  {sessionRef ? (
+                    <li>
+                      <Link
+                        className="text-primary underline-offset-4 hover:underline"
+                        to={`/verification-sessions?sessionId=${encodeURIComponent(sessionRef)}`}
+                      >
+                        Verification session {sessionRef}
+                      </Link>
+                    </li>
                   ) : null}
+                  {!hasEntityLinks ? <li className="text-muted-foreground">No entity links for this row.</li> : null}
                 </ul>
               </div>
 

@@ -1,6 +1,6 @@
-import { ArrowLeft, Code2 } from "lucide-react";
+import { ArrowLeft, ClipboardList, Code2 } from "lucide-react";
 import { useMemo, useState, useSyncExternalStore } from "react";
-import { useNavigate, useParams } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
 import { Button } from "../../shared/components/ui/button";
 import { Card } from "../../shared/components/ui/card";
 import {
@@ -21,6 +21,7 @@ import {
 } from "../data/platformClientAppsSession";
 import type { PlatformClientAppRow } from "../data/platformClientAppsSample";
 import { formatIntegrationStatus } from "../data/platformOrganizationsSample";
+import { auditLogsHref } from "../utils/auditLogsNavigation";
 
 function formatDateTime(iso: string | null) {
   return iso
@@ -100,6 +101,17 @@ export function PlatformClientAppDetail() {
                 <UnifiedBadge variant="status" value={row.environment === "production" ? "Production" : "Sandbox"} />
                 <UnifiedBadge variant="integration" value={formatIntegrationStatus(row.integrationStatus)} />
               </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" asChild>
+                  <Link
+                    to={auditLogsHref({ clientAppId: row.id, entityType: "client_app" })}
+                    className="inline-flex items-center gap-2"
+                  >
+                    <ClipboardList className="h-4 w-4" />
+                    View audit history
+                  </Link>
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -130,7 +142,7 @@ export function PlatformClientAppDetail() {
                 </div>
                 <dl className="mt-6 space-y-3 text-sm">
                   <div>
-                    <dt className="text-muted-foreground">client_id</dt>
+                    <dt className="text-muted-foreground">Client ID</dt>
                     <dd className="font-mono text-[13px] break-all">{row.clientId}</dd>
                   </div>
                   <div>
@@ -184,7 +196,7 @@ export function PlatformClientAppDetail() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="mt-4 text-sm text-muted-foreground">No redirect URIs registered (sample).</p>
+                  <p className="mt-4 text-sm text-muted-foreground">No redirect URIs registered.</p>
                 )}
                 <p className="mt-4 text-[12px] text-muted-foreground">
                   Only registered redirect URIs may receive authorization codes.
@@ -208,7 +220,7 @@ export function PlatformClientAppDetail() {
                 </div>
                 {row.futureScopes?.length ? (
                   <p className="mt-4 text-sm text-muted-foreground">
-                    Future scopes (not enabled): {row.futureScopes.join(", ")}
+                    Additional scopes (not enabled): {row.futureScopes.join(", ")}
                   </p>
                 ) : null}
                 <div className="mt-6 border-t border-border pt-4 space-y-2 text-[13px]">
@@ -251,8 +263,8 @@ export function PlatformClientAppDetail() {
           <DialogHeader>
             <DialogTitle>Rotate client secret?</DialogTitle>
             <DialogDescription>
-              Mock only: marks secret rotation as satisfied for{" "}
-              <span className="font-mono">{row.clientId}</span>. Raw secrets are never displayed.
+              Records a credential rotation for <span className="font-mono">{row.clientId}</span>. Secret values are never
+              displayed in this portal.
             </DialogDescription>
           </DialogHeader>
           <p className="rounded-md border border-border/80 bg-muted/30 px-3 py-2 text-[12px] text-muted-foreground">
@@ -266,7 +278,7 @@ export function PlatformClientAppDetail() {
               onClick={() => {
                 updateClientAppRow(row.id, { secretStatus: "configured" });
                 setRotateOpen(false);
-                setMessage(`Secret rotation recorded for ${row.appName} (mock).`);
+                setMessage(`Secret rotation recorded for ${row.appName}.`);
               }}
             >
               Confirm rotate
@@ -280,7 +292,8 @@ export function PlatformClientAppDetail() {
           <DialogHeader>
             <DialogTitle>Disable client application?</DialogTitle>
             <DialogDescription>
-              Mock only: sets integration to not configured for <span className="font-mono">{row.clientId}</span>.
+              Disables this client application for <span className="font-mono">{row.clientId}</span> and marks integration as
+              not configured until restored.
             </DialogDescription>
           </DialogHeader>
           <p className="rounded-md border border-border/80 bg-muted/30 px-3 py-2 text-[12px] text-muted-foreground">
@@ -295,7 +308,7 @@ export function PlatformClientAppDetail() {
               onClick={() => {
                 updateClientAppRow(row.id, { integrationStatus: "not_configured" });
                 setDisableOpen(false);
-                setMessage(`${row.appName} disabled in sample data (mock).`);
+                setMessage(`${row.appName} disabled.`);
               }}
             >
               Confirm disable

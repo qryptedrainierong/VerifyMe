@@ -1,4 +1,4 @@
-import { ArrowLeft, Link2 } from "lucide-react";
+import { ArrowLeft, ClipboardList, Link2 } from "lucide-react";
 import { useMemo, useState, useSyncExternalStore } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { Button } from "../../shared/components/ui/button";
@@ -34,6 +34,12 @@ import {
   getEndUserAssociations,
   subscribeEndUserAssociationListeners,
 } from "../data/platformEndUserAssociationsSession";
+import {
+  getConflictHistoryForIdentityLinkId,
+  type IdentityLinkConflictHistoryEntryKind,
+} from "../data/platformIdentityLinkConflictHistorySample";
+import { GovernanceTimeline } from "../../shared/components/GovernanceTimeline";
+import { auditLogsHref } from "../utils/auditLogsNavigation";
 
 function linkStatusLabel(s: IdentityLinkStatus): string {
   const map: Record<IdentityLinkStatus, string> = {
@@ -54,6 +60,16 @@ function conflictLabel(c: IdentityLinkConflictStatus): string {
     resolved: "Resolved",
   };
   return map[c];
+}
+
+function conflictHistoryStepLabel(kind: IdentityLinkConflictHistoryEntryKind): string {
+  const map: Record<IdentityLinkConflictHistoryEntryKind, string> = {
+    detected: "Conflict detected",
+    review_opened: "Review opened",
+    reviewed: "Reviewed",
+    resolved: "Conflict resolved",
+  };
+  return map[kind];
 }
 
 function nameMatchStatusLabel(status: NameMatchStatus): string {
@@ -151,6 +167,22 @@ export function PlatformIdentityLinkDetail() {
                 <UnifiedBadge variant="status" value={linkStatusLabel(row.linkStatus)} />
                 <UnifiedBadge variant="status" value={conflictLabel(row.conflictStatus)} />
               </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" asChild>
+                  <Link
+                    to={auditLogsHref({ identityLinkId: row.id, governanceCategory: "Identity" })}
+                    className="inline-flex items-center gap-2"
+                  >
+                    <ClipboardList className="h-4 w-4" />
+                    View audit history
+                  </Link>
+                </Button>
+                <Button variant="outline" size="sm" asChild>
+                  <Link to={auditLogsHref({ identityLinkId: row.id, conflictEventsOnly: true })}>
+                    Conflict audit trail only
+                  </Link>
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -190,7 +222,7 @@ export function PlatformIdentityLinkDetail() {
                   Review conflict…
                 </Button>
                 <p className="text-[12px] text-muted-foreground">
-                  Confirmation is required. Resolution is auditable in a live system.
+                  Confirmation is required. Resolutions are recorded for audit.
                 </p>
               </div>
             ) : row.conflictStatus === "resolved" ? (
@@ -227,6 +259,40 @@ export function PlatformIdentityLinkDetail() {
           </Card>
 
           <Card className="border border-border p-6 shadow-sm">
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border pb-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Conflict history</p>
+                <p className="mt-2 max-w-xl text-[13px] text-muted-foreground">
+                  Operational timeline for detection, review, and resolution. Entries are illustrative in this prototype.
+                </p>
+              </div>
+            </div>
+            <div className="pt-6">
+              <GovernanceTimeline
+                items={getConflictHistoryForIdentityLinkId(row.id).map((h) => ({
+                  id: h.id,
+                  timestamp: h.timestamp,
+                  title: conflictHistoryStepLabel(h.kind),
+                  subtitle: (
+                    <>
+                      {h.summary}
+                      {h.resolutionNotes ? (
+                        <>
+                          {" "}
+                          <span className="block mt-2 text-[12px] text-muted-foreground">
+                            Resolution notes: {h.resolutionNotes}
+                          </span>
+                        </>
+                      ) : null}
+                    </>
+                  ),
+                  meta: h.reviewer ? <span>Reviewer: {h.reviewer}</span> : null,
+                }))}
+              />
+            </div>
+          </Card>
+
+          <Card className="border border-border p-6 shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Link summary</p>
             <dl className="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
               <div>
@@ -240,12 +306,22 @@ export function PlatformIdentityLinkDetail() {
                 <dd className="font-medium">{row.organizationName}</dd>
               </div>
               <div>
-                <dt className="text-muted-foreground">client_user_id</dt>
+                <dt className="text-muted-foreground">Customer user ID</dt>
                 <dd className="font-mono">{row.clientUserId}</dd>
               </div>
               <div>
                 <dt className="text-muted-foreground">VerifyMe ID</dt>
                 <dd className="font-mono font-medium">{row.verifymeId}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">VerifyMe account status</dt>
+                <dd>
+                  <UnifiedBadge variant="status" value={row.verifymeAccountStatus} />
+                </dd>
+              </div>
+              <div className="sm:col-span-2">
+                <dt className="text-muted-foreground">Device status</dt>
+                <dd>{row.deviceStatusSummary}</dd>
               </div>
               <div>
                 <dt className="text-muted-foreground">Linked date</dt>
@@ -262,10 +338,6 @@ export function PlatformIdentityLinkDetail() {
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Organization customer</p>
             <dl className="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
               <div>
-                <dt className="text-muted-foreground">client_user_id</dt>
-                <dd className="font-mono">{row.clientUserId}</dd>
-              </div>
-              <div>
                 <dt className="text-muted-foreground">Customer display name</dt>
                 <dd>{row.customerDisplayName?.trim() ? row.customerDisplayName : "—"}</dd>
               </div>
@@ -278,36 +350,16 @@ export function PlatformIdentityLinkDetail() {
           </Card>
 
           <Card className="border border-border p-6 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">VerifyMe reference</p>
-            <dl className="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
-              <div>
-                <dt className="text-muted-foreground">VerifyMe ID</dt>
-                <dd className="font-mono font-medium">{row.verifymeId}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">User status</dt>
-                <dd>
-                  <UnifiedBadge variant="status" value={row.verifymeAccountStatus} />
-                </dd>
-              </div>
-              <div className="sm:col-span-2">
-                <dt className="text-muted-foreground">Device status</dt>
-                <dd>{row.deviceStatusSummary}</dd>
-              </div>
-            </dl>
-          </Card>
-
-          <Card className="border border-border p-6 shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Name consistency</p>
             <dl className="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
               <div>
-                <dt className="text-muted-foreground">name_match_status</dt>
+                <dt className="text-muted-foreground">Outcome</dt>
                 <dd className="mt-1">
                   <UnifiedBadge variant="status" value={nameMatchStatusLabel(row.nameMatchStatus)} />
                 </dd>
               </div>
               <div>
-                <dt className="text-muted-foreground">name_match_score (sample)</dt>
+                <dt className="text-muted-foreground">Match confidence</dt>
                 <dd className="tabular-nums">
                   {row.nameMatchScore != null ? row.nameMatchScore.toFixed(2) : "—"}
                 </dd>
@@ -340,14 +392,23 @@ export function PlatformIdentityLinkDetail() {
               </div>
             ) : (
               <p className="mt-4 text-sm text-muted-foreground">
-                No platform user risk snapshot in sample data for this VerifyMe ID (e.g. user not in VerifyMe Users sample).
+                No platform risk snapshot is available for this VerifyMe user yet.
               </p>
             )}
           </Card>
 
           <details className="rounded-lg border border-border bg-muted/10 p-4 text-[12px] text-muted-foreground">
-            <summary className="cursor-pointer font-medium text-foreground">Technical reference</summary>
-            <p className="mt-2 font-mono">Link record: {row.id}</p>
+            <summary className="cursor-pointer font-medium text-foreground">Technical details</summary>
+            <dl className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <div>
+                <dt className="text-muted-foreground">Link ID</dt>
+                <dd className="font-mono text-foreground">{row.id}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Organization ID</dt>
+                <dd className="font-mono text-foreground">{row.organizationId}</dd>
+              </div>
+            </dl>
           </details>
         </div>
       </div>
@@ -357,7 +418,9 @@ export function PlatformIdentityLinkDetail() {
           <AlertDialogHeader>
             <AlertDialogTitle>Resolve conflict for this link?</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
-              <span className="block">Updates sample data for client_user_id {row.clientUserId} at {row.organizationName}.</span>
+              <span className="block">
+                Applies to customer user ID <span className="font-mono">{row.clientUserId}</span> at {row.organizationName}.
+              </span>
               <span className="block rounded-md border border-border/80 bg-muted/30 px-3 py-2 text-[12px] text-muted-foreground">
                 This action will be recorded in audit logs.
               </span>
@@ -370,12 +433,12 @@ export function PlatformIdentityLinkDetail() {
                 const reviewedAt = new Date().toISOString();
                 updateIdentityLinkRow(row.id, {
                   conflictStatus: "resolved",
-                  conflictReviewedBy: "platform.operator@verifyme.com (mock)",
+                  conflictReviewedBy: "VerifyMe platform",
                   conflictReviewedAt: reviewedAt,
-                  conflictResolution: "Conflict reviewed and cleared in VerifyMe Admin (sample).",
+                  conflictResolution: "Conflict reviewed and cleared in VerifyMe Admin.",
                 });
                 setConflictReviewOpen(false);
-                setMessage(`Conflict resolved for ${row.clientUserId} (mock).`);
+                setMessage(`Conflict resolved for ${row.clientUserId}.`);
               }}
             >
               Confirm resolution

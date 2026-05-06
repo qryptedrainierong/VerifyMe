@@ -1,5 +1,12 @@
 import type { AuditLog } from "../../shared/types/auditLog";
-import { ActorType, AuditStatus, type AuditAction, type AuditSeverityLevel } from "../../shared/types/auditLog";
+import {
+  ActorType,
+  AuditStatus,
+  type AuditAction,
+  type AuditChangeTrackingEntry,
+  type AuditSeverityLevel,
+  type GovernanceCategory,
+} from "../../shared/types/auditLog";
 
 const create = (log: {
   id: string;
@@ -16,6 +23,8 @@ const create = (log: {
   userAgent?: string;
   target: string;
   severity?: AuditSeverityLevel;
+  governanceCategory?: GovernanceCategory;
+  changeTracking?: AuditChangeTrackingEntry[];
   requestRef?: string;
   sessionRef?: string;
   relatedVerifymeUserId?: string;
@@ -33,6 +42,47 @@ const create = (log: {
  * Deep-link fields use ids that exist in other platform sample modules where possible.
  */
 export const platformAuditLogsSample: AuditLog[] = [
+  create({
+    id: "LOG-8215",
+    timestamp: "2024-04-12T17:52:00Z",
+    actor: "system",
+    actorType: ActorType.SYSTEM,
+    organization: "Acme Corporation",
+    organizationId: "ORG-001",
+    action: "verifyme_user.risk_level_changed",
+    status: AuditStatus.SUCCESS,
+    ipAddress: "N/A",
+    details: "Platform risk model decreased risk band after stable device and verification cadence.",
+    target: "vm07f9a2",
+    severity: "low",
+    governanceCategory: "Risk",
+    relatedVerifymeUserId: "a0000001-0000-4000-8000-000000000001",
+    relatedVerifymeId: "vm07f9a2",
+    changeTracking: [
+      { label: "Risk band", before: "Elevated", after: "Moderate" },
+      { label: "Contributors (aggregated)", before: "Elevated posture", after: "Moderate posture" },
+    ],
+  }),
+  create({
+    id: "LOG-8216",
+    timestamp: "2024-04-11T06:40:00Z",
+    actor: "system",
+    actorType: ActorType.SYSTEM,
+    organization: "TechStart Inc.",
+    organizationId: "ORG-002",
+    action: "verifyme_user.risk_level_changed",
+    status: AuditStatus.SUCCESS,
+    ipAddress: "N/A",
+    details: "Risk band increased following identity consistency review signal.",
+    target: "vm91b3c4",
+    severity: "high",
+    governanceCategory: "Risk",
+    relatedVerifymeUserId: "a0000002-0000-4000-8000-000000000002",
+    relatedVerifymeId: "vm91b3c4",
+    changeTracking: [
+      { label: "Risk band", before: "Moderate", after: "High" },
+    ],
+  }),
   // —— Organization governance ——
   create({
     id: "LOG-8201",
@@ -47,6 +97,8 @@ export const platformAuditLogsSample: AuditLog[] = [
     details: "New organization registered with enterprise onboarding (sample).",
     target: "Acme Corporation",
     severity: "low",
+    governanceCategory: "Governance",
+    changeTracking: [{ label: "Lifecycle", before: "Draft", after: "Active" }],
     payload: { planType: "Enterprise", adminEmail: "owner@acme.com" },
   }),
   create({
@@ -62,6 +114,8 @@ export const platformAuditLogsSample: AuditLog[] = [
     details: "Organization suspended for policy review (mock).",
     target: "Design Studio Pro",
     severity: "high",
+    governanceCategory: "Governance",
+    changeTracking: [{ label: "Lifecycle", before: "Active", after: "Suspended" }],
     payload: { reason: "Payment failure", duration: "temporary" },
   }),
   create({
@@ -123,6 +177,7 @@ export const platformAuditLogsSample: AuditLog[] = [
     severity: "high",
     relatedVerifymeUserId: "a0000001-0000-4000-8000-000000000001",
     relatedVerifymeId: "vm07f9a2",
+    changeTracking: [{ label: "Account status", before: "Active", after: "Suspended" }],
     payload: { linkedOrganizationCount: 2 },
   }),
   create({
@@ -236,6 +291,7 @@ export const platformAuditLogsSample: AuditLog[] = [
     target: "APP-001",
     severity: "high",
     relatedClientAppId: "APP-001",
+    changeTracking: [{ label: "Integration status", before: "Production active", after: "Not configured" }],
   }),
   create({
     id: "LOG-8223",
@@ -269,6 +325,24 @@ export const platformAuditLogsSample: AuditLog[] = [
   }),
   // —— Identity links ——
   create({
+    id: "LOG-8229",
+    timestamp: "2024-04-11T16:00:00Z",
+    actor: "system",
+    actorType: ActorType.SYSTEM,
+    organization: "TechStart Inc.",
+    organizationId: "ORG-002",
+    action: "identity_link.conflict_detected",
+    status: AuditStatus.WARNING,
+    ipAddress: "N/A",
+    details: "Name consistency variance triggered conflict review workflow.",
+    target: "cust_acme_99102",
+    severity: "medium",
+    governanceCategory: "Identity",
+    relatedIdentityLinkId: "IL-1003",
+    relatedVerifymeId: "vm91b3c4",
+    changeTracking: [{ label: "Conflict status", before: "None", after: "Pending review" }],
+  }),
+  create({
     id: "LOG-8230",
     timestamp: "2024-04-12T14:35:00Z",
     actor: "system",
@@ -299,7 +373,31 @@ export const platformAuditLogsSample: AuditLog[] = [
     details: "Conflict marked reviewed after operator confirmation (mock).",
     target: "IL-1003",
     severity: "medium",
+    governanceCategory: "Identity",
     relatedIdentityLinkId: "IL-1003",
+    relatedVerifymeId: "vm91b3c4",
+    changeTracking: [{ label: "Review state", before: "Awaiting review", after: "Reviewed" }],
+  }),
+  create({
+    id: "LOG-8231b",
+    timestamp: "2024-04-12T14:36:00Z",
+    actor: "admin@platform.com",
+    actorType: ActorType.PLATFORM_ADMIN,
+    organization: "TechStart Inc.",
+    organizationId: "ORG-002",
+    action: "identity_link.conflict_resolved",
+    status: AuditStatus.SUCCESS,
+    ipAddress: "192.168.1.100",
+    details: "Conflict closed with documented resolution.",
+    target: "IL-1003",
+    severity: "low",
+    governanceCategory: "Identity",
+    relatedIdentityLinkId: "IL-1003",
+    relatedVerifymeId: "vm91b3c4",
+    changeTracking: [
+      { label: "Conflict status", before: "Pending review", after: "Resolved" },
+      { label: "Review outcome", before: "Open", after: "Cleared" },
+    ],
   }),
   create({
     id: "LOG-8232",

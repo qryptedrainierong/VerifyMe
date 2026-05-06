@@ -111,6 +111,7 @@ export type AuditAction =
   | "verifyme_user.disabled"
   | "verifyme_user.restored"
   | "verifyme_user.recovery_reset_requested"
+  | "verifyme_user.risk_level_changed"
   // Client app & redirect URI governance
   | "client_app.created"
   | "client_app.secret_rotated"
@@ -119,7 +120,9 @@ export type AuditAction =
   | "redirect_uri.disabled"
   // Identity links
   | "identity_link.created"
+  | "identity_link.conflict_detected"
   | "identity_link.conflict_reviewed"
+  | "identity_link.conflict_resolved"
   | "identity_link.revoked"
   | "identity_link.suspended"
   // Verification session lifecycle
@@ -135,6 +138,19 @@ export type AuditAction =
 
 /** Triage level for operators; distinct from outcome `status`. */
 export type AuditSeverityLevel = "info" | "low" | "medium" | "high" | "critical";
+
+/** Operator-facing governance bucket for filters and dashboards (distinct from legacy table facet). */
+export type GovernanceCategory = "Risk" | "Identity" | "Security" | "Verification" | "Governance" | "Billing";
+
+/** Four-level governance severity shown in VerifyMe Admin audit UI. */
+export type GovernanceSeverityLabel = "Informational" | "Warning" | "High" | "Critical";
+
+export interface AuditChangeTrackingEntry {
+  /** Field or aspect that changed (no raw credential or comparison payloads). */
+  label: string;
+  before: string;
+  after: string;
+}
 
 export interface BaseAuditLog {
   id: string; // LOG-XXXX format
@@ -153,6 +169,10 @@ export interface BaseAuditLog {
   target?: string;
   /** Operator triage; optional — derived in UI when omitted. */
   severity?: AuditSeverityLevel;
+  /** Explicit governance bucket; when omitted, {@link deriveGovernanceCategoryFromAction} is used. */
+  governanceCategory?: GovernanceCategory;
+  /** Safe before/after fields for accountable change review (never secrets). */
+  changeTracking?: AuditChangeTrackingEntry[];
   requestRef?: string;
   sessionRef?: string;
   /** Deep links on detail modal when ids exist in the sample dataset */
@@ -532,13 +552,16 @@ export function getActionLabel(action: string): string {
     "verifyme_user.disabled": "VerifyMe user disabled",
     "verifyme_user.restored": "VerifyMe user restored",
     "verifyme_user.recovery_reset_requested": "VerifyMe recovery reset requested",
+    "verifyme_user.risk_level_changed": "VerifyMe risk level changed",
     "client_app.created": "Client app created",
     "client_app.secret_rotated": "Client secret rotated",
     "client_app.disabled": "Client app disabled",
     "redirect_uri.added": "Redirect URI added",
     "redirect_uri.disabled": "Redirect URI disabled",
     "identity_link.created": "Identity link created",
+    "identity_link.conflict_detected": "Identity link conflict detected",
     "identity_link.conflict_reviewed": "Identity link conflict reviewed",
+    "identity_link.conflict_resolved": "Identity link conflict resolved",
     "identity_link.revoked": "Identity link revoked",
     "identity_link.suspended": "Identity link suspended",
     "verification_session.started": "Verification session started",
@@ -648,6 +671,79 @@ export function deriveAuditSeverity(log: BaseAuditLog): AuditSeverityLevel {
   if (log.status === AuditStatus.WARNING) return "medium";
   if (log.status === AuditStatus.PENDING) return "low";
   return "info";
+}
+
+/** Maps internal triage bands to governance severity labels for operators. */
+export function deriveGovernanceSeverityLabel(log: BaseAuditLog): GovernanceSeverityLabel {
+  const internal = deriveAuditSeverity(log);
+  if (internal === "info" || internal === "low") return "Informational";
+  if (internal === "medium") return "Warning";
+  if (internal === "high") return "High";
+  return "Critical";
+}
+
+/** Primary governance category for filtering and KPIs (overridable per log row). */
+export function getGovernanceCategoryForLog(log: BaseAuditLog): GovernanceCategory {
+  if (log.governanceCategory) return log.governanceCategory;
+  return deriveGovernanceCategoryFromAction(log.action);
+}
+
+export function deriveGovernanceCategoryFromAction(action: string): GovernanceCategory {
+  if (action === "verifyme_user.risk_level_changed") return "Risk";
+  if (
+    /^billing\.|^subscription\.|^plan\.|^credits\.|^invoice\.|^refund\./.test(action)
+  ) {
+    return "Billing";
+  }
+  if (action.startsWith("identity_link.")) return "Identity";
+  if (action.startsWith("verification_session.")) return "Verification";
+  if (/^(mfa\.|api_key\.|sso\.|admin\.login|admin\.logout)/.test(action)) return "Security";
+  return "Governance";
+}
+
+/** Entity facet for cross-linking from detail pages to audit logs. */
+export type AuditEntityType =
+  | "organization"
+  | "verifyme_user"
+  | "identity_link"
+  | "client_app"
+  | "verification_session"
+  | "billing"
+  | "other";
+
+export function deriveAuditEntityType(log: BaseAuditLog): AuditEntityType {
+  const a = log.action;
+  if (/^organization\.|^seats\./.test(a)) return "organization";
+  if (/^verifyme_user\./.test(a)) return "verifyme_user";
+  if (/^identity_link\./.test(a)) return "identity_link";
+  if (/^client_app\.|^redirect_uri\./.test(a)) return "client_app";
+  if (/^verification_session\./.test(a)) return "verification_session";
+  if (/^billing\.|^subscription\.|^plan\.|^credits\.|^invoice\.|^refund\./.test(a)) return "billing";
+  return "other";
+}
+
+const CONFLICT_WORKFLOW_ACTIONS: ReadonlySet<string> = new Set([
+  "identity_link.conflict_detected",
+  "identity_link.conflict_reviewed",
+  "identity_link.conflict_resolved",
+]);
+
+export function isConflictWorkflowAuditEvent(log: BaseAuditLog): boolean {
+  return CONFLICT_WORKFLOW_ACTIONS.has(log.action);
+}
+
+export function isRiskGovernanceAuditEvent(log: BaseAuditLog): boolean {
+  return getGovernanceCategoryForLog(log) === "Risk";
+}
+
+export function governanceSeverityBadgeClass(label: GovernanceSeverityLabel): string {
+  const map: Record<GovernanceSeverityLabel, string> = {
+    Informational: "bg-slate-500/10 text-slate-700 border-slate-200",
+    Warning: "bg-amber-500/10 text-amber-800 border-amber-200",
+    High: "bg-orange-500/10 text-orange-800 border-orange-200",
+    Critical: "bg-red-500/10 text-red-800 border-red-200",
+  };
+  return map[label];
 }
 
 /**

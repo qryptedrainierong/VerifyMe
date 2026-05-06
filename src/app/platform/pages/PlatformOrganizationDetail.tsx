@@ -1,4 +1,5 @@
-import { ArrowLeft, Building2 } from "lucide-react";
+import { ArrowLeft, Building2, ClipboardList } from "lucide-react";
+import { Link } from "react-router";
 import { useMemo, useSyncExternalStore } from "react";
 import { useNavigate, useParams } from "react-router";
 import { Button } from "../../shared/components/ui/button";
@@ -15,6 +16,7 @@ import {
 } from "../data/platformOrganizationsSample";
 import { platformEndUserAssociations } from "../data/platformUsersSample";
 import { OrganizationDetailTabs } from "./components/OrganizationDetailTabs";
+import { auditLogsHref } from "../utils/auditLogsNavigation";
 
 type OrganizationProfile = {
   owner: { name: string; email: string; phone: string };
@@ -117,6 +119,14 @@ export function PlatformOrganizationDetail() {
               <p className="text-[13px] text-muted-foreground mt-1">
                 {organization.domain} · {organization.country} · Created {formatDate(organization.created)}
               </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" asChild>
+                  <Link to={auditLogsHref({ organizationId: organization.id })} className="inline-flex items-center gap-2">
+                    <ClipboardList className="h-4 w-4" />
+                    View audit history
+                  </Link>
+                </Button>
+              </div>
             </div>
           </div>
         </div>

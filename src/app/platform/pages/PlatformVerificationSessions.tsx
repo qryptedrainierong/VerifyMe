@@ -1,4 +1,5 @@
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { Link, useSearchParams } from "react-router";
 import { Filter, ListChecks, Search } from "lucide-react";
 import { Button } from "../../shared/components/ui/button";
 import { Card } from "../../shared/components/ui/card";
@@ -45,6 +46,7 @@ import {
 } from "../data/mockPlatformRisk";
 import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
 import { shouldIgnoreRowOpenClick } from "../utils/tableRowNav";
+import { auditLogsHref } from "../utils/auditLogsNavigation";
 
 type OutcomeFilter = "all" | VerificationSessionOutcome;
 type BillableFilter = "all" | "billable" | "not_billable";
@@ -62,6 +64,7 @@ function withinTimeFilter(createdAt: string, tf: TimeFilter): boolean {
 export function PlatformVerificationSessions() {
   const allSessions = useMemo(() => getVerificationSessionsMock(), []);
   const organizations = useMemo(() => buildInitialOrganizations(), []);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [search, setSearch] = useState("");
   const [orgFilter, setOrgFilter] = useState<string>("all");
@@ -70,6 +73,13 @@ export function PlatformVerificationSessions() {
   const [channelFilter, setChannelFilter] = useState<ChannelFilter>("all");
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("all");
   const [detail, setDetail] = useState<MockVerificationSession | null>(null);
+
+  useEffect(() => {
+    const sid = searchParams.get("sessionId") ?? searchParams.get("verificationSessionId");
+    if (!sid) return;
+    const hit = allSessions.find((s) => s.sessionId === sid);
+    if (hit) setDetail(hit);
+  }, [searchParams, allSessions]);
 
   const assocVersion = useSyncExternalStore(
     subscribeEndUserAssociationListeners,
@@ -319,7 +329,23 @@ export function PlatformVerificationSessions() {
       </Card>
       </PortalPageFrame>
 
-      <Dialog open={detail !== null} onOpenChange={(o) => !o && setDetail(null)}>
+      <Dialog
+        open={detail !== null}
+        onOpenChange={(o) => {
+          if (!o) {
+            setDetail(null);
+            setSearchParams(
+              (prev) => {
+                const next = new URLSearchParams(prev);
+                next.delete("sessionId");
+                next.delete("verificationSessionId");
+                return next;
+              },
+              { replace: true },
+            );
+          }
+        }}
+      >
         <DialogContent className="flex max-h-[min(92vh,calc(100dvh-2rem))] w-full max-w-[calc(100%-1.5rem)] flex-col gap-0 overflow-hidden border bg-background p-0 shadow-lg sm:max-w-3xl">
           <DialogHeader className="shrink-0 space-y-1 border-b border-border px-6 pb-4 pt-6 text-left">
             <DialogTitle className="flex items-center gap-2 text-xl font-semibold tracking-tight">
@@ -334,7 +360,15 @@ export function PlatformVerificationSessions() {
             <>
               <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-4">
                 <p className="mb-4 text-xs text-muted-foreground">
-                  Sample session — secrets and raw tokens are never shown.
+                  Secrets and raw tokens are never shown.{" "}
+                  <Link
+                    className="text-primary underline-offset-4 hover:underline"
+                    to={auditLogsHref({
+                      verificationSessionId: detail.sessionId,
+                    })}
+                  >
+                    View audit history for this session
+                  </Link>
                 </p>
                 <VerificationSessionDetailBody
                   session={detail}

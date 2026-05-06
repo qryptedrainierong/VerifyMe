@@ -33,6 +33,14 @@ This document is **not** a migration or API contract; it guides product, complia
 
 ---
 
+## 1a. Risk History (VerifyMe Admin — prototype)
+
+VerifyMe User detail includes a **Risk History** tab fed by **mock-only** timeline data (`platformVerifymeUserRiskHistorySample.ts`). Each entry shows **timestamp**, **previous band → new band**, and a **short contributing-signals summary** that must stay **aggregated** (no naming other organizations in narrative).
+
+Operators can open a pre-filtered audit view via **View risk audit trail**, which sets Audit Logs **`focus=risk`** (see [`audit-logs-plan.md`](./audit-logs-plan.md) governance section). Live systems should emit **`verifyme_user.risk_level_changed`** (or equivalent) with optional **`changeTracking`** on the audit row; do not log raw model features or cross-tenant identifiers in org-scoped contexts.
+
+---
+
 ## 2. Identity links: conflict and name consistency (not a link risk score)
 
 **Identity links** (`organization_user_links`) are the right place for:
@@ -45,6 +53,8 @@ This document is **not** a migration or API contract; it guides product, complia
 | **Invite / channel notes** | Context for review (sample UI only in mocks). |
 
 Link-level events (name mismatch, retries on one link, duplicate link attempts) may **inform** the **VerifyMe User** risk engine or **trigger conflict workflows**, but the **product-facing numeric risk score** is **not** framed as a separate **“Link Risk Score”** for customers.
+
+**Conflict History (prototype):** Identity Link detail shows a **Conflict history** timeline (`platformIdentityLinkConflictHistorySample.ts`) for detection → review → resolution, with reviewer and resolution notes when present. Link **Conflict audit trail only** narrows Audit Logs to **`identity_link.conflict_*`** events. Resolution text must remain operator-safe (no raw comparison payloads).
 
 ---
 

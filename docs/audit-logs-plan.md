@@ -4,6 +4,21 @@
 
 **Portal UX (prototype):** Governance-affecting operations are initiated only from **VerifyMe Admin** entity detail pages with **confirmation**; **audit log events** are the accountability trail. The Audit Logs screen is an **immutable, read-only** review surface (modal detail). See [`implementation-notes.md`](./implementation-notes.md) and [`audit-logs-ui.md`](./audit-logs-ui.md).
 
+### Governance alignment (prototype UI — Step 7)
+
+VerifyMe Admin treats audit logs as a **connected governance surface** aligned with entity detail pages:
+
+| Concept | Behavior (frontend prototype) |
+|--------|-------------------------------|
+| **Governance categories** | **Risk**, **Identity**, **Security**, **Verification**, **Governance**, **Billing** — derived from action keys with optional per-row override (`governanceCategory`). |
+| **Governance severity** | **Informational**, **Warning**, **High**, **Critical** — mapped from internal triage bands (`severity` / outcome), not duplicated as raw vendor codes in UI copy. |
+| **Change tracking** | Optional structured **`changeTracking`** on each row: `{ label, before, after }` tuples for accountable review — **never** secrets, tokens, biometric material, passcodes, or raw cross-org dumps. |
+| **Deep links** | Entity headers link to **`/audit-logs?…`** with filters such as **`verifymeId`**, **`identityLinkId`**, **`organizationId`**, **`clientAppId`**, **`verificationSessionId`**, **`focus=risk`** (risk-only), **`focus=conflict`** (conflict workflow events). Built via `auditLogsHref()` in `src/app/platform/utils/auditLogsNavigation.ts`. |
+| **Related entities** | Modal lists links to Organization, VerifyMe User, Identity Link, Client App, and Verification Session routes where IDs exist in mock data. |
+| **New actions (mock)** | `verifyme_user.risk_level_changed`, `identity_link.conflict_detected`, `identity_link.conflict_resolved` complement existing lifecycle keys. |
+
+Product-facing tables also retain a legacy **event area** facet (`getAuditTableCategory`) for coloring continuity; governance category is the **primary** operator filter.
+
 ## Overview
 This document outlines all audit log types organized by category, with detailed logging requirements for each action.
 

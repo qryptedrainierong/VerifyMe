@@ -163,14 +163,6 @@ export function OrganizationDetailTabs({
                   <p className="text-[14px] text-foreground font-mono">{organization.organizationCode}</p>
                 </div>
                 <div>
-                  <p className="text-[13px] text-muted-foreground mb-1">Primary client_id</p>
-                  <p className="text-[13px] text-foreground font-mono break-all">{organization.primaryClientId}</p>
-                </div>
-                <div>
-                  <p className="text-[13px] text-muted-foreground mb-1">Internal organization_id</p>
-                  <p className="text-[13px] text-foreground font-mono">{organization.id}</p>
-                </div>
-                <div>
                   <p className="text-[13px] text-muted-foreground mb-1">Domain</p>
                   <p className="text-[14px] text-foreground">{organization.domain}</p>
                 </div>
@@ -194,6 +186,19 @@ export function OrganizationDetailTabs({
                   <p className="text-[14px] text-foreground">{profile.billingEmail}</p>
                 </div>
               </div>
+              <details className="border-t border-border px-6 py-4 text-[12px] text-muted-foreground">
+                <summary className="cursor-pointer font-medium text-foreground">Technical details</summary>
+                <dl className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <dt className="text-muted-foreground">Primary client ID</dt>
+                    <dd className="font-mono text-[13px] text-foreground break-all">{organization.primaryClientId}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Organization ID</dt>
+                    <dd className="font-mono text-[13px] text-foreground">{organization.id}</dd>
+                  </div>
+                </dl>
+              </details>
             </Card>
 
             <Card className="border border-border shadow-sm">
@@ -227,8 +232,8 @@ export function OrganizationDetailTabs({
             <div className="p-6 border-b border-border">
               <h3 className="text-[16px] font-semibold text-foreground">Related Views</h3>
               <p className="text-[12px] text-muted-foreground mt-1 leading-relaxed">
-                These links open platform-wide views with an organization filter. Filtered view behavior is design-phase
-                until target screens read the organizationId query param.
+                These links open the corresponding VerifyMe Admin area. Where supported, the organization filter is applied
+                from the URL.
               </p>
             </div>
             <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
@@ -290,7 +295,7 @@ export function OrganizationDetailTabs({
                 </div>
                 <p className="text-[13px] text-muted-foreground mb-1">Billable spend this period</p>
                 <p className="text-3xl font-semibold tabular-nums tracking-tight text-foreground">{formatCurrency(billableSpend)}</p>
-                <p className="text-[12px] text-muted-foreground mt-1">From billable verification outcomes (sample)</p>
+                <p className="text-[12px] text-muted-foreground mt-1">From billable verification outcomes this period</p>
               </Card>
               <Card className="p-6 border border-border shadow-sm">
                 <div className="flex items-start justify-between mb-3">
@@ -300,7 +305,7 @@ export function OrganizationDetailTabs({
                 </div>
                 <p className="text-[13px] text-muted-foreground mb-1">Verification sessions</p>
                 <p className="text-3xl font-semibold tabular-nums tracking-tight text-foreground">{formatNumber(organization.usage)}</p>
-                <p className="text-[12px] text-muted-foreground mt-1">Session volume for this period (sample)</p>
+                <p className="text-[12px] text-muted-foreground mt-1">Session volume for this period</p>
               </Card>
               <Card className="p-6 border border-border shadow-sm">
                 <div className="flex items-start justify-between mb-3">
@@ -418,7 +423,7 @@ export function OrganizationDetailTabs({
           <Card className="border border-border shadow-sm">
             <div className="p-6 border-b border-border">
               <h3 className="text-[16px] font-semibold text-foreground">Readiness summary</h3>
-              <p className="text-[13px] text-muted-foreground mt-1">Compact snapshot from integration status (sample).</p>
+              <p className="text-[13px] text-muted-foreground mt-1">Compact snapshot from the current integration status.</p>
             </div>
             <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
@@ -426,7 +431,7 @@ export function OrganizationDetailTabs({
                 <UnifiedBadge variant="integration" value={formatIntegrationStatus(organization.integrationStatus)} />
               </div>
               <div>
-                <p className="text-[13px] text-muted-foreground mb-1">Primary client_id</p>
+                <p className="text-[13px] text-muted-foreground mb-1">Primary client ID</p>
                 <p className="text-[13px] text-foreground font-mono break-all">{organization.primaryClientId}</p>
               </div>
               <div>
@@ -591,8 +596,7 @@ export function OrganizationDetailTabs({
           <DialogHeader>
             <DialogTitle>Reactivate organization?</DialogTitle>
             <DialogDescription>
-              This restores the organization to Active for verification, API access, and Organization Admin Portal use
-              (mock UI only).
+              This restores the organization to Active for verification, API access, and Organization Admin Portal use.
             </DialogDescription>
           </DialogHeader>
           <p className="text-[12px] text-muted-foreground border border-border/80 rounded-md bg-muted/30 px-3 py-2">
@@ -618,11 +622,3 @@ export function OrganizationDetailTabs({
     </div>
   );
 }
-
-/**
- * Legacy top-level tab panels (removed 2026): Client Apps / API, Redirect URIs, QR Linking & Keys,
- * Verification Settings, Billing & Credits, Admin Users, Linked End Users, Verification Sessions, Audit Logs.
- * Mock sources: `organizationDetailMock` (client apps, redirect URIs, QR keys, verification settings, credit tx, audit rows),
- * `verificationSessionsMock` (sessions), inline admin-user table + role dialog, `organizationEndUsers` prop (linked users).
- * Restore bodies from git history if reintroducing tabs.
- */

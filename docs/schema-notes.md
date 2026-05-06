@@ -6,6 +6,8 @@ These names are **working** relational concepts for engineering alignment. Colum
 
 Terminology: [`glossary.md`](./glossary.md). Risk scoring (design): [`risk-scoring.md`](./risk-scoring.md). Audit storage detail: [`audit-logs-schema.md`](./audit-logs-schema.md), event catalog: [`audit-logs-plan.md`](./audit-logs-plan.md).
 
+**Audit log row (governance fields — UI / future storage):** Beyond core actor, org, action, and payload, rows may carry **`governanceCategory`** (explicit override), **`changeTracking`** (bounded `before` / `after` labels only), and related-entity foreign keys for navigation. Governance **severity** shown to operators maps from triage metadata; it is not a second independent security classification. See [`audit-logs-plan.md`](./audit-logs-plan.md) governance section.
+
 **Do not swap `verifyme_id` and `verifyme_user_id`.** `verifyme_users.id` is the UUID primary key. `verifyme_id` is the public `vmXXXXXX` display identifier. `verifyme_user_id` in other tables is only the foreign key to `verifyme_users.id`. Normal **VerifyMe Admin** screens show **VerifyMe ID** and masked email; UUID keys surface only in technical/debug contexts. Email is private login / recovery / OTP delivery — not a public display identity. VerifyMe does not use **username** or **handle** terminology.
 
 ## Core tenancy & clients
