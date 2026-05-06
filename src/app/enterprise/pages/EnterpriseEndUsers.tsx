@@ -4,7 +4,6 @@ import {
   BookOpen,
   Download,
   Link2,
-  MoreVertical,
   Plus,
   Search,
   Upload,
@@ -24,13 +23,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../../shared/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "../../shared/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -65,6 +57,7 @@ import {
   subscribeEndUserAssociationListeners,
 } from "../../platform/data/platformEndUserAssociationsSession";
 import { userRiskLevelForOrgAdmin } from "../../platform/data/mockPlatformRisk";
+import { shouldIgnoreRowOpenClick } from "../../platform/utils/tableRowNav";
 
 type RecentFilter = "all" | "invited_recent" | "verified_recent";
 
@@ -140,6 +133,7 @@ export function EnterpriseEndUsers() {
   const [detailRecord, setDetailRecord] = useState<OrganizationUserRecord | null>(null);
   const [inviteRecord, setInviteRecord] = useState<OrganizationUserRecord | null>(null);
   const [conflictRecord, setConflictRecord] = useState<OrganizationUserRecord | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{ record: OrganizationUserRecord; action: string } | null>(null);
 
   const [addForm, setAddForm] = useState({
     clientUserId: "",
@@ -202,7 +196,7 @@ export function EnterpriseEndUsers() {
     };
     setRecords((prev) => prev.map((x) => (x.id === r.id ? next : x)));
     setInviteRecord(next);
-    bumpMessage("New invite generated (mock). Share the link or QR from this panel.");
+    bumpMessage("New invite generated. Share the link or QR from this panel.");
   };
 
   const handleAddSubmit = (e: FormEvent) => {
@@ -235,7 +229,7 @@ export function EnterpriseEndUsers() {
     setAddOpen(false);
     setAddForm({ clientUserId: "", customerDisplayName: "", customerReference: "", contact: "" });
     bumpMessage(
-      `Record created for ${recordDisplayLabel(row)}. Invite URL (mock): ${row.invite?.inviteUrl}. The end-user must complete linking in the VerifyMe mobile app.`,
+      `Record created for ${recordDisplayLabel(row)}. Invite URL: ${row.invite?.inviteUrl}. The end-user must complete linking in the VerifyMe mobile app.`,
     );
   };
 
@@ -246,7 +240,7 @@ export function EnterpriseEndUsers() {
         id: `ou-bulk-${now}-1`,
         clientUserId: "CUST-CSV-001",
         customerDisplayName: "CSV Import One",
-        customerReference: "Bulk import (mock)",
+        customerReference: "Bulk import",
         nameMatchStatus: "not_checked",
         linkStatus: "pending",
         inviteStatus: "pending",
@@ -280,7 +274,7 @@ export function EnterpriseEndUsers() {
     setRecords((prev) => [...imported, ...prev]);
     setBulkOpen(false);
     bumpMessage(
-      `Imported ${imported.length} valid records (mock). Already linked and other skipped rows were not imported. Invite links generated for pending rows.`,
+      `Imported ${imported.length} valid records. Already linked and other skipped rows were not imported. Invite links generated for pending rows.`,
     );
   };
 
@@ -309,7 +303,7 @@ export function EnterpriseEndUsers() {
     a.download = "linked_end_users_export.csv";
     a.click();
     URL.revokeObjectURL(url);
-    bumpMessage("Export downloaded (mock snapshot).");
+    bumpMessage("Export downloaded.");
   };
 
   const exportInviteLinks = () => {
@@ -323,7 +317,7 @@ export function EnterpriseEndUsers() {
     a.download = "invite_links_export.csv";
     a.click();
     URL.revokeObjectURL(url);
-    bumpMessage("Invite links export downloaded (mock).");
+    bumpMessage("Invite links export downloaded.");
   };
 
   const applyRowAction = (r: OrganizationUserRecord, action: string) => {
@@ -360,7 +354,7 @@ export function EnterpriseEndUsers() {
           invitedAt: new Date().toISOString(),
           invite: createMockInvite(r.clientUserId, `inv_re_${r.clientUserId}_${Date.now().toString(36).slice(-4)}`),
         });
-        bumpMessage(`New invite issued for ${recordDisplayLabel(r)} (mock).`);
+        bumpMessage(`New invite issued for ${recordDisplayLabel(r)}.`);
         break;
       default:
         break;
@@ -371,7 +365,7 @@ export function EnterpriseEndUsers() {
     if (!conflictRecord) return;
     updateRecord(conflictRecord.id, { conflictReviewed: true });
     setConflictRecord(null);
-    bumpMessage("Conflict marked as reviewed (mock). Link state unchanged — production would route to support workflows.");
+    bumpMessage("Conflict marked as reviewed. Link state unchanged.");
   };
 
   return (
@@ -503,8 +497,8 @@ export function EnterpriseEndUsers() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All activity</SelectItem>
-            <SelectItem value="invited_recent">Recently invited (sample)</SelectItem>
-            <SelectItem value="verified_recent">Recently verified (sample)</SelectItem>
+            <SelectItem value="invited_recent">Recently invited</SelectItem>
+            <SelectItem value="verified_recent">Recently verified</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -551,12 +545,18 @@ export function EnterpriseEndUsers() {
                 <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">VerifyMe ID (masked)</th>
                 <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">Last verified</th>
                 <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">Created / invited</th>
-                <th className="text-right p-3 font-semibold text-muted-foreground uppercase text-[11px] w-[72px]">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {filtered.map((r) => (
-                <tr key={r.id} className="hover:bg-accent/30">
+                <tr
+                  key={r.id}
+                  className="cursor-pointer hover:bg-accent/30"
+                  onClick={(e) => {
+                    if (shouldIgnoreRowOpenClick(e.target)) return;
+                    setDetailRecord(r);
+                  }}
+                >
                   <td className="p-3 font-mono text-[13px]">{r.clientUserId}</td>
                   <td className="p-3 font-medium text-foreground">{r.customerDisplayName?.trim() || "—"}</td>
                   <td className="p-3 align-top">
@@ -597,66 +597,6 @@ export function EnterpriseEndUsers() {
                     {r.invitedAt && (
                       <span className="block text-[11px]">Invited {formatDateTime(r.invitedAt)}</span>
                     )}
-                  </td>
-                  <td className="p-3 text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreVertical className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-52">
-                        <DropdownMenuItem onClick={() => setDetailRecord(r)}>View details</DropdownMenuItem>
-                        {(r.linkStatus === "pending"
-                          || r.linkStatus === "unlinked"
-                          || r.linkStatus === "revoked"
-                          || r.linkStatus === "conflict") && (
-                          <DropdownMenuItem onClick={() => openInvitePanel(r)}>
-                            Generate / view invite link
-                          </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem
-                          onClick={() => applyRowAction(r, "reinvite")}
-                          disabled={
-                            r.linkStatus === "linked"
-                            || !(
-                              ["revoked", "unlinked", "pending", "conflict"].includes(r.linkStatus)
-                              || r.inviteStatus === "expired"
-                            )
-                          }
-                        >
-                          Re-invite
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => applyRowAction(r, "suspend")}
-                          disabled={r.linkStatus !== "linked"}
-                        >
-                          Suspend
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => applyRowAction(r, "reactivate")}
-                          disabled={r.linkStatus !== "suspended"}
-                        >
-                          Reactivate
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => applyRowAction(r, "revoke")}
-                          disabled={r.linkStatus !== "linked"}
-                        >
-                          Revoke link
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => applyRowAction(r, "disable")} disabled={r.linkStatus === "disabled"}>
-                          Disable
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => setConflictRecord(r)}
-                          disabled={r.linkStatus !== "conflict"}
-                        >
-                          Resolve conflict
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
                   </td>
                 </tr>
               ))}
@@ -720,7 +660,7 @@ export function EnterpriseEndUsers() {
               <Label htmlFor="contact">Notification email or phone (optional, design placeholder)</Label>
               <Input
                 id="contact"
-                placeholder="Not sent in this UI build"
+                placeholder="Not available"
                 value={addForm.contact}
                 onChange={(e) => setAddForm((f) => ({ ...f, contact: e.target.value }))}
               />
@@ -731,7 +671,7 @@ export function EnterpriseEndUsers() {
               </Button>
               <Button type="submit">
                 <Plus className="w-4 h-4 mr-2" />
-                Create record & invite (mock)
+                Create record & invite
               </Button>
             </DialogFooter>
           </form>
@@ -751,7 +691,7 @@ export function EnterpriseEndUsers() {
           <div className="space-y-4">
             <div className="rounded-lg border border-dashed border-border bg-muted/30 p-8 text-center">
               <Upload className="w-10 h-10 mx-auto text-muted-foreground mb-2" />
-              <p className="text-sm font-medium text-foreground">Drop CSV here (mock)</p>
+              <p className="text-sm font-medium text-foreground">Drop CSV here</p>
               <p className="text-xs text-muted-foreground mt-1">No file parsing in this build — use preview below.</p>
             </div>
             <Button type="button" variant="outline" onClick={downloadCsvTemplate}>
@@ -824,7 +764,7 @@ export function EnterpriseEndUsers() {
               Close
             </Button>
             <Button type="button" onClick={handleBulkImport}>
-              Import valid records (mock)
+              Import valid records
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -835,9 +775,8 @@ export function EnterpriseEndUsers() {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Automated Invite API</DialogTitle>
-            <DialogDescription>
-              Your enterprise systems can call the invite API when a new customer record is created (design contract —
-              mock only).
+              <DialogDescription>
+              Your enterprise systems can call the invite API when a new customer record is created.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 text-[13px]">
@@ -991,6 +930,10 @@ export function EnterpriseEndUsers() {
                   Customer display information is provided by the organization for reference only. VerifyMe verifies the
                   linked user, not the displayed name.
                 </p>
+                <div>
+                  <p className="text-[11px] text-muted-foreground uppercase">Summary</p>
+                  <p className="text-[13px]">Organization-scoped linked end-user record.</p>
+                </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <p className="text-[11px] text-muted-foreground uppercase">client_user_id</p>
@@ -1017,6 +960,13 @@ export function EnterpriseEndUsers() {
                     <p className="text-[11px] text-muted-foreground uppercase">Customer reference</p>
                     <p>{detailRecord.customerReference?.trim() || "—"}</p>
                   </div>
+                </div>
+                <div>
+                  <p className="text-[11px] text-muted-foreground uppercase">User risk status</p>
+                  {(() => {
+                    const lvl = userRiskLevelForOrgAdmin(detailRecord.platformRiskVerifymeId, platformAssociations);
+                    return lvl ? <UserRiskStatusBadge level={lvl} /> : <span className="text-muted-foreground">Not available</span>;
+                  })()}
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
@@ -1049,6 +999,67 @@ export function EnterpriseEndUsers() {
                 <div>
                   <p className="text-[11px] text-muted-foreground uppercase">Verification count (org)</p>
                   <p>{detailRecord.verificationCount}</p>
+                </div>
+                <Separator />
+                <p className="font-medium text-foreground">Invite controls</p>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" size="sm" onClick={() => openInvitePanel(detailRecord)}>
+                    Generate / view invite
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setConfirmAction({ record: detailRecord, action: "reinvite" })}
+                    disabled={
+                      detailRecord.linkStatus === "linked" &&
+                      detailRecord.inviteStatus !== "expired"
+                    }
+                  >
+                    Re-invite
+                  </Button>
+                </div>
+                <p className="font-medium text-foreground">Restricted controls</p>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={detailRecord.linkStatus !== "linked"}
+                    onClick={() => setConfirmAction({ record: detailRecord, action: "suspend" })}
+                  >
+                    Suspend link
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={detailRecord.linkStatus !== "suspended"}
+                    onClick={() => setConfirmAction({ record: detailRecord, action: "reactivate" })}
+                  >
+                    Reactivate link
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={detailRecord.linkStatus !== "linked"}
+                    onClick={() => setConfirmAction({ record: detailRecord, action: "revoke" })}
+                  >
+                    Revoke link
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    disabled={detailRecord.linkStatus === "disabled"}
+                    onClick={() => setConfirmAction({ record: detailRecord, action: "disable" })}
+                  >
+                    Disable link
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={detailRecord.linkStatus !== "conflict"}
+                    onClick={() => setConflictRecord(detailRecord)}
+                  >
+                    Conflict review
+                  </Button>
                 </div>
                 <Separator />
                 <p className="font-medium text-foreground">Recent verification outcomes (this organization)</p>
@@ -1086,9 +1097,7 @@ export function EnterpriseEndUsers() {
               <AlertTriangle className="w-5 h-5 text-orange-600" />
               Resolve conflict
             </DialogTitle>
-            <DialogDescription>
-              Review-only (mock). Production would require audit trails and VerifyMe support coordination.
-            </DialogDescription>
+            <DialogDescription>Review-only flow with confirmation and audit expectations.</DialogDescription>
           </DialogHeader>
           {conflictRecord && (
             <div className="space-y-4 text-[13px]">
@@ -1121,7 +1130,7 @@ export function EnterpriseEndUsers() {
                 </div>
                 <div>
                   <dt className="text-[11px] font-medium text-muted-foreground uppercase">Conflicting VerifyMe ID (masked)</dt>
-                  <dd className="font-mono">{conflictRecord.conflictingMaskedVerifymeId ?? "vm_**** (mock)"}</dd>
+                  <dd className="font-mono">{conflictRecord.conflictingMaskedVerifymeId ?? "Not available"}</dd>
                 </div>
               </dl>
               <p className="text-[12px] text-muted-foreground leading-relaxed">
@@ -1138,7 +1147,7 @@ export function EnterpriseEndUsers() {
                     Force re-link after review (future)
                   </Button>
                   <Button type="button" variant="secondary" className="justify-start" disabled>
-                    Escalate to VerifyMe support (mock)
+                    Escalate to VerifyMe support
                   </Button>
                 </div>
               </div>
@@ -1150,6 +1159,34 @@ export function EnterpriseEndUsers() {
             </Button>
             <Button onClick={markConflictReviewedAndClose}>Mark as reviewed / close</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={confirmAction !== null} onOpenChange={(o) => !o && setConfirmAction(null)}>
+        <DialogContent className="max-w-md">
+          {confirmAction && (
+            <>
+              <DialogHeader>
+                <DialogTitle>Confirm action</DialogTitle>
+                <DialogDescription>
+                  {confirmAction.action} for <span className="font-mono">{confirmAction.record.clientUserId}</span>?
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setConfirmAction(null)}>
+                  Cancel
+                </Button>
+                <Button
+                  variant={confirmAction.action === "disable" ? "destructive" : "default"}
+                  onClick={() => {
+                    applyRowAction(confirmAction.record, confirmAction.action);
+                    setConfirmAction(null);
+                  }}
+                >
+                  Confirm
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </PortalPageFrame>

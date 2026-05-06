@@ -153,15 +153,15 @@ export function PlatformIdentityLinks() {
       variant="fill"
       rootClassName="h-full"
       title="Identity Links"
-      description="Organization customer identifiers linked to VerifyMe accounts (sample)."
+      description="Organization customer identifiers linked to VerifyMe accounts."
       headerExtra={
         <>
           {urlOrganizationId ? (
             <p className="text-xs text-muted-foreground sm:text-sm">
               URL filter: <span className="font-mono text-foreground">{urlOrganizationId}</span>
               {!knownOrgIds.has(urlOrganizationId)
-                ? " — unknown organization id in sample set; adjust filters manually."
-                : " — applied when recognized in sample organizations."}
+                ? " — unknown organization id; adjust filters manually."
+                : " — applied when recognized in configured organizations."}
             </p>
           ) : null}
         </>

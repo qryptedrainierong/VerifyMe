@@ -41,7 +41,7 @@ export function EnterpriseUsage() {
   return (
     <PortalPageFrame
       title="Usage & credits"
-      description="Credit balance (monetary wallet), plan, billable verification sessions, delivery add-ons, and how outcomes map to credits (sample data)."
+      description="Credit balance (monetary wallet), plan, billable verification sessions, delivery add-ons, and how outcomes map to credits."
       headerActions={
         <div className="flex flex-wrap items-center gap-3">
           <Select defaultValue="current">
@@ -74,7 +74,7 @@ export function EnterpriseUsage() {
           <p className="text-[22px] font-semibold tabular-nums">
             {formatCurrency(enterpriseOrganization.monthlyIncludedCredits)}
           </p>
-          <p className="text-[12px] text-muted-foreground mt-1">From your plan allocation (sample)</p>
+          <p className="text-[12px] text-muted-foreground mt-1">From your plan allocation</p>
         </Card>
         <Card className="p-5 border border-border shadow-sm">
           <p className="text-[12px] font-medium text-muted-foreground uppercase tracking-wide mb-1">Top-up credits</p>
@@ -103,11 +103,9 @@ export function EnterpriseUsage() {
       <Card className="p-5 border border-border shadow-sm">
         <h3 className="text-[15px] font-semibold text-foreground mb-2">Billable outcomes</h3>
         <ul className="text-[13px] text-muted-foreground space-y-1 list-disc list-inside">
-          <li>Verified — billable</li>
-          <li>Failed — billable</li>
-          <li>Expired — not billable</li>
-          <li>Error — not billable</li>
-          <li>Indeterminate — not billable</li>
+          <li>ID Proof Pass — billable</li>
+          <li>ID Proof Fail — billable</li>
+          <li>Expired / Error / Indeterminate / Cancelled / Pending / Awaiting verification — not billable</li>
         </ul>
       </Card>
 
@@ -138,7 +136,7 @@ export function EnterpriseUsage() {
             <div>
               <p className="text-[18px] font-semibold text-foreground">Verification sessions</p>
               <p className="text-[13px] text-muted-foreground">
-                Billable verification volume for this period (sample). Credits above are monetary wallet value —
+                Billable verification volume for this period. Credits above are monetary wallet value —
                 verification volume (period) is tracked separately from credits.
               </p>
             </div>
@@ -155,8 +153,7 @@ export function EnterpriseUsage() {
                 {formatNumber(enterpriseOrganization.usage)}
               </p>
               <p className="text-[15px] text-muted-foreground mt-2">
-                Compared to sample period verification volume ceiling ({formatNumber(enterpriseUsageLimit)} sessions,
-                illustrative)
+                Compared to period verification volume baseline ({formatNumber(enterpriseUsageLimit)} sessions)
               </p>
             </div>
             <p className="text-[32px] font-semibold text-orange-600">{enterpriseCreditUtilizationPct.toFixed(1)}%</p>
@@ -174,7 +171,7 @@ export function EnterpriseUsage() {
               <span className="font-medium text-foreground">
                 {formatNumber(Math.max(enterpriseUsageLimit - enterpriseOrganization.usage, 0))} sessions
               </span>{" "}
-              below sample period volume ceiling (not a credit limit)
+              below current period baseline (not a credit limit)
             </p>
             <p className="text-[13px] text-muted-foreground">
               Billable spend: <span className="font-medium text-foreground">{formatCurrency(enterpriseUsageSpend)}</span>
@@ -186,7 +183,7 @@ export function EnterpriseUsage() {
       <Card className="border border-border shadow-sm">
         <div className="p-6 border-b border-border">
           <h3 className="text-[16px] font-semibold text-foreground">Verification sessions over time</h3>
-          <p className="text-[13px] text-muted-foreground">Billable-oriented volume trend (sample)</p>
+          <p className="text-[13px] text-muted-foreground">Billable-oriented volume trend</p>
         </div>
         <div className="p-6">
           <ResponsiveContainer width="100%" height={320}>

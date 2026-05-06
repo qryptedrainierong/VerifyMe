@@ -10,6 +10,9 @@ Internal Qrypted / VerifyMe operator console: organizations, VerifyMe Users, ide
 **Organization Admin Portal**  
 Customer tenant console: Linked End Users, verification logs, API integration, QR linking, team & roles, usage & credits, billing, settings.
 
+**Platform Admin User**  
+Internal VerifyMe operator/staff account for the VerifyMe Admin Portal (platform console). Separate from VerifyMe Users and Organization Admin users. Email is the login identifier.
+
 **VerifyMe User**  
 A person who installs the **VerifyMe mobile app**, completes onboarding there, and holds the device-bound identity used in verification. Not the same as an organization portal admin.
 
@@ -55,6 +58,9 @@ Private **login**, **recovery**, and **OTP delivery** identifier for the VerifyM
 
 **admin_user_id**  
 Internal UUID for a **VerifyMe Admin Portal** or **Organization Admin Portal** staff user row when a doc needs a generic admin FK label.
+
+**platform_admin_id**  
+Support-friendly display identifier for internal platform admins (for example `pa000001`). Not a replacement for internal UUID PKs.
 
 **Device**  
 Registered **VerifyMe User** device that holds secure verification state. In the **current MVP**, each VerifyMe user is limited to a **single active device**. Registering a new device replaces the existing device and rotates the associated secure state. Future versions may support multiple devices per user, subject to additional security controls and policies.

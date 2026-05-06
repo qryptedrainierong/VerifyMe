@@ -449,6 +449,21 @@ Action groups:
 
 > **Design reference:** risk ownership (VerifyMe User), conflict vs score, privacy boundaries — [`risk-scoring.md`](./risk-scoring.md).
 
+### 4.16 platform_admin.invited
+Track invite creation for internal VerifyMe platform operators.
+
+### 4.17 platform_admin.role_changed
+Track role transitions for platform operators (one role per admin user).
+
+### 4.18 platform_admin.suspended / platform_admin.reactivated / platform_admin.disabled
+Track platform admin access lifecycle changes.
+
+### 4.19 platform_admin.mfa_reset_requested / platform_admin.force_signed_out / platform_admin.login_failed
+Track platform admin security operations and failed sign-in events.
+
+### 4.20 platform_admin.permission_changed
+Track permission-summary updates for platform admin scope.
+
 ---
 
 ## 5. Organization Management

@@ -209,7 +209,7 @@ export function CreateOrganizationDialog({
         <DialogHeader>
           <DialogTitle>Create organization</DialogTitle>
           <DialogDescription>
-            Step {step} of 3: {stepTitle}. No backend call — mock flow for VerifyMe Admin Portal design.
+            Step {step} of 3: {stepTitle}. Current period configuration flow for VerifyMe Admin Portal.
           </DialogDescription>
         </DialogHeader>
 
@@ -439,7 +439,7 @@ export function CreateOrganizationDialog({
               />
             </div>
             <div className="rounded-md border border-blue-200 bg-blue-50/50 p-3 text-[12px] text-muted-foreground">
-              After creation (mock): lifecycle <strong className="text-foreground">pending_setup</strong>, integration{" "}
+              After creation: lifecycle <strong className="text-foreground">pending_setup</strong>, integration{" "}
               <strong className="text-foreground">not_configured</strong>. The organization admin completes remaining setup
               in the Organization Admin Portal.
             </div>

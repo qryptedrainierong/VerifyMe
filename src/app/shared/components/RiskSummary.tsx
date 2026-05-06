@@ -87,7 +87,7 @@ export function RiskSummary({ score, level, signals, recommendation }: RiskSumma
               </ul>
             </div>
           ) : (
-            <p className="text-[13px] text-muted-foreground">No elevated signals in the current sample window.</p>
+            <p className="text-[13px] text-muted-foreground">No elevated signals in the current period.</p>
           )}
 
           <p className="border-t border-border/60 pt-3 text-[13px] leading-relaxed text-muted-foreground">

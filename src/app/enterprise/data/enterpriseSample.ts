@@ -43,6 +43,7 @@ export const enterpriseInvoices = [
           ? "pending"
           : "failed",
     period: "Apr 2024",
+    actionRequired: enterpriseOrganization.paymentStanding !== "current",
   },
   {
     id: `INV-${enterpriseOrganization.id}-0324`,
@@ -50,6 +51,7 @@ export const enterpriseInvoices = [
     amount: Math.round(enterpriseUsageSpend * 0.87),
     status: "success",
     period: "Mar 2024",
+    actionRequired: false,
   },
   {
     id: `INV-${enterpriseOrganization.id}-0224`,
@@ -57,6 +59,31 @@ export const enterpriseInvoices = [
     amount: Math.round(enterpriseUsageSpend * 0.81),
     status: "success",
     period: "Feb 2024",
+    actionRequired: false,
+  },
+  {
+    id: `INV-${enterpriseOrganization.id}-0124`,
+    date: "Jan 1, 2024",
+    amount: Math.round(enterpriseUsageSpend * 0.78),
+    status: "pending",
+    period: "Jan 2024",
+    actionRequired: true,
+  },
+  {
+    id: `INV-${enterpriseOrganization.id}-1223`,
+    date: "Dec 1, 2023",
+    amount: Math.round(enterpriseUsageSpend * 0.75),
+    status: "failed",
+    period: "Dec 2023",
+    actionRequired: true,
+  },
+  {
+    id: `INV-${enterpriseOrganization.id}-1123`,
+    date: "Nov 1, 2023",
+    amount: Math.round(enterpriseUsageSpend * 0.7),
+    status: "warning",
+    period: "Nov 2023",
+    actionRequired: true,
   },
 ];
 
@@ -149,6 +176,18 @@ export const enterpriseMockClientApplication = {
   futureScopes: ["profile", "offline_access", "verifyme:verification"],
   integrationStatusLabel: formatIntegrationStatus(enterpriseOrganization.integrationStatus),
 };
+
+export const enterpriseApiIntegrationScenarios = [
+  { id: "not_configured", label: "Not configured" },
+  { id: "missing_redirect_uri", label: "Missing redirect URI" },
+  { id: "missing_keys", label: "Missing keys" },
+  { id: "ready_for_testing", label: "Ready for testing" },
+  { id: "sandbox_active", label: "Sandbox active" },
+  { id: "production_active", label: "Production active" },
+  { id: "error", label: "Error" },
+  { id: "disabled_app", label: "Disabled app" },
+  { id: "secret_rotation_due", label: "Secret rotation due" },
+];
 
 export type EnterpriseMockRedirectUri = {
   id: string;

@@ -61,6 +61,17 @@ export type AuditAction =
   | "billing.payment_received"
   | "billing.payment_failed"
   | "billing.payment_refunded"
+  | "billing.invoice_action_required"
+  // Platform admin governance
+  | "platform_admin.invited"
+  | "platform_admin.role_changed"
+  | "platform_admin.suspended"
+  | "platform_admin.reactivated"
+  | "platform_admin.disabled"
+  | "platform_admin.mfa_reset_requested"
+  | "platform_admin.force_signed_out"
+  | "platform_admin.login_failed"
+  | "platform_admin.permission_changed"
   // User Management
   | "user.invited"
   | "user.joined"
@@ -112,6 +123,7 @@ export type AuditAction =
   | "verifyme_user.restored"
   | "verifyme_user.recovery_reset_requested"
   | "verifyme_user.risk_level_changed"
+  | "verifyme_user.risk_reviewed"
   // Client app & redirect URI governance
   | "client_app.created"
   | "client_app.secret_rotated"
@@ -123,12 +135,15 @@ export type AuditAction =
   | "identity_link.conflict_detected"
   | "identity_link.conflict_reviewed"
   | "identity_link.conflict_resolved"
+  | "identity_link.conflict_reopened"
+  | "identity_link.name_match_evaluated"
   | "identity_link.revoked"
   | "identity_link.suspended"
   // Verification session lifecycle
   | "verification_session.started"
   | "verification_session.verified"
   | "verification_session.failed"
+  | "verification_session.completed"
   | "verification_session.expired"
   | "verification_session.error";
 
@@ -182,6 +197,7 @@ export interface BaseAuditLog {
   relatedClientAppId?: string;
   relatedIdentityLinkId?: string;
   relatedVerificationSessionId?: string;
+  relatedPlatformAdminId?: string;
 }
 
 // ============================================================================
@@ -509,6 +525,16 @@ export function getActionLabel(action: string): string {
     "billing.payment_received": "Payment Received",
     "billing.payment_failed": "Payment Failed",
     "billing.payment_refunded": "Payment Refunded",
+    "billing.invoice_action_required": "Invoice action required",
+    "platform_admin.invited": "Platform admin invited",
+    "platform_admin.role_changed": "Platform admin role changed",
+    "platform_admin.suspended": "Platform admin suspended",
+    "platform_admin.reactivated": "Platform admin reactivated",
+    "platform_admin.disabled": "Platform admin disabled",
+    "platform_admin.mfa_reset_requested": "Platform admin MFA reset requested",
+    "platform_admin.force_signed_out": "Platform admin force signed out",
+    "platform_admin.login_failed": "Platform admin login failed",
+    "platform_admin.permission_changed": "Platform admin permission changed",
     "user.invited": "User Invited",
     "user.joined": "User Joined",
     "user.role_changed": "Role Changed",
@@ -553,6 +579,7 @@ export function getActionLabel(action: string): string {
     "verifyme_user.restored": "VerifyMe user restored",
     "verifyme_user.recovery_reset_requested": "VerifyMe recovery reset requested",
     "verifyme_user.risk_level_changed": "VerifyMe risk level changed",
+    "verifyme_user.risk_reviewed": "VerifyMe risk reviewed",
     "client_app.created": "Client app created",
     "client_app.secret_rotated": "Client secret rotated",
     "client_app.disabled": "Client app disabled",
@@ -562,11 +589,14 @@ export function getActionLabel(action: string): string {
     "identity_link.conflict_detected": "Identity link conflict detected",
     "identity_link.conflict_reviewed": "Identity link conflict reviewed",
     "identity_link.conflict_resolved": "Identity link conflict resolved",
+    "identity_link.conflict_reopened": "Identity link conflict reopened",
+    "identity_link.name_match_evaluated": "Identity link name match evaluated",
     "identity_link.revoked": "Identity link revoked",
     "identity_link.suspended": "Identity link suspended",
     "verification_session.started": "Verification session started",
     "verification_session.verified": "Verification session verified",
     "verification_session.failed": "Verification session failed",
+    "verification_session.completed": "Verification session completed",
     "verification_session.expired": "Verification session expired",
     "verification_session.error": "Verification session error",
   };
@@ -577,6 +607,7 @@ export function getActionLabel(action: string): string {
 export function getAuditTableCategory(action: string): string {
   if (action.startsWith("organization.")) return "Organization";
   if (action.startsWith("verifyme_user.")) return "VerifyMe User";
+  if (action.startsWith("platform_admin.")) return "Platform admin";
   if (action.startsWith("client_app.") || action.startsWith("redirect_uri.")) return "Client app / API";
   if (action.startsWith("identity_link.")) return "Identity link";
   if (action.startsWith("verification_session.")) return "Verification session";
@@ -603,6 +634,7 @@ export function getAuditSummaryBucket(action: string): AuditSummaryBucket {
   if (/^(subscription\.|billing\.|plan\.|credits\.|invoice\.|refund\.)/.test(action)) return "billing";
   if (/^(mfa\.|api_key\.|sso\.|admin\.login|admin\.logout)/.test(action)) return "security";
   if (/^(client_app\.|redirect_uri\.|identity_link\.|verification_session\.)/.test(action)) return "integration";
+  if (/^platform_admin\./.test(action)) return "admin";
   return "admin";
 }
 
@@ -618,6 +650,7 @@ export function getCategoryColorForAction(action: string): string {
     refund: "text-emerald-600",
     user: "text-purple-600",
     verifyme_user: "text-violet-600",
+    platform_admin: "text-fuchsia-600",
     organization: "text-indigo-600",
     client_app: "text-cyan-600",
     redirect_uri: "text-cyan-600",
@@ -690,6 +723,11 @@ export function getGovernanceCategoryForLog(log: BaseAuditLog): GovernanceCatego
 
 export function deriveGovernanceCategoryFromAction(action: string): GovernanceCategory {
   if (action === "verifyme_user.risk_level_changed") return "Risk";
+  if (action === "verifyme_user.risk_reviewed") return "Risk";
+  if (/^platform_admin\.(mfa_reset_requested|force_signed_out|login_failed|suspended|disabled|reactivated)/.test(action)) {
+    return "Security";
+  }
+  if (/^platform_admin\./.test(action)) return "Governance";
   if (
     /^billing\.|^subscription\.|^plan\.|^credits\.|^invoice\.|^refund\./.test(action)
   ) {
@@ -705,6 +743,7 @@ export function deriveGovernanceCategoryFromAction(action: string): GovernanceCa
 export type AuditEntityType =
   | "organization"
   | "verifyme_user"
+  | "platform_admin"
   | "identity_link"
   | "client_app"
   | "verification_session"
@@ -715,6 +754,7 @@ export function deriveAuditEntityType(log: BaseAuditLog): AuditEntityType {
   const a = log.action;
   if (/^organization\.|^seats\./.test(a)) return "organization";
   if (/^verifyme_user\./.test(a)) return "verifyme_user";
+  if (/^platform_admin\./.test(a)) return "platform_admin";
   if (/^identity_link\./.test(a)) return "identity_link";
   if (/^client_app\.|^redirect_uri\./.test(a)) return "client_app";
   if (/^verification_session\./.test(a)) return "verification_session";
@@ -726,6 +766,7 @@ const CONFLICT_WORKFLOW_ACTIONS: ReadonlySet<string> = new Set([
   "identity_link.conflict_detected",
   "identity_link.conflict_reviewed",
   "identity_link.conflict_resolved",
+  "identity_link.conflict_reopened",
 ]);
 
 export function isConflictWorkflowAuditEvent(log: BaseAuditLog): boolean {

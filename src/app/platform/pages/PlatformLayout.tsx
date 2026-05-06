@@ -20,14 +20,15 @@ export function PlatformLayout() {
     { label: "Organizations", href: "/organizations", icon: <Building2 className="w-5 h-5" /> },
     { label: "VerifyMe Users", href: "/verifyme-users", icon: <Users className="w-5 h-5" /> },
     { label: "Identity Links", href: "/identity-links", icon: <Link2 className="w-5 h-5" /> },
+    { label: "Client Apps / API", href: "/client-apps", icon: <Code2 className="w-5 h-5" /> },
     {
       label: "Verification Sessions",
       href: "/verification-sessions",
       icon: <ListChecks className="w-5 h-5" />,
     },
-    { label: "Client Apps / API", href: "/client-apps", icon: <Code2 className="w-5 h-5" /> },
     { label: "Billing & Credits", href: "/billing", icon: <Coins className="w-5 h-5" /> },
     { label: "Audit Logs", href: "/audit-logs", icon: <ScrollText className="w-5 h-5" /> },
+    { label: "Platform Team & Access", href: "/platform-team", icon: <Users className="w-5 h-5" /> },
     { label: "Platform Settings", href: "/settings", icon: <Settings className="w-5 h-5" /> },
   ];
 

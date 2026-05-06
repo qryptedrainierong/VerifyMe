@@ -259,40 +259,6 @@ export function PlatformIdentityLinkDetail() {
           </Card>
 
           <Card className="border border-border p-6 shadow-sm">
-            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border pb-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Conflict history</p>
-                <p className="mt-2 max-w-xl text-[13px] text-muted-foreground">
-                  Operational timeline for detection, review, and resolution. Entries are illustrative in this prototype.
-                </p>
-              </div>
-            </div>
-            <div className="pt-6">
-              <GovernanceTimeline
-                items={getConflictHistoryForIdentityLinkId(row.id).map((h) => ({
-                  id: h.id,
-                  timestamp: h.timestamp,
-                  title: conflictHistoryStepLabel(h.kind),
-                  subtitle: (
-                    <>
-                      {h.summary}
-                      {h.resolutionNotes ? (
-                        <>
-                          {" "}
-                          <span className="block mt-2 text-[12px] text-muted-foreground">
-                            Resolution notes: {h.resolutionNotes}
-                          </span>
-                        </>
-                      ) : null}
-                    </>
-                  ),
-                  meta: h.reviewer ? <span>Reviewer: {h.reviewer}</span> : null,
-                }))}
-              />
-            </div>
-          </Card>
-
-          <Card className="border border-border p-6 shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Link summary</p>
             <dl className="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
               <div>
@@ -372,6 +338,22 @@ export function PlatformIdentityLinkDetail() {
           </Card>
 
           <Card className="border border-border p-6 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">VerifyMe reference</p>
+            <dl className="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+              <div>
+                <dt className="text-muted-foreground">VerifyMe ID</dt>
+                <dd className="font-mono font-medium">{row.verifymeId}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">VerifyMe account status</dt>
+                <dd>
+                  <UnifiedBadge variant="status" value={row.verifymeAccountStatus} />
+                </dd>
+              </div>
+            </dl>
+          </Card>
+
+          <Card className="border border-border p-6 shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Related user risk</p>
             <p className="mt-2 text-[12px] text-muted-foreground">
               Risk score and level belong to the <strong className="text-foreground">VerifyMe User</strong> (platform-wide). This
@@ -395,6 +377,35 @@ export function PlatformIdentityLinkDetail() {
                 No platform risk snapshot is available for this VerifyMe user yet.
               </p>
             )}
+          </Card>
+
+          <Card className="border border-border p-6 shadow-sm">
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border pb-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Conflict history</p>
+                <p className="mt-2 max-w-xl text-[13px] text-muted-foreground">
+                  Operational timeline for detection, review, and resolution.
+                </p>
+              </div>
+            </div>
+            <div className="pt-6">
+              <GovernanceTimeline
+                items={getConflictHistoryForIdentityLinkId(row.id).map((h) => ({
+                  id: h.id,
+                  timestamp: h.timestamp,
+                  title: conflictHistoryStepLabel(h.kind),
+                  subtitle: (
+                    <>
+                      {h.summary}
+                      {h.resolutionNotes ? (
+                        <span className="block mt-2 text-[12px] text-muted-foreground">Resolution: {h.resolutionNotes}</span>
+                      ) : null}
+                    </>
+                  ),
+                  meta: h.reviewer ? <span>Reviewer: {h.reviewer}</span> : null,
+                }))}
+              />
+            </div>
           </Card>
 
           <details className="rounded-lg border border-border bg-muted/10 p-4 text-[12px] text-muted-foreground">

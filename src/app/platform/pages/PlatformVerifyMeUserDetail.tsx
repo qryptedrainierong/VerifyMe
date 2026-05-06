@@ -175,19 +175,16 @@ export function PlatformVerifyMeUserDetail() {
                 Profile & Status
               </TabsTrigger>
               <TabsTrigger value="platform-risk" className="flex-none shrink-0 px-2 text-[11px] sm:text-[12px]">
-                Platform Risk
+                Risk
               </TabsTrigger>
               <TabsTrigger value="devices" className="flex-none shrink-0 px-2 text-[11px] sm:text-[12px]">
-                Device / Secure State
+                Device
               </TabsTrigger>
               <TabsTrigger value="orgs" className="flex-none shrink-0 px-2 text-[11px] sm:text-[12px]">
                 Linked Organizations
               </TabsTrigger>
               <TabsTrigger value="activity" className="flex-none shrink-0 px-2 text-[11px] sm:text-[12px]">
-                Verification Activity
-              </TabsTrigger>
-              <TabsTrigger value="risk-history" className="flex-none shrink-0 px-2 text-[11px] sm:text-[12px]">
-                Risk History
+                Activity
               </TabsTrigger>
               <TabsTrigger value="controls" className="flex-none shrink-0 px-2 text-[11px] sm:text-[12px]">
                 User Controls
@@ -245,6 +242,7 @@ export function PlatformVerifyMeUserDetail() {
             <TabsContent value="platform-risk" className="mt-6 space-y-4 text-[13px]">
               {platformRisk ? (
                 <>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Platform Risk Summary</p>
                   <RiskSummary
                     score={platformRisk.score}
                     level={platformRisk.level}
@@ -289,6 +287,36 @@ export function PlatformVerifyMeUserDetail() {
                       Platform risk is universal for this VerifyMe User across linked organizations. Signals are aggregated —
                       other organizations are not named in factor labels.
                     </p>
+                  </Card>
+                  <Card className="border border-border p-6 shadow-sm space-y-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border pb-4">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Risk History timeline</p>
+                        <p className="mt-2 text-[13px] text-muted-foreground">
+                          Platform-wide risk trajectory for this VerifyMe User with aggregated contributing signals.
+                        </p>
+                      </div>
+                      <Button variant="outline" size="sm" asChild>
+                        <Link to={auditLogsHref({ verifymeId: selectedRowGroup.verifymeId, riskEventsOnly: true })}>
+                          View audit history
+                        </Link>
+                      </Button>
+                    </div>
+                    <GovernanceTimeline
+                      items={getRiskHistoryForVerifymeId(selectedRowGroup.verifymeId).map((e) => ({
+                        id: e.id,
+                        timestamp: e.timestamp,
+                        title: (
+                          <>
+                            Risk band{" "}
+                            <span className="text-muted-foreground">
+                              {e.previousLevel} → {e.newLevel}
+                            </span>
+                          </>
+                        ),
+                        subtitle: e.contributingSignalsSummary,
+                      }))}
+                    />
                   </Card>
                 </>
               ) : null}
@@ -405,40 +433,6 @@ export function PlatformVerifyMeUserDetail() {
                       })}
                   />
                 </div>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="risk-history" className="mt-6 text-[13px]">
-              <Card className="border border-border p-6 shadow-sm space-y-4">
-                <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border pb-4">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Risk History</p>
-                    <p className="mt-2 text-[13px] text-muted-foreground">
-                      Platform-wide risk trajectory for this VerifyMe User. Contributing signals are summarized in the
-                      aggregate — other organizations are not named.
-                    </p>
-                  </div>
-                  <Button variant="outline" size="sm" asChild>
-                    <Link to={auditLogsHref({ verifymeId: selectedRowGroup.verifymeId, riskEventsOnly: true })}>
-                      View risk audit trail
-                    </Link>
-                  </Button>
-                </div>
-                <GovernanceTimeline
-                  items={getRiskHistoryForVerifymeId(selectedRowGroup.verifymeId).map((e) => ({
-                    id: e.id,
-                    timestamp: e.timestamp,
-                    title: (
-                      <>
-                        Risk band{" "}
-                        <span className="text-muted-foreground">
-                          {e.previousLevel} → {e.newLevel}
-                        </span>
-                      </>
-                    ),
-                    subtitle: e.contributingSignalsSummary,
-                  }))}
-                />
               </Card>
             </TabsContent>
 

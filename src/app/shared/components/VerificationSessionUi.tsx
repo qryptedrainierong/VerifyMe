@@ -223,7 +223,7 @@ export function VerificationSessionDetailBody({
 
       {session.sessionContextRiskLevel ? (
         <div className="rounded-md border border-border/80 bg-card px-3 py-2">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Context: user risk (sample)</p>
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Context: user risk</p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <UserRiskStatusBadge level={session.sessionContextRiskLevel} />
             <span className="text-[12px] text-muted-foreground">

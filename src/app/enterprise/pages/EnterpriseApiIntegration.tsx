@@ -1,25 +1,32 @@
 import { BookOpen, ExternalLink, KeyRound, Link2, Plug } from "lucide-react";
+import { useState } from "react";
 import { Card } from "../../shared/components/ui/card";
 import { Button } from "../../shared/components/ui/button";
 import { UnifiedBadge } from "../../shared/components/UnifiedBadge";
 import {
   enterpriseApiDocCards,
+  enterpriseApiIntegrationScenarios,
   enterpriseMockClientApplication,
   enterpriseMockRedirectUris,
   enterpriseOrganization,
 } from "../data/enterpriseSample";
 import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../shared/components/ui/dialog";
+import { shouldIgnoreRowOpenClick } from "../../platform/utils/tableRowNav";
 
 export function EnterpriseApiIntegration() {
+  const [redirectDetail, setRedirectDetail] = useState<(typeof enterpriseMockRedirectUris)[number] | null>(null);
+  const [confirming, setConfirming] = useState<string | null>(null);
   const client = enterpriseMockClientApplication;
 
   const formatDate = (d: string) =>
     new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
   return (
+    <>
     <PortalPageFrame
       title="API integration"
-      description="OIDC-style client configuration for VerifyMe: client identifiers, redirect URIs, scopes, and confidential-client secret handling (design-time sample)."
+      description="OIDC-style client configuration for VerifyMe: client identifiers, redirect URIs, scopes, and confidential-client secret handling."
       bodyClassName="max-w-6xl space-y-8"
     >
       <Card className="p-6 border border-border shadow-sm">
@@ -70,7 +77,7 @@ export function EnterpriseApiIntegration() {
               <strong className="text-foreground">Rotate secret</strong> to issue a new secret; previous secrets stop
               working after rotation completes.
             </p>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={() => setConfirming("rotate secret")}>
               <KeyRound className="w-4 h-4 mr-2" />
               Rotate secret
             </Button>
@@ -131,26 +138,24 @@ export function EnterpriseApiIntegration() {
                   <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">Environment</th>
                   <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">Status</th>
                   <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">Created</th>
-                  <th className="text-right p-3 font-semibold text-muted-foreground uppercase text-[11px]">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {enterpriseMockRedirectUris.map((row) => (
-                  <tr key={row.id} className="hover:bg-accent/20">
+                  <tr
+                    key={row.id}
+                    className="cursor-pointer hover:bg-accent/20"
+                    onClick={(e) => {
+                      if (shouldIgnoreRowOpenClick(e.target)) return;
+                      setRedirectDetail(row);
+                    }}
+                  >
                     <td className="p-3 font-mono text-[12px] break-all max-w-md">{row.redirectUri}</td>
                     <td className="p-3">{row.environment}</td>
                     <td className="p-3">
                       <UnifiedBadge variant="status" value={row.status === "active" ? "Active" : "Disabled"} />
                     </td>
                     <td className="p-3 text-muted-foreground">{formatDate(row.created)}</td>
-                    <td className="p-3 text-right space-x-2">
-                      <Button variant="outline" size="sm">
-                        Disable
-                      </Button>
-                      <Button variant="ghost" size="sm" className="text-destructive">
-                        Remove
-                      </Button>
-                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -176,7 +181,7 @@ export function EnterpriseApiIntegration() {
       <div>
         <h2 className="text-[18px] font-semibold text-foreground mb-2">OIDC endpoints (reference)</h2>
         <p className="text-[13px] text-muted-foreground mb-4 max-w-3xl">
-          Sample cards for documentation alignment. Replace base URLs with your VerifyMe Organization API endpoints when integrating.
+          Operational cards for documentation alignment. Replace base URLs with your VerifyMe Organization API endpoints when integrating.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {enterpriseApiDocCards.map((card) => (
@@ -209,6 +214,48 @@ export function EnterpriseApiIntegration() {
           <strong className="text-foreground">{enterpriseOrganization.plan}</strong>
         </p>
       </Card>
+      <Card className="p-5 border border-border shadow-sm">
+        <h3 className="text-[16px] font-semibold mb-2">Integration status coverage</h3>
+        <div className="flex flex-wrap gap-2">
+          {enterpriseApiIntegrationScenarios.map((s) => (
+            <UnifiedBadge key={s.id} variant="integration" value={s.label} />
+          ))}
+        </div>
+      </Card>
     </PortalPageFrame>
+    <Dialog open={redirectDetail !== null} onOpenChange={(o) => !o && setRedirectDetail(null)}>
+      <DialogContent className="max-w-lg">
+        {redirectDetail && (
+          <>
+            <DialogHeader>
+              <DialogTitle>Redirect URI detail</DialogTitle>
+              <DialogDescription>{redirectDetail.redirectUri}</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 text-sm">
+              <p>Environment: {redirectDetail.environment}</p>
+              <p>Status: {redirectDetail.status === "active" ? "Active" : "Disabled"}</p>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => setConfirming("disable redirect uri")}>Disable</Button>
+                <Button variant="destructive" size="sm" onClick={() => setConfirming("remove redirect uri")}>Remove</Button>
+              </div>
+            </div>
+            <DialogFooter><Button variant="outline" onClick={() => setRedirectDetail(null)}>Close</Button></DialogFooter>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
+    <Dialog open={confirming !== null} onOpenChange={(o) => !o && setConfirming(null)}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Confirm action</DialogTitle>
+          <DialogDescription>{confirming}?</DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setConfirming(null)}>Cancel</Button>
+          <Button onClick={() => setConfirming(null)}>Confirm</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

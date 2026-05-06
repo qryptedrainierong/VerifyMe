@@ -1,10 +1,13 @@
 import { CreditCard, Download, AlertCircle } from "lucide-react";
+import { useMemo, useState } from "react";
 import { Card } from "../../shared/components/ui/card";
 import { Button } from "../../shared/components/ui/button";
 import { StatusBadge } from "../../shared/components/StatusBadge";
 import { DataTable } from "../../shared/components/DataTable";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../shared/components/ui/tabs";
 import { Progress } from "../../shared/components/ui/progress";
+import { Switch } from "../../shared/components/ui/switch";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../shared/components/ui/dialog";
 import {
   enterpriseCreditRemaining,
   enterpriseCreditUtilizationPct,
@@ -17,7 +20,13 @@ import {
 import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
 
 export function EnterpriseBilling() {
-  const invoices = enterpriseInvoices;
+  const [requiresActionOnly, setRequiresActionOnly] = useState(true);
+  const [invoiceDetail, setInvoiceDetail] = useState<(typeof enterpriseInvoices)[number] | null>(null);
+  const [confirming, setConfirming] = useState<string | null>(null);
+  const invoices = useMemo(
+    () => enterpriseInvoices.filter((inv) => (requiresActionOnly ? inv.actionRequired : true)),
+    [requiresActionOnly],
+  );
 
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat("en-US", {
@@ -28,6 +37,7 @@ export function EnterpriseBilling() {
     }).format(amount);
 
   return (
+    <>
     <PortalPageFrame
       title="Billing"
       description="Plan, invoices or billing history, credit purchases, top-ups, and payment-related settings."
@@ -47,15 +57,15 @@ export function EnterpriseBilling() {
 
         <div className="grid grid-cols-3 gap-6 mb-6">
           <div>
-            <p className="text-[13px] text-muted-foreground mb-1">Monthly Cost</p>
+            <p className="text-[13px] text-muted-foreground mb-1">Plan</p>
             <p className="text-2xl font-semibold tabular-nums tracking-tight text-foreground">{formatCurrency(enterpriseOrganization.creditBalance)}</p>
             <p className="text-[13px] text-muted-foreground mt-1">Included credit</p>
           </div>
           <div>
-            <p className="text-[13px] text-muted-foreground mb-1">Verification Spend</p>
+            <p className="text-[13px] text-muted-foreground mb-1">Billable verification spend</p>
             <p className="text-2xl font-semibold tabular-nums tracking-tight text-foreground">{formatCurrency(enterpriseUsageSpend)}</p>
             <p className="text-[13px] text-muted-foreground mt-1">
-              {enterpriseOrganization.usage.toLocaleString()} calls this period
+              {enterpriseOrganization.usage.toLocaleString()} verification sessions this period
             </p>
           </div>
           <div>
@@ -116,6 +126,11 @@ export function EnterpriseBilling() {
         </TabsList>
 
         <TabsContent value="invoices" className="mt-6">
+          <div className="mb-3 flex items-center gap-3">
+            <span className="text-sm text-muted-foreground">Requires action</span>
+            <Switch checked={requiresActionOnly} onCheckedChange={setRequiresActionOnly} />
+            <span className="text-sm text-muted-foreground">All invoices</span>
+          </div>
           <DataTable
             title="Recent Invoices"
             columns={[
@@ -128,34 +143,26 @@ export function EnterpriseBilling() {
                 label: "Status",
                 render: (row) => <StatusBadge status={row.status as any} label="Paid" />,
               },
-              {
-                key: "download",
-                label: "",
-                render: () => (
-                  <Button variant="ghost" size="sm">
-                    <Download className="w-4 h-4 mr-2" />
-                    Download
-                  </Button>
-                ),
-              },
+              { key: "actionRequired", label: "Action required", render: (row) => (row.actionRequired ? "Yes" : "No") },
             ]}
             data={invoices}
+            onRowClick={(row) => setInvoiceDetail(row as (typeof enterpriseInvoices)[number])}
           />
         </TabsContent>
 
         <TabsContent value="usage" className="mt-6">
           <Card className="p-6 shadow-sm">
-            <h3 className="text-[16px] font-semibold text-foreground mb-4">Current Billing Period Usage</h3>
+            <h3 className="text-[16px] font-semibold text-foreground mb-4">Current period usage</h3>
             <div className="space-y-6">
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-[14px] text-foreground">Identity verification attempts</span>
+                  <span className="text-[14px] text-foreground">Verification sessions</span>
                   <span className="text-[14px] font-medium">
                     {enterpriseOrganization.usage.toLocaleString()} / {enterpriseUsageLimit.toLocaleString()}
                   </span>
                 </div>
                 <Progress value={Math.min(enterpriseUsagePct, 100)} className="h-2" />
-                <p className="text-[12px] text-muted-foreground mt-1.5">{enterpriseUsagePct.toFixed(1)}% of call allowance used</p>
+                <p className="text-[12px] text-muted-foreground mt-1.5">{enterpriseUsagePct.toFixed(1)}% of period verification volume</p>
               </div>
               <div className="pt-4 border-t border-border space-y-2">
                 <div className="flex items-center justify-between">
@@ -164,12 +171,12 @@ export function EnterpriseBilling() {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-[13px] text-muted-foreground">Avg daily usage</span>
-                  <span className="text-[13px] font-medium text-foreground">6,900 calls/day</span>
+                  <span className="text-[13px] font-medium text-foreground">6,900 sessions/day</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-[13px] text-muted-foreground">Remaining</span>
                   <span className="text-[13px] font-medium text-foreground">
-                    {Math.max(enterpriseUsageLimit - enterpriseOrganization.usage, 0).toLocaleString()} calls
+                    {Math.max(enterpriseUsageLimit - enterpriseOrganization.usage, 0).toLocaleString()} sessions
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
@@ -182,5 +189,40 @@ export function EnterpriseBilling() {
         </TabsContent>
       </Tabs>
     </PortalPageFrame>
+    <Dialog open={invoiceDetail !== null} onOpenChange={(o) => !o && setInvoiceDetail(null)}>
+      <DialogContent className="max-w-lg">
+        {invoiceDetail && (
+          <>
+            <DialogHeader>
+              <DialogTitle>Invoice detail</DialogTitle>
+              <DialogDescription>{invoiceDetail.id} · {invoiceDetail.period}</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 text-sm">
+              <p>Amount: <strong>{formatCurrency(Number(invoiceDetail.amount))}</strong></p>
+              <p>Action required: {invoiceDetail.actionRequired ? "Yes" : "No"}</p>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" size="sm"><Download className="w-4 h-4 mr-2" />Download</Button>
+                <Button size="sm" variant="outline" disabled={!invoiceDetail.actionRequired} onClick={() => setConfirming("send reminder")}>Send reminder</Button>
+                <Button size="sm" variant="outline" disabled={!invoiceDetail.actionRequired} onClick={() => setConfirming("request refund")}>Request refund</Button>
+              </div>
+            </div>
+            <DialogFooter><Button variant="outline" onClick={() => setInvoiceDetail(null)}>Close</Button></DialogFooter>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
+    <Dialog open={confirming !== null} onOpenChange={(o) => !o && setConfirming(null)}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Confirm action</DialogTitle>
+          <DialogDescription>{confirming} for this invoice?</DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setConfirming(null)}>Cancel</Button>
+          <Button onClick={() => setConfirming(null)}>Confirm</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

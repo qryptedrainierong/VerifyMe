@@ -7,6 +7,7 @@ export type AuditLogsNavFilters = {
   organizationId?: string;
   clientAppId?: string;
   verificationSessionId?: string;
+  platformAdminId?: string;
   governanceCategory?: GovernanceCategory;
   entityType?: AuditEntityType;
   severity?: "Informational" | "Warning" | "High" | "Critical";
@@ -22,6 +23,7 @@ export function auditLogsHref(filters: AuditLogsNavFilters): string {
     organizationId,
     clientAppId,
     verificationSessionId,
+    platformAdminId,
     governanceCategory,
     entityType,
     severity,
@@ -34,6 +36,7 @@ export function auditLogsHref(filters: AuditLogsNavFilters): string {
   if (organizationId) p.set("organizationId", organizationId);
   if (clientAppId) p.set("clientAppId", clientAppId);
   if (verificationSessionId) p.set("verificationSessionId", verificationSessionId);
+  if (platformAdminId) p.set("platformAdminId", platformAdminId);
   if (governanceCategory) p.set("governanceCategory", governanceCategory);
   if (entityType && entityType !== "other") p.set("entityType", entityType);
   if (severity) p.set("severity", severity.toLowerCase());

@@ -109,9 +109,9 @@ export function PlatformUsers() {
             <p className="text-xs leading-relaxed text-muted-foreground sm:text-sm">
               URL filter: <span className="font-mono text-foreground">{urlOrganizationId}</span>
               {!knownOrgIds.has(urlOrganizationId) ? (
-                <> — not found in sample organizations; showing all until you pick a valid org.</>
+                <> — not found in configured organizations; showing all until you pick a valid org.</>
               ) : (
-                <> — list filtered to this organization when present in sample data.</>
+                <> — list filtered to this organization when present in configured data.</>
               )}
             </p>
           ) : null}

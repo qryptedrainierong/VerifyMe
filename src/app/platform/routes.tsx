@@ -13,6 +13,8 @@ import { PlatformClientAppDetail } from "./pages/PlatformClientAppDetail";
 import { PlatformIdentityLinks } from "./pages/PlatformIdentityLinks";
 import { PlatformIdentityLinkDetail } from "./pages/PlatformIdentityLinkDetail";
 import { PlatformVerificationSessions } from "./pages/PlatformVerificationSessions";
+import { PlatformTeamAccess } from "./pages/PlatformTeamAccess";
+import { PlatformTeamMemberDetail } from "./pages/PlatformTeamMemberDetail";
 import { PortalNotFound } from "../shared/components/PortalNotFound";
 
 // Lazy router creation to prevent HMR connection errors
@@ -38,6 +40,8 @@ export function getPlatformRouter() {
           { path: "identity-links", Component: PlatformIdentityLinks },
           { path: "identity-links/:identityLinkId", Component: PlatformIdentityLinkDetail },
           { path: "verification-sessions", Component: PlatformVerificationSessions },
+          { path: "platform-team", Component: PlatformTeamAccess },
+          { path: "platform-team/:platformAdminId", Component: PlatformTeamMemberDetail },
           { path: "client-apps", Component: PlatformClientApps },
           { path: "client-apps/:clientAppId", Component: PlatformClientAppDetail },
           { path: "billing", Component: PlatformBilling },

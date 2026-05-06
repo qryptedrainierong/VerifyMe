@@ -100,7 +100,7 @@ export function PlatformUsage() {
             <p className="text-[32px] font-semibold text-foreground leading-none">
               {formatNumber(totalUsage)}
             </p>
-            <p className="text-[12px] text-muted-foreground mt-2">Platform-wide (sample period)</p>
+            <p className="text-[12px] text-muted-foreground mt-2">Platform-wide (current period)</p>
           </div>
         </Card>
 
@@ -117,7 +117,7 @@ export function PlatformUsage() {
           <div>
             <p className="text-[13px] text-muted-foreground mb-1">Avg sessions per organization</p>
             <p className="text-[32px] font-semibold text-foreground leading-none">{formatNumber(Math.round(avgUsagePerOrg))}</p>
-            <p className="text-[12px] text-muted-foreground mt-2">Per day (sample)</p>
+            <p className="text-[12px] text-muted-foreground mt-2">Per day (current period)</p>
           </div>
         </Card>
 
@@ -222,7 +222,7 @@ export function PlatformUsage() {
                 <h3 className="text-[15px] font-semibold text-foreground">
                   Top organizations by verification sessions
                 </h3>
-                <p className="text-[13px] text-muted-foreground">Highest session volume (sample)</p>
+                <p className="text-[13px] text-muted-foreground">Highest session volume (current period)</p>
               </div>
             </div>
           </div>

@@ -9,6 +9,7 @@ import { getOrgVerificationSessions } from "../../shared/data/verificationSessio
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import {
   enterpriseActiveEndUsers,
+  enterpriseInvoices,
   enterpriseCreditRemaining,
   enterpriseCreditUtilizationPct,
   enterpriseEndUsers,
@@ -69,7 +70,7 @@ export function EnterpriseDashboard() {
   return (
     <PortalPageFrame
       title="Dashboard"
-      description="Organization-level overview of credits, verification sessions, linked end users, and integration readiness (sample data)."
+      description="Operational view of credits, verification sessions, linked end users, and integration readiness."
       bodyClassName="space-y-6"
     >
       {enterprisePortalSetupIncomplete ? (
@@ -82,7 +83,7 @@ export function EnterpriseDashboard() {
             </p>
             <p className="text-[13px] text-foreground mt-3 rounded-md border border-amber-200 bg-amber-50/80 px-3 py-2 dark:bg-amber-950/30 dark:border-amber-800">
               Verification API usage should remain <strong>disabled</strong> until redirect URI, QR keys, and
-              verification settings are configured and tested (policy copy — not enforced in this UI build).
+              verification settings are configured and tested.
             </p>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -182,7 +183,7 @@ export function EnterpriseDashboard() {
               {enterpriseOrganization.usage.toLocaleString()}
             </p>
             <p className="text-[13px] text-muted-foreground mt-2">
-              {formatCurrency(enterpriseUsageSpend)} billable spend (sample)
+              {formatCurrency(enterpriseUsageSpend)} billable verification spend
             </p>
           </div>
         </Card>
@@ -192,30 +193,36 @@ export function EnterpriseDashboard() {
         <Card className="p-4 border border-border shadow-sm">
           <div className="flex items-center gap-2 mb-2">
             <ScrollText className="w-4 h-4 text-primary" />
-            <p className="text-[13px] font-semibold text-foreground">Verification logs (sample)</p>
+            <p className="text-[13px] font-semibold text-foreground">Verification sessions</p>
           </div>
           <p className="text-[26px] font-semibold">{orgSessionSnap.total}</p>
-          <p className="text-[12px] text-muted-foreground mt-1">Sessions for this organization in mock data</p>
+          <p className="text-[12px] text-muted-foreground mt-1">Current period</p>
           <Button variant="link" className="px-0 h-auto mt-2" asChild>
             <Link to="/verification-logs">Open verification logs</Link>
           </Button>
         </Card>
         <Card className="p-4 border border-border shadow-sm">
-          <p className="text-[13px] font-semibold text-foreground mb-2">Failed rate (settled)</p>
+          <p className="text-[13px] font-semibold text-foreground mb-2">ID Proof Fail rate</p>
           <p className="text-[26px] font-semibold text-orange-700">{orgSessionSnap.failRate.toFixed(1)}%</p>
           <p className="text-[12px] text-muted-foreground mt-1">Failed ÷ non-pending outcomes</p>
         </Card>
         <Card className="p-4 border border-border shadow-sm">
-          <p className="text-[13px] font-semibold text-foreground mb-2">Billable vs not</p>
+          <p className="text-[13px] font-semibold text-foreground mb-2">Billable outcomes</p>
           <p className="text-[22px] font-semibold">
             {orgSessionSnap.billable}{" "}
             <span className="text-muted-foreground text-[14px] font-normal">/ {orgSessionSnap.nonBill}</span>
           </p>
-          <p className="text-[12px] text-muted-foreground mt-2">By final outcome (sample)</p>
+          <p className="text-[12px] text-muted-foreground mt-2">By final outcome</p>
           <div className="mt-2">
-            <UnifiedBadge variant="integration" value="Operational (design)" />
+            <UnifiedBadge variant="integration" value="Operational view" />
           </div>
         </Card>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="p-4 border border-border shadow-sm"><p className="text-xs text-muted-foreground">Setup incomplete</p><p className="text-2xl font-semibold">{enterpriseSetupSteps.filter((s) => !s.complete).length}</p></Card>
+        <Card className="p-4 border border-border shadow-sm"><p className="text-xs text-muted-foreground">Active linked users</p><p className="text-2xl font-semibold">{enterpriseActiveEndUsers}</p></Card>
+        <Card className="p-4 border border-border shadow-sm"><p className="text-xs text-muted-foreground">Active identity conflicts</p><p className="text-2xl font-semibold">{enterpriseEndUsers.filter((u) => u.status === "pending").length}</p></Card>
+        <Card className="p-4 border border-border shadow-sm"><p className="text-xs text-muted-foreground">Action-required invoices</p><p className="text-2xl font-semibold">{enterpriseInvoices.filter((i) => i.actionRequired).length}</p></Card>
       </div>
 
       {alerts.length > 0 && (
@@ -255,7 +262,7 @@ export function EnterpriseDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-[16px] font-semibold text-foreground">Verification session volume</h3>
-                <p className="text-[13px] text-muted-foreground">Last 9 days (sample trend)</p>
+                <p className="text-[13px] text-muted-foreground">Last 9 days</p>
               </div>
               <Button variant="outline" size="sm">Last 30 days</Button>
             </div>
@@ -306,7 +313,7 @@ export function EnterpriseDashboard() {
         <Card className="border border-border shadow-sm">
           <div className="p-6 border-b border-border">
             <h3 className="text-[16px] font-semibold text-foreground">Credits</h3>
-            <p className="text-[13px] text-muted-foreground">Wallet vs billable spend (sample)</p>
+            <p className="text-[13px] text-muted-foreground">Wallet vs billable spend</p>
           </div>
           <div className="p-6 space-y-6">
             <div>
@@ -347,7 +354,7 @@ export function EnterpriseDashboard() {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-[16px] font-semibold text-foreground">Recent activity</h3>
-              <p className="text-[13px] text-muted-foreground">Verification and portal actions (sample)</p>
+              <p className="text-[13px] text-muted-foreground">Verification and portal actions</p>
             </div>
             <Button variant="ghost" size="sm">View all</Button>
           </div>

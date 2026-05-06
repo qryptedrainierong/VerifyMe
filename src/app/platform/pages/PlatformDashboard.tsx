@@ -21,6 +21,11 @@ import { platformEndUserAssociations } from "../data/platformUsersSample";
 import { getVerificationSessionsMock } from "../../shared/data/verificationSessionsMock";
 import { UnifiedBadge } from "../../shared/components/UnifiedBadge";
 import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
+import { groupAssociationsByVerifymeUserId } from "../data/groupEndUsers";
+import { computePlatformRiskSummary } from "../data/mockPlatformRisk";
+import { platformIdentityLinks } from "../data/platformIdentityLinksSample";
+import { getPlatformBillingInvoices } from "../data/platformBillingInvoicesMock";
+import { platformClientApps } from "../data/platformClientAppsSample";
 
 export function PlatformDashboard() {
   const organizations = useMemo(() => buildInitialOrganizations(), []);
@@ -37,6 +42,23 @@ export function PlatformDashboard() {
   const totalUsage = organizations.reduce((sum, org) => sum + org.usage, 0);
   const totalRevenue = organizations.reduce((sum, org) => sum + getVerificationSpend(org), 0);
   const totalEndUsers = platformEndUserAssociations.length;
+  const groupedUsers = useMemo(() => groupAssociationsByVerifymeUserId(platformEndUserAssociations), []);
+  const highRiskUsers = useMemo(
+    () => groupedUsers.filter((group) => ["High", "Critical"].includes(computePlatformRiskSummary(group).level)).length,
+    [groupedUsers],
+  );
+  const activeIdentityConflicts = useMemo(
+    () => platformIdentityLinks.filter((row) => row.conflictStatus === "pending_review").length,
+    [],
+  );
+  const actionRequiredInvoices = useMemo(() => getPlatformBillingInvoices().filter((row) => row.actionRequired).length, []);
+  const integrationIssues = useMemo(
+    () =>
+      platformClientApps.filter((row) =>
+        ["not_configured", "missing_redirect_uri", "missing_keys", "error"].includes(row.integrationStatus),
+      ).length,
+    [],
+  );
 
   const usageData = [
     { month: "Oct", value: 245000 },
@@ -118,7 +140,7 @@ export function PlatformDashboard() {
   return (
     <PortalPageFrame
       title="Dashboard"
-      description="Platform-wide overview of organizations, VerifyMe users, verification activity, billable events, credit usage, and system health (sample metrics for UI design)."
+      description="Operational view of organizations, VerifyMe users, verification activity, billable outcomes, credit usage, and platform health."
       bodyClassName="space-y-6"
     >
       {/* KPI Cards */}
@@ -136,7 +158,7 @@ export function PlatformDashboard() {
           <div>
             <p className="text-[13px] text-muted-foreground mb-1">Total Organizations</p>
             <p className="text-[32px] font-semibold text-foreground leading-none">{totalOrganizations}</p>
-            <p className="text-[12px] text-muted-foreground mt-2">Current sample dataset</p>
+            <p className="text-[12px] text-muted-foreground mt-2">Current period</p>
           </div>
         </Card>
 
@@ -168,11 +190,11 @@ export function PlatformDashboard() {
             </span>
           </div>
           <div>
-            <p className="text-[13px] text-muted-foreground mb-1">Billable revenue (sample)</p>
+            <p className="text-[13px] text-muted-foreground mb-1">Billable verification spend</p>
             <p className="text-[32px] font-semibold text-foreground leading-none">
               ${Math.round(totalRevenue).toLocaleString()}
             </p>
-            <p className="text-[12px] text-muted-foreground mt-2">From billable verification sessions (sample)</p>
+            <p className="text-[12px] text-muted-foreground mt-2">Current period</p>
           </div>
         </Card>
 
@@ -187,11 +209,11 @@ export function PlatformDashboard() {
             </span>
           </div>
           <div>
-            <p className="text-[13px] text-muted-foreground mb-1">Verification volume</p>
+            <p className="text-[13px] text-muted-foreground mb-1">Verification sessions</p>
             <p className="text-[32px] font-semibold text-foreground leading-none">
               {Math.round(totalUsage).toLocaleString()}
             </p>
-            <p className="text-[12px] text-muted-foreground mt-2">Billable-style events this month (sample)</p>
+            <p className="text-[12px] text-muted-foreground mt-2">Current period</p>
           </div>
         </Card>
       </div>
@@ -200,31 +222,54 @@ export function PlatformDashboard() {
         <Card className="p-4 border border-border shadow-sm">
           <div className="flex items-center gap-2 mb-2">
             <ListChecks className="w-4 h-4 text-primary" />
-            <p className="text-[13px] font-semibold text-foreground">Verification sessions (sample)</p>
+            <p className="text-[13px] font-semibold text-foreground">Verification sessions</p>
           </div>
           <p className="text-3xl font-semibold tabular-nums tracking-tight">{sessionSnapshot.total}</p>
-          <p className="text-[12px] text-muted-foreground mt-1">Mock sessions in design dataset</p>
+          <p className="text-[12px] text-muted-foreground mt-1">Current period</p>
           <Button variant="link" className="px-0 h-auto mt-2" asChild>
             <Link to="/verification-sessions">Open verification sessions</Link>
           </Button>
         </Card>
         <Card className="p-4 border border-border shadow-sm">
-          <p className="text-[13px] font-semibold text-foreground mb-2">Failed rate (settled)</p>
+          <p className="text-[13px] font-semibold text-foreground mb-2">ID Proof Fail rate</p>
           <p className="text-3xl font-semibold tabular-nums tracking-tight text-orange-700">{sessionSnapshot.failRate.toFixed(1)}%</p>
           <p className="text-[12px] text-muted-foreground mt-1">Failed ÷ non-pending outcomes</p>
         </Card>
         <Card className="p-4 border border-border shadow-sm">
-          <p className="text-[13px] font-semibold text-foreground mb-2">Billable vs not</p>
+          <p className="text-[13px] font-semibold text-foreground mb-2">Billable outcomes</p>
           <p className="text-[22px] font-semibold">
             {sessionSnapshot.billable}{" "}
             <span className="text-muted-foreground text-[14px] font-normal">/ {sessionSnapshot.nonBillable}</span>
           </p>
-          <p className="text-[12px] text-muted-foreground mt-1">By final outcome (sample)</p>
+          <p className="text-[12px] text-muted-foreground mt-1">By final outcome</p>
         </Card>
         <Card className="p-4 border border-border shadow-sm">
           <p className="text-[13px] font-semibold text-foreground mb-2">Verification Service</p>
-          <UnifiedBadge variant="integration" value="Operational (design)" />
-          <p className="text-[12px] text-muted-foreground mt-2">No live health check in this UI build</p>
+          <UnifiedBadge variant="integration" value="Operational view" />
+          <p className="text-[12px] text-muted-foreground mt-2">Configured</p>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="p-4 border border-border shadow-sm">
+          <p className="text-[13px] font-semibold text-foreground mb-2">High-risk VerifyMe users</p>
+          <p className="text-3xl font-semibold tabular-nums tracking-tight text-red-700">{highRiskUsers}</p>
+          <p className="text-[12px] text-muted-foreground mt-1">Requires operator review</p>
+        </Card>
+        <Card className="p-4 border border-border shadow-sm">
+          <p className="text-[13px] font-semibold text-foreground mb-2">Active identity conflicts</p>
+          <p className="text-3xl font-semibold tabular-nums tracking-tight text-orange-700">{activeIdentityConflicts}</p>
+          <p className="text-[12px] text-muted-foreground mt-1">Pending conflict resolution</p>
+        </Card>
+        <Card className="p-4 border border-border shadow-sm">
+          <p className="text-[13px] font-semibold text-foreground mb-2">Action-required invoices</p>
+          <p className="text-3xl font-semibold tabular-nums tracking-tight">{actionRequiredInvoices}</p>
+          <p className="text-[12px] text-muted-foreground mt-1">Billing follow-up queue</p>
+        </Card>
+        <Card className="p-4 border border-border shadow-sm">
+          <p className="text-[13px] font-semibold text-foreground mb-2">Integration issues</p>
+          <p className="text-3xl font-semibold tabular-nums tracking-tight">{integrationIssues}</p>
+          <p className="text-[12px] text-muted-foreground mt-1">Configuration or runtime issues</p>
         </Card>
       </div>
 
@@ -280,7 +325,7 @@ export function PlatformDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-[15px] font-semibold text-foreground">Verification activity</h3>
-                <p className="text-[13px] text-muted-foreground">Organization-wide verification attempts over time (sample)</p>
+                <p className="text-[13px] text-muted-foreground">Organization-wide verification attempts over time</p>
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="ghost" size="sm">1M</Button>
@@ -344,7 +389,7 @@ export function PlatformDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-[15px] font-semibold text-foreground">Billable revenue trend</h3>
-                <p className="text-[13px] text-muted-foreground">Credits, verification fees, and OTP charges (sample)</p>
+                <p className="text-[13px] text-muted-foreground">Credits, verification fees, and OTP charges</p>
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="ghost" size="sm">1M</Button>
@@ -418,7 +463,7 @@ export function PlatformDashboard() {
               </div>
               <div>
                 <h3 className="text-[15px] font-semibold text-foreground">Recent platform activity</h3>
-                <p className="text-[13px] text-muted-foreground">Verification, credits, and admin actions (sample)</p>
+                <p className="text-[13px] text-muted-foreground">Verification, credits, and admin actions</p>
               </div>
             </div>
             <Button variant="outline" size="sm">View Full Log</Button>

@@ -130,7 +130,7 @@ export function PlatformVerificationSessions() {
         variant="fill"
         rootClassName="h-full"
         title="Verification Sessions"
-        description="Platform-wide sessions: session status, ID proof result, billing, and risk context (sample)."
+        description="Platform-wide sessions: session status, ID proof result, billing, and risk context."
         bodyClassName="space-y-6"
       >
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
@@ -194,7 +194,7 @@ export function PlatformVerificationSessions() {
             <SelectValue placeholder="Outcome" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All ID proof (internal filter)</SelectItem>
+            <SelectItem value="all">All ID proof outcomes</SelectItem>
             <SelectItem value="verified">{verificationOutcomeLabel("verified")}</SelectItem>
             <SelectItem value="failed">{verificationOutcomeLabel("failed")}</SelectItem>
             <SelectItem value="expired">Expired</SelectItem>
@@ -230,10 +230,10 @@ export function PlatformVerificationSessions() {
             <SelectValue placeholder="Time" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All time (sample)</SelectItem>
-            <SelectItem value="24h">Last 24 hours (mock)</SelectItem>
-            <SelectItem value="7d">Last 7 days (mock)</SelectItem>
-            <SelectItem value="30d">Last 30 days (mock)</SelectItem>
+            <SelectItem value="all">All time</SelectItem>
+            <SelectItem value="24h">Last 24 hours</SelectItem>
+            <SelectItem value="7d">Last 7 days</SelectItem>
+            <SelectItem value="30d">Last 30 days</SelectItem>
           </SelectContent>
         </Select>
         <Button

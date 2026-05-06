@@ -109,7 +109,7 @@ export function PlatformClientApps() {
         urlOrganizationId ? (
           <p className="text-xs text-muted-foreground sm:text-sm">
             Filter: <span className="font-mono text-foreground">{urlOrganizationId}</span>
-            {!knownOrgIds.has(urlOrganizationId) ? " — not in sample set." : null}
+            {!knownOrgIds.has(urlOrganizationId) ? " — not available in current dataset." : null}
           </p>
         ) : null
       }

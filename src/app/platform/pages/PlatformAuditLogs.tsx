@@ -61,6 +61,7 @@ const ENTITY_TYPES: Array<{ value: string; label: string }> = [
   { value: "all", label: "All subjects" },
   { value: "organization", label: "Organization" },
   { value: "verifyme_user", label: "VerifyMe user" },
+  { value: "platform_admin", label: "Platform admin" },
   { value: "identity_link", label: "Identity link" },
   { value: "client_app", label: "Client app" },
   { value: "verification_session", label: "Verification session" },
@@ -136,6 +137,7 @@ function entityTypeShort(log: AuditLog): string {
   const map: Record<string, string> = {
     organization: "Organization",
     verifyme_user: "VerifyMe user",
+    platform_admin: "Platform admin",
     identity_link: "Identity link",
     client_app: "Client app",
     verification_session: "Verification",
@@ -178,6 +180,7 @@ export function PlatformAuditLogs() {
   const identityLinkFilter = searchParams.get("identityLinkId") ?? "";
   const clientAppFilter = searchParams.get("clientAppId") ?? "";
   const verificationSessionFilter = searchParams.get("verificationSessionId") ?? "";
+  const platformAdminIdFilter = searchParams.get("platformAdminId") ?? "";
   const rawFocus = searchParams.get("focus") ?? "all";
   const governanceFocus = rawFocus === "risk" || rawFocus === "conflict" ? rawFocus : "all";
 
@@ -230,6 +233,7 @@ export function PlatformAuditLogs() {
           log.relatedIdentityLinkId ?? "",
           log.relatedClientAppId ?? "",
           log.relatedVerificationSessionId ?? "",
+          log.relatedPlatformAdminId ?? "",
         ]
           .join(" ")
           .toLowerCase();
@@ -262,6 +266,11 @@ export function PlatformAuditLogs() {
         const vs = verificationSessionFilter.trim();
         if (log.relatedVerificationSessionId !== vs && log.sessionRef !== vs) return false;
       }
+      if (platformAdminIdFilter.trim()) {
+        const pa = platformAdminIdFilter.trim();
+        const matchesPa = log.relatedPlatformAdminId === pa || log.actor.toLowerCase().includes(pa.toLowerCase());
+        if (!matchesPa) return false;
+      }
 
       if (riskOnly && !isRiskGovernanceAuditEvent(log)) return false;
 
@@ -287,6 +296,7 @@ export function PlatformAuditLogs() {
     identityLinkFilter,
     clientAppFilter,
     verificationSessionFilter,
+    platformAdminIdFilter,
     governanceFocus,
   ]);
 
@@ -363,7 +373,7 @@ export function PlatformAuditLogs() {
               <div className="relative max-w-md min-w-[200px] flex-1">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  placeholder="Search events, IDs, governance fields…"
+                  placeholder="Search events, subjects, actors, organizations…"
                   value={searchQuery}
                   onChange={(e) => patch({ search: e.target.value || null })}
                   className="h-10 bg-background pl-10"
@@ -443,6 +453,15 @@ export function PlatformAuditLogs() {
                   placeholder="Session id"
                   value={verificationSessionFilter}
                   onChange={(e) => patch({ verificationSessionId: e.target.value || null })}
+                  className="h-10 font-mono text-[13px]"
+                />
+              </div>
+              <div className="flex min-w-[160px] max-w-[220px] flex-col gap-1">
+                <Label className="text-[11px] text-muted-foreground">Platform admin</Label>
+                <Input
+                  placeholder="pa000001"
+                  value={platformAdminIdFilter}
+                  onChange={(e) => patch({ platformAdminId: e.target.value || null })}
                   className="h-10 font-mono text-[13px]"
                 />
               </div>
@@ -584,12 +603,11 @@ export function PlatformAuditLogs() {
                     </span>
                   </th>
                   <th className="p-4 text-left font-medium text-muted-foreground">Event</th>
-                  <th className="p-4 text-left font-medium text-muted-foreground">Governance</th>
+                  <th className="p-4 text-left font-medium text-muted-foreground">Governance category</th>
+                  <th className="p-4 text-left font-medium text-muted-foreground">Severity</th>
                   <th className="p-4 text-left font-medium text-muted-foreground">Subject</th>
                   <th className="p-4 text-left font-medium text-muted-foreground">Actor</th>
-                  <th className="p-4 text-left font-medium text-muted-foreground">Target</th>
                   <th className="p-4 text-left font-medium text-muted-foreground">Organization</th>
-                  <th className="p-4 text-left font-medium text-muted-foreground">Severity</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -618,15 +636,6 @@ export function PlatformAuditLogs() {
                         </p>
                       </td>
                       <td className="p-4 align-top text-muted-foreground">{getGovernanceCategoryForLog(log)}</td>
-                      <td className="p-4 align-top text-muted-foreground">{entityTypeShort(log)}</td>
-                      <td className="p-4 align-top">
-                        <p className="text-foreground">{log.actor}</p>
-                        <p className="text-[11px] text-muted-foreground">{log.actorType}</p>
-                      </td>
-                      <td className="max-w-[200px] p-4 align-top break-words text-foreground">{log.target ?? "—"}</td>
-                      <td className="p-4 align-top">
-                        <p className="text-foreground">{log.organization}</p>
-                      </td>
                       <td className="p-4 align-top">
                         <span
                           className={`inline-flex items-center rounded-md border px-2 py-1 text-[12px] font-medium ${governanceSeverityBadgeClass(
@@ -636,12 +645,20 @@ export function PlatformAuditLogs() {
                           {govSev}
                         </span>
                       </td>
+                      <td className="p-4 align-top text-muted-foreground">{entityTypeShort(log)}</td>
+                      <td className="p-4 align-top">
+                        <p className="text-foreground">{log.actor}</p>
+                        <p className="text-[11px] text-muted-foreground">{log.actorType}</p>
+                      </td>
+                      <td className="p-4 align-top">
+                        <p className="text-foreground">{log.organization}</p>
+                      </td>
                     </tr>
                   );
                 })}
                 {visibleLogs.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="px-6 py-12 text-center text-sm text-muted-foreground">
+                    <td colSpan={7} className="px-6 py-12 text-center text-sm text-muted-foreground">
                       No audit logs match the current filters.
                     </td>
                   </tr>

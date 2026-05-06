@@ -25,6 +25,8 @@ export const mockPlatformUserRiskByVerifymeId: Record<string, MockPlatformUserRi
   vmee90cd: { idProofFailCountSample: 5 },
   vmff01ef: { idProofFailCountSample: 0 },
   vmconflict1: { idProofFailCountSample: 1 },
+  vmzz12xy: { idProofFailCountSample: 4, recentDeviceReplacement: true },
+  vmorphan1: { idProofFailCountSample: 0, recentDeviceReplacement: false },
 };
 
 export function riskLevelFromScore(score: number): RiskLevelLabel {

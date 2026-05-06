@@ -1,6 +1,5 @@
-import { UserPlus, Mail, MoreVertical } from "lucide-react";
-import { DataTable } from "../../shared/components/DataTable";
-import { StatusBadge } from "../../shared/components/StatusBadge";
+import { useMemo, useState } from "react";
+import { UserPlus, Mail } from "lucide-react";
 import { UnifiedBadge } from "../../shared/components/UnifiedBadge";
 import { Button } from "../../shared/components/ui/button";
 import { Card } from "../../shared/components/ui/card";
@@ -10,6 +9,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -21,13 +21,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../../shared/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "../../shared/components/ui/dropdown-menu";
 import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
+import { shouldIgnoreRowOpenClick } from "../../platform/utils/tableRowNav";
 
 type EnterpriseRole =
   | "Owner"
@@ -47,6 +42,9 @@ const enterpriseRoleOptions: EnterpriseRole[] = [
 ];
 
 export function EnterpriseTeam() {
+  const [detail, setDetail] = useState<any | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{ action: string; member: any } | null>(null);
+  const [changeRole, setChangeRole] = useState<EnterpriseRole>("Admin");
   const teamMembers = [
     {
       name: "Sarah Johnson",
@@ -80,7 +78,7 @@ export function EnterpriseTeam() {
       email: "james@company.com",
       role: "Compliance / Auditor",
       department: "Sales",
-      status: "inactive",
+      status: "suspended",
       joined: "Dec 10, 2023",
       lastActive: "2 days ago",
     },
@@ -102,7 +100,34 @@ export function EnterpriseTeam() {
       joined: "Feb 15, 2024",
       lastActive: "30 min ago",
     },
+    {
+      name: "Priya Kapoor",
+      email: "priya@company.com",
+      role: "Operations",
+      department: "Support",
+      status: "pending",
+      joined: "Apr 2, 2024",
+      lastActive: "Never",
+    },
+    {
+      name: "Ramon Cruz",
+      email: "ramon@company.com",
+      role: "Admin",
+      department: "Security",
+      status: "disabled",
+      joined: "Jan 3, 2024",
+      lastActive: "Apr 12, 2024",
+    },
   ];
+  const stats = useMemo(
+    () => ({
+      total: teamMembers.length,
+      active: teamMembers.filter((m) => m.status === "active").length,
+      admins: teamMembers.filter((m) => m.role === "Owner" || m.role === "Admin").length,
+      pending: teamMembers.filter((m) => m.status === "pending").length,
+    }),
+    [teamMembers],
+  );
 
   return (
     <PortalPageFrame
@@ -164,90 +189,117 @@ export function EnterpriseTeam() {
       <div className="grid grid-cols-4 gap-4">
         <Card className="p-4 shadow-sm">
           <p className="text-[13px] text-muted-foreground mb-1">Total Users</p>
-          <p className="text-2xl font-semibold tabular-nums tracking-tight">24</p>
+          <p className="text-2xl font-semibold tabular-nums tracking-tight">{stats.total}</p>
         </Card>
         <Card className="p-4 shadow-sm">
           <p className="text-[13px] text-muted-foreground mb-1">Active Now</p>
-          <p className="text-2xl font-semibold tabular-nums tracking-tight text-green-600">18</p>
+          <p className="text-2xl font-semibold tabular-nums tracking-tight text-green-600">{stats.active}</p>
         </Card>
         <Card className="p-4 shadow-sm">
           <p className="text-[13px] text-muted-foreground mb-1">Admins</p>
-          <p className="text-2xl font-semibold tabular-nums tracking-tight">3</p>
+          <p className="text-2xl font-semibold tabular-nums tracking-tight">{stats.admins}</p>
         </Card>
         <Card className="p-4 shadow-sm">
           <p className="text-[13px] text-muted-foreground mb-1">Pending Invites</p>
-          <p className="text-2xl font-semibold tabular-nums tracking-tight text-yellow-600">2</p>
+          <p className="text-2xl font-semibold tabular-nums tracking-tight text-yellow-600">{stats.pending}</p>
         </Card>
       </div>
 
-      {/* Team Table */}
-      <DataTable
-        columns={[
-          {
-            key: "name",
-            label: "User",
-            render: (row) => (
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <span className="text-[14px] font-medium text-primary">
-                    {row.name.split(" ").map((n: string) => n[0]).join("")}
-                  </span>
-                </div>
+      <Card className="border border-border shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="border-b border-border bg-accent/40">
+              <tr>
+                <th className="p-3 text-left text-[11px] font-semibold uppercase text-muted-foreground">User</th>
+                <th className="p-3 text-left text-[11px] font-semibold uppercase text-muted-foreground">Role</th>
+                <th className="p-3 text-left text-[11px] font-semibold uppercase text-muted-foreground">Department</th>
+                <th className="p-3 text-left text-[11px] font-semibold uppercase text-muted-foreground">Status</th>
+                <th className="p-3 text-left text-[11px] font-semibold uppercase text-muted-foreground">Last Active</th>
+                <th className="p-3 text-left text-[11px] font-semibold uppercase text-muted-foreground">Joined</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {teamMembers.map((row) => (
+                <tr
+                  key={row.email}
+                  className="cursor-pointer hover:bg-accent/20"
+                  onClick={(e) => {
+                    if (shouldIgnoreRowOpenClick(e.target)) return;
+                    setDetail(row);
+                    setChangeRole(row.role as EnterpriseRole);
+                  }}
+                >
+                  <td className="p-3">
+                    <p className="font-medium">{row.name}</p>
+                    <p className="text-[13px] text-muted-foreground">{row.email}</p>
+                  </td>
+                  <td className="p-3"><UnifiedBadge variant="role" value={row.role} size="sm" /></td>
+                  <td className="p-3">{row.department}</td>
+                  <td className="p-3"><UnifiedBadge variant="status" value={row.status} /></td>
+                  <td className="p-3 text-muted-foreground">{row.lastActive}</td>
+                  <td className="p-3 text-muted-foreground">{row.joined}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+      <Dialog open={detail !== null} onOpenChange={(o) => !o && setDetail(null)}>
+        <DialogContent className="max-w-lg">
+          {detail && (
+            <>
+              <DialogHeader>
+                <DialogTitle>Team member detail</DialogTitle>
+                <DialogDescription>Role, activity, and user controls.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div><p className="text-xs text-muted-foreground">Profile</p><p>{detail.name} · {detail.email}</p></div>
                 <div>
-                  <p className="text-[14px] font-medium">{row.name}</p>
-                  <p className="text-[13px] text-muted-foreground">{row.email}</p>
+                  <p className="text-xs text-muted-foreground mb-2">Role & Permissions</p>
+                  <Select value={changeRole} onValueChange={(v) => setChangeRole(v as EnterpriseRole)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>{enterpriseRoleOptions.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
+                  </Select>
+                  <Button size="sm" className="mt-2" onClick={() => setConfirmAction({ action: "change_role", member: detail })}>
+                    Change role
+                  </Button>
+                </div>
+                <div><p className="text-xs text-muted-foreground">Activity</p><p>{detail.lastActive}</p></div>
+                <div className="flex flex-wrap gap-2">
+                  {detail.status === "pending" && (
+                    <Button variant="outline" size="sm" onClick={() => setConfirmAction({ action: "resend_invite", member: detail })}>
+                      Resend invite
+                    </Button>
+                  )}
+                  <Button variant="outline" size="sm" onClick={() => setConfirmAction({ action: "suspend_access", member: detail })}>
+                    Suspend access
+                  </Button>
+                  <Button variant="destructive" size="sm" onClick={() => setConfirmAction({ action: "disable_access", member: detail })}>
+                    Disable access
+                  </Button>
                 </div>
               </div>
-            ),
-          },
-          {
-            key: "role",
-            label: "Role",
-            render: (row) => (
-              <UnifiedBadge variant="role" value={row.role} size="sm" />
-            ),
-          },
-          { key: "department", label: "Department" },
-          {
-            key: "status",
-            label: "Status",
-            render: (row) => <StatusBadge status={row.status as any} />,
-          },
-          { 
-            key: "lastActive", 
-            label: "Last Active",
-            render: (row) => (
-              <span className="text-[13px] text-muted-foreground">{row.lastActive}</span>
-            ),
-          },
-          { 
-            key: "joined", 
-            label: "Joined",
-            render: (row) => (
-              <span className="text-[13px] text-muted-foreground">{row.joined}</span>
-            ),
-          },
-          {
-            key: "actions",
-            label: "",
-            render: () => (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm">
-                    <MoreVertical className="w-4 h-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem>Edit Role</DropdownMenuItem>
-                  <DropdownMenuItem>Send Message</DropdownMenuItem>
-                  <DropdownMenuItem className="text-red-600">Remove</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ),
-          },
-        ]}
-        data={teamMembers}
-      />
+              <DialogFooter><Button variant="outline" onClick={() => setDetail(null)}>Close</Button></DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+      <Dialog open={confirmAction !== null} onOpenChange={(o) => !o && setConfirmAction(null)}>
+        <DialogContent className="max-w-md">
+          {confirmAction && (
+            <>
+              <DialogHeader>
+                <DialogTitle>Confirm change</DialogTitle>
+                <DialogDescription>{confirmAction.action.replace("_", " ")} for {confirmAction.member.email}?</DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setConfirmAction(null)}>Cancel</Button>
+                <Button onClick={() => setConfirmAction(null)}>Confirm</Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </PortalPageFrame>
   );
 }

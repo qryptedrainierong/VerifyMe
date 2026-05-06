@@ -39,6 +39,8 @@ Routers are created through functions (e.g. `getPlatformRouter()`) rather than a
 
 Organization Detail shows organization-specific summary (info, status), usage highlights, an integration readiness checklist, and governance controls. Deep operational tables—verification sessions, audit logs, billing activity, client apps / API, identity links, and similar—live on platform-wide VerifyMe Admin routes; Organization Detail links to those views with an `organizationId` query parameter when the target page supports it.
 
+Organization Admin Portal follows the same operational UI pattern as VerifyMe Admin: summary lists, row-click details, destructive controls only inside detail views with confirmation, and no prototype wording in visible UI.
+
 **Prototype behavior:** VerifyMe Users (`/verifyme-users`), Identity Links (`/identity-links`), and Client Apps / API (`/client-apps`) read `organizationId` from the query string, match it against seeded organization ids, and pre-select the organization filter when possible. Other list screens should follow the same pattern as query-aware filtering is added.
 
 **Billing dashboard:** Top-line spend metrics aggregate `getVerificationSpend(org)` from seeded organizations — this is **verification-related spend**, not SaaS MRR. Invoice rows and governance actions use in-memory mock data (`platformBillingInvoicesMock`); confirmations do not send email or call a payments API in the prototype.
@@ -59,9 +61,15 @@ Major entities use **full-page** detail views (Organizations, VerifyMe Users, Cl
 
 Tokens live in `src/styles/theme.css` with Tailwind mapping. Prefer token changes over per-page color overrides.
 
+### UI language principle
+
+Visible admin UI should use operational language. Prototype/design notes belong in documentation.
+
 ### VerifyMe Admin list pages (UI pattern)
 
 VerifyMe Admin list pages should be **summary-first**: the table is a filterable overview. **Row click** navigates to a **full-page detail** for major entities or opens a **detail dialog** for event/transaction/log rows (see “Detail presentation” above). **Destructive or security-sensitive actions** (refunds, credential rotation, account disable, conflict resolution, etc.) must live **inside** detail **controls** and use **explicit confirmation** (e.g. alert/confirm flow), not row-level menus or ad-hoc list buttons.
+
+Platform Team & Access uses the same list/detail behavior: no destructive controls in rows, confirmations for state-changing controls, and operational language in visible UI.
 
 ### Governance & audit logs
 
@@ -95,6 +103,11 @@ Details of each past iteration are intentionally summarized here; avoid duplicat
 npm install
 npm run dev
 ```
+
+## Packaging hygiene
+
+- Source ZIP handoff packages should exclude `dist/`.
+- `dist/` is build output and should be generated per environment, not versioned in source handoff archives.
 
 ## Organization Detail tabs (historical note)
 

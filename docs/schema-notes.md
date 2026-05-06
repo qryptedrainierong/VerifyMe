@@ -23,6 +23,8 @@ Terminology: [`glossary.md`](./glossary.md). Risk scoring (design): [`risk-scori
 |-------|---------|
 | **verifyme_admin_users** | **VerifyMe Admin Portal** operators: `id` UUID PK, `email`, `role`, `status`, `last_login_at`. MFA enrollment references (no secrets); may alternatively be delegated to corporate IdP with shadow mapping. |
 | **organization_admin_users** | **Organization Admin Portal** users: `id` UUID PK, `organization_id` FK, `email`, `role`, `status`, `last_login_at`. MFA enrollment references (no secrets). |
+| **platform_admin_users** | **VerifyMe Admin Portal** internal operators: `id` UUID PK, `platform_admin_id` unique display/support ID, `email`, `full_name`, `role`, `status`, `mfa_status`, `last_login_at`, `last_activity_at`, `created_at`, `invited_by`. |
+| **platform_admin_sessions** | Platform admin session state: `id` UUID, `platform_admin_user_id` FK, `device_summary`, `ip_address`, `last_activity_at`, `revoked_at`. |
 
 ## VerifyMe Users & devices
 

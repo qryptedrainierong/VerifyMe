@@ -1,5 +1,5 @@
 import { useMemo, useState, useSyncExternalStore } from "react";
-import { ScrollText, Search, MoreVertical } from "lucide-react";
+import { ScrollText, Search } from "lucide-react";
 import { Button } from "../../shared/components/ui/button";
 import { Card } from "../../shared/components/ui/card";
 import { Input } from "../../shared/components/ui/input";
@@ -18,12 +18,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../../shared/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "../../shared/components/ui/dropdown-menu";
 import {
   VerificationBillingCallout,
   BillableBadge,
@@ -49,6 +43,7 @@ import {
   isPublicVerifymeIdForRiskCompute,
 } from "../../platform/data/mockPlatformRisk";
 import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
+import { shouldIgnoreRowOpenClick } from "../../platform/utils/tableRowNav";
 
 type OutcomeFilter = "all" | VerificationSessionOutcome;
 type BillableFilter = "all" | "billable" | "not_billable";
@@ -171,7 +166,7 @@ export function EnterpriseVerificationLogs() {
             <SelectValue placeholder="Outcome" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All ID proof (internal filter)</SelectItem>
+            <SelectItem value="all">All ID proof outcomes</SelectItem>
             <SelectItem value="verified">{verificationOutcomeLabel("verified")}</SelectItem>
             <SelectItem value="failed">{verificationOutcomeLabel("failed")}</SelectItem>
             <SelectItem value="expired">Expired</SelectItem>
@@ -207,9 +202,9 @@ export function EnterpriseVerificationLogs() {
             <SelectValue placeholder="Date range" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All dates (sample)</SelectItem>
-            <SelectItem value="7d">Last 7 days (mock)</SelectItem>
-            <SelectItem value="30d">Last 30 days (mock)</SelectItem>
+            <SelectItem value="all">All dates</SelectItem>
+            <SelectItem value="7d">Last 7 days</SelectItem>
+            <SelectItem value="30d">Last 30 days</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -231,12 +226,18 @@ export function EnterpriseVerificationLogs() {
                 <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">Billing</th>
                 <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">Cost</th>
                 <th className="text-left p-3 font-semibold text-muted-foreground uppercase text-[11px]">Timestamp</th>
-                <th className="text-right p-3 font-semibold text-muted-foreground uppercase text-[11px] w-[72px]">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {filtered.map((s) => (
-                <tr key={s.sessionId} className="hover:bg-accent/30">
+                <tr
+                  key={s.sessionId}
+                  className="cursor-pointer hover:bg-accent/30"
+                  onClick={(e) => {
+                    if (shouldIgnoreRowOpenClick(e.target)) return;
+                    setDetail(s);
+                  }}
+                >
                   <td className="p-3 font-mono text-[12px]">{s.sessionId}</td>
                   <td className="p-3 font-mono text-[12px]">{s.clientUserId}</td>
                   <td className="p-3">
@@ -266,18 +267,6 @@ export function EnterpriseVerificationLogs() {
                       hour: "numeric",
                       minute: "2-digit",
                     })}
-                  </td>
-                  <td className="p-3 text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreVertical className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setDetail(s)}>View details</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
                   </td>
                 </tr>
               ))}

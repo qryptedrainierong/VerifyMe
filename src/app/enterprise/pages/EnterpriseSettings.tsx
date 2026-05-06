@@ -30,7 +30,7 @@ export function EnterpriseSettings() {
   return (
     <PortalPageFrame
       title="Settings"
-      description="Organization profile, verification behavior, notifications, and security preferences (sample forms — no persistence)."
+      description="Organization profile, verification behavior, notifications, and security preferences."
       bodyClassName="max-w-5xl space-y-6"
     >
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -127,7 +127,7 @@ export function EnterpriseSettings() {
             <div className="flex justify-end mt-6">
               <Button type="button">
                 <Save className="w-4 h-4 mr-2" />
-                Save profile (mock)
+                Save profile
               </Button>
             </div>
           </Card>
@@ -168,7 +168,7 @@ export function EnterpriseSettings() {
               <div className="flex justify-end mt-6">
                 <Button type="button">
                   <Save className="w-4 h-4 mr-2" />
-                  Save verification settings (mock)
+                  Save verification settings
                 </Button>
               </div>
             </Card>
@@ -218,7 +218,7 @@ export function EnterpriseSettings() {
             <div className="flex justify-end mt-6">
               <Button type="button">
                 <Save className="w-4 h-4 mr-2" />
-                Save preferences (mock)
+                Save preferences
               </Button>
             </div>
           </Card>
@@ -253,7 +253,7 @@ export function EnterpriseSettings() {
             <div className="flex justify-end mt-6">
               <Button type="button">
                 <Save className="w-4 h-4 mr-2" />
-                Update security (mock)
+                Update security
               </Button>
             </div>
           </Card>
@@ -268,7 +268,7 @@ export function EnterpriseSettings() {
               Only a VerifyMe Super Admin can permanently disable or archive an organization.
             </p>
             <Button variant="outline" type="button" className="border-red-300 text-red-700 hover:bg-red-100 dark:hover:bg-red-950">
-              Request organization deactivation review (mock)
+              Request organization deactivation review
             </Button>
           </Card>
         </TabsContent>
