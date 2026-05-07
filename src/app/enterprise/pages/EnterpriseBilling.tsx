@@ -16,16 +16,39 @@ import {
   enterpriseUsageLimit,
   enterpriseUsagePct,
   enterpriseUsageSpend,
+  type EnterpriseInvoiceRow,
 } from "../data/enterpriseSample";
 import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
 
+function parseInvoiceDate(dateStr: string): number {
+  const t = Date.parse(dateStr);
+  return Number.isNaN(t) ? 0 : t;
+}
+
+function invoiceStatusBadge(row: EnterpriseInvoiceRow) {
+  if (row.refundRequested) {
+    return <StatusBadge status="warning" label="Refund requested" />;
+  }
+  return <StatusBadge status={row.status as any} label={row.status === "success" ? "Paid" : undefined} />;
+}
+
 export function EnterpriseBilling() {
   const [requiresActionOnly, setRequiresActionOnly] = useState(true);
-  const [invoiceDetail, setInvoiceDetail] = useState<(typeof enterpriseInvoices)[number] | null>(null);
-  const [confirming, setConfirming] = useState<string | null>(null);
+  const [invoiceDetail, setInvoiceDetail] = useState<EnterpriseInvoiceRow | null>(null);
+  const [confirming, setConfirming] = useState<"reminder" | "refund" | null>(null);
+
+  const sortedInvoices = useMemo(() => {
+    const copy = [...enterpriseInvoices];
+    copy.sort((a, b) => {
+      if (a.actionRequired !== b.actionRequired) return a.actionRequired ? -1 : 1;
+      return parseInvoiceDate(b.date) - parseInvoiceDate(a.date);
+    });
+    return copy;
+  }, []);
+
   const invoices = useMemo(
-    () => enterpriseInvoices.filter((inv) => (requiresActionOnly ? inv.actionRequired : true)),
-    [requiresActionOnly],
+    () => sortedInvoices.filter((inv) => (requiresActionOnly ? inv.actionRequired : true)),
+    [sortedInvoices, requiresActionOnly],
   );
 
   const formatCurrency = (amount: number) =>
@@ -141,12 +164,12 @@ export function EnterpriseBilling() {
               {
                 key: "status",
                 label: "Status",
-                render: (row) => <StatusBadge status={row.status as any} label="Paid" />,
+                render: (row) => invoiceStatusBadge(row as EnterpriseInvoiceRow),
               },
               { key: "actionRequired", label: "Action required", render: (row) => (row.actionRequired ? "Yes" : "No") },
             ]}
             data={invoices}
-            onRowClick={(row) => setInvoiceDetail(row as (typeof enterpriseInvoices)[number])}
+            onRowClick={(row) => setInvoiceDetail(row as EnterpriseInvoiceRow)}
           />
         </TabsContent>
 
@@ -198,13 +221,45 @@ export function EnterpriseBilling() {
               <DialogDescription>{invoiceDetail.id} · {invoiceDetail.period}</DialogDescription>
             </DialogHeader>
             <div className="space-y-3 text-sm">
-              <p>Amount: <strong>{formatCurrency(Number(invoiceDetail.amount))}</strong></p>
-              <p>Action required: {invoiceDetail.actionRequired ? "Yes" : "No"}</p>
-              <div className="flex flex-wrap gap-2">
-                <Button variant="outline" size="sm"><Download className="w-4 h-4 mr-2" />Download</Button>
-                <Button size="sm" variant="outline" disabled={!invoiceDetail.actionRequired} onClick={() => setConfirming("send reminder")}>Send reminder</Button>
-                <Button size="sm" variant="outline" disabled={!invoiceDetail.actionRequired} onClick={() => setConfirming("request refund")}>Request refund</Button>
+              <div>
+                <p className="text-xs text-muted-foreground uppercase mb-1">Summary</p>
+                <p>{invoiceDetail.summary ?? "Invoice for verification usage and plan credits."}</p>
               </div>
+              <p>
+                <span className="text-muted-foreground">Amount:</span>{" "}
+                <strong>{formatCurrency(Number(invoiceDetail.amount))}</strong>
+              </p>
+              <p>
+                <span className="text-muted-foreground">Period:</span> {invoiceDetail.period} ·{" "}
+                <span className="text-muted-foreground">Issued:</span> {invoiceDetail.date}
+              </p>
+              <p>Action required: {invoiceDetail.actionRequired ? "Yes" : "No"}</p>
+              {invoiceDetail.refundRequested ? (
+                <p className="text-xs text-amber-800 dark:text-amber-200">Refund requested — finance workflow in progress.</p>
+              ) : null}
+              <div className="flex flex-wrap gap-2 pt-2">
+                <Button variant="outline" size="sm">
+                  <Download className="w-4 h-4 mr-2" />
+                  Download
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={!invoiceDetail.actionRequired}
+                  onClick={() => setConfirming("reminder")}
+                >
+                  Send reminder
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={!invoiceDetail.actionRequired || invoiceDetail.refundRequested}
+                  onClick={() => setConfirming("refund")}
+                >
+                  Request refund
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">Billing controls require confirmation and are recorded in audit logs when live.</p>
             </div>
             <DialogFooter><Button variant="outline" onClick={() => setInvoiceDetail(null)}>Close</Button></DialogFooter>
           </>
@@ -214,11 +269,26 @@ export function EnterpriseBilling() {
     <Dialog open={confirming !== null} onOpenChange={(o) => !o && setConfirming(null)}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Confirm action</DialogTitle>
-          <DialogDescription>{confirming} for this invoice?</DialogDescription>
+          <DialogTitle>{confirming === "reminder" ? "Send payment reminder?" : "Request refund?"}</DialogTitle>
+          <DialogDescription className="text-left space-y-2">
+            {confirming === "reminder" && (
+              <>
+                <p>Send a reminder for invoice {invoiceDetail?.id} ({invoiceDetail?.period})?</p>
+                <p className="text-xs text-muted-foreground">This action will be recorded in audit logs.</p>
+              </>
+            )}
+            {confirming === "refund" && (
+              <>
+                <p>Request a refund review for invoice {invoiceDetail?.id}? Finance will follow your organization policy.</p>
+                <p className="text-xs text-muted-foreground">This action will be recorded in audit logs.</p>
+              </>
+            )}
+          </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setConfirming(null)}>Cancel</Button>
+          <Button variant="outline" onClick={() => setConfirming(null)}>
+            Cancel
+          </Button>
           <Button onClick={() => setConfirming(null)}>Confirm</Button>
         </DialogFooter>
       </DialogContent>

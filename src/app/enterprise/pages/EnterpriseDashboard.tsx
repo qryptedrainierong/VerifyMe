@@ -1,63 +1,104 @@
-import { useMemo } from "react";
-import { CheckCircle2, Circle, CreditCard, Users, AlertCircle, BarChart3, ScrollText } from "lucide-react";
+import { useMemo, useSyncExternalStore, type ReactNode } from "react";
+import { CheckCircle2, Circle, ListChecks, ScrollText } from "lucide-react";
 import { Link } from "react-router";
 import { Card } from "../../shared/components/ui/card";
 import { Button } from "../../shared/components/ui/button";
 import { Progress } from "../../shared/components/ui/progress";
-import { UnifiedBadge } from "../../shared/components/UnifiedBadge";
 import { getOrgVerificationSessions } from "../../shared/data/verificationSessionsMock";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import {
   enterpriseActiveEndUsers,
-  enterpriseInvoices,
   enterpriseCreditRemaining,
   enterpriseCreditUtilizationPct,
-  enterpriseEndUsers,
+  enterpriseInvoices,
   enterpriseOrganization,
   enterprisePortalSetupIncomplete,
   enterpriseSetupSteps,
   enterpriseUsageTrend,
   enterpriseUsageSpend,
+  enterpriseUsageLimit,
+  enterpriseUsagePct,
 } from "../data/enterpriseSample";
 import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
+import {
+  getLinkedEndUserRecords,
+  getLinkedEndUsersStoreVersion,
+  subscribeLinkedEndUsersListeners,
+} from "../data/enterpriseLinkedEndUsersSession";
+import { userRiskLevelForOrgAdmin } from "../../platform/data/mockPlatformRisk";
+import { getEndUserAssociations } from "../../platform/data/platformEndUserAssociationsSession";
+
+function KpiCard({
+  label,
+  value,
+  hint,
+  valueClassName,
+  footer,
+}: {
+  label: string;
+  value: string | number;
+  hint?: string;
+  valueClassName?: string;
+  footer?: ReactNode;
+}) {
+  return (
+    <Card className="p-4 border border-border shadow-sm">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className={`text-2xl font-semibold tabular-nums tracking-tight mt-1 ${valueClassName ?? "text-foreground"}`}>
+        {value}
+      </p>
+      {hint ? <p className="text-sm text-muted-foreground mt-1">{hint}</p> : null}
+      {footer ? <div className="mt-2">{footer}</div> : null}
+    </Card>
+  );
+}
 
 export function EnterpriseDashboard() {
+  const linkedVersion = useSyncExternalStore(
+    subscribeLinkedEndUsersListeners,
+    getLinkedEndUsersStoreVersion,
+    getLinkedEndUsersStoreVersion,
+  );
+  const linkedRecords = useMemo(() => getLinkedEndUserRecords(), [linkedVersion]);
+  const platformAssociations = useMemo(() => getEndUserAssociations(), []);
+
   const usageData = enterpriseUsageTrend;
   const orgSessionSnap = useMemo(() => {
     const sessions = getOrgVerificationSessions(enterpriseOrganization.id);
     const settled = sessions.filter((s) => s.outcome !== "pending");
     const failed = settled.filter((s) => s.outcome === "failed").length;
     const failRate = settled.length > 0 ? (failed / settled.length) * 100 : 0;
-    const billable = sessions.filter((s) => s.billable).length;
-    const nonBill = sessions.filter((s) => !s.billable).length;
-    return { total: sessions.length, failRate, billable, nonBill };
+    return { total: sessions.length, failRate };
   }, []);
 
-  const recentActivity = enterpriseEndUsers.slice(0, 4).map((user, index) => ({
-    id: index + 1,
+  const setupIncompleteCount = enterpriseSetupSteps.filter((s) => !s.complete).length;
+  const activeConflicts = linkedRecords.filter((r) => r.linkStatus === "conflict" && !r.conflictReviewed).length;
+  const userRiskWarnings = useMemo(
+    () =>
+      linkedRecords.filter((r) => {
+        const lvl = userRiskLevelForOrgAdmin(r.platformRiskVerifymeId, platformAssociations);
+        return lvl === "High" || lvl === "Critical";
+      }).length,
+    [linkedRecords, platformAssociations],
+  );
+  const actionRequiredInvoices = enterpriseInvoices.filter((i) => i.actionRequired).length;
+  const integrationIssueSteps = enterpriseSetupSteps.filter(
+    (s) => !s.complete && ["redirect", "qr", "verification", "test", "api"].includes(s.id),
+  ).length;
+
+  const creditOverage = Math.max(0, enterpriseUsageSpend - enterpriseOrganization.creditBalance);
+
+  const recentActivity = linkedRecords.slice(0, 5).map((user, index) => ({
+    id: user.id,
     clientUserId: user.clientUserId || "—",
     action:
-      user.status === "active" ? "Completed a billable verification session" : "Has a pending VerifyMe link",
-    timestamp: `${2 + index * 2} hour${index === 0 ? "" : "s"} ago`,
+      user.linkStatus === "linked"
+        ? "Linked — verification activity may appear in logs"
+        : user.linkStatus === "pending"
+          ? "Pending VerifyMe link"
+          : `Status: ${user.linkStatus}`,
+    timestamp: `${1 + index}h ago`,
   }));
-
-  const alerts = [
-    {
-      id: 1,
-      type: enterpriseCreditUtilizationPct >= 80 ? "warning" : "info",
-      message:
-        enterpriseCreditUtilizationPct >= 100
-          ? "Your included credit is exhausted for this period"
-          : `You're using ${enterpriseCreditUtilizationPct.toFixed(1)}% of your included credit`,
-      action: "usage",
-    },
-    {
-      id: 2,
-      type: "info",
-      message: "Your invoice for April is ready",
-      action: "billing",
-    },
-  ];
 
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat("en-US", {
@@ -70,312 +111,273 @@ export function EnterpriseDashboard() {
   return (
     <PortalPageFrame
       title="Dashboard"
-      description="Operational view of credits, verification sessions, linked end users, and integration readiness."
-      bodyClassName="space-y-6"
+      description="Operational view: attention queue, organization health, and recent activity."
+      bodyClassName="space-y-8"
     >
       {enterprisePortalSetupIncomplete ? (
-        <Card className="p-6 border-2 border-primary/30 bg-primary/5 shadow-sm">
-          <div className="mb-4">
-            <h2 className="text-[18px] font-semibold text-foreground">Finish organization setup</h2>
-            <p className="text-[14px] text-muted-foreground mt-1 max-w-3xl">
-              VerifyMe Admin created your organization (profile, initial admin, plan & credits). Complete the steps below
-              in this portal before relying on production verification traffic.
-            </p>
-            <p className="text-[13px] text-foreground mt-3 rounded-md border border-amber-200 bg-amber-50/80 px-3 py-2 dark:bg-amber-950/30 dark:border-amber-800">
-              Verification API usage should remain <strong>disabled</strong> until redirect URI, QR keys, and
-              verification settings are configured and tested.
-            </p>
+        <Card className="p-4 border border-border shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
+            <div>
+              <h2 className="text-base font-semibold text-foreground">Finish organization setup</h2>
+              <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
+                Complete the remaining steps before production verification traffic. API usage should stay disabled until
+                redirect URIs, QR keys, and verification settings are tested.
+              </p>
+            </div>
+            <Button size="sm" variant="outline" asChild>
+              <Link to="/api-integration">Integration</Link>
+            </Button>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {enterpriseSetupSteps.map((step) => (
-              <Card
+              <div
                 key={step.id}
-                className={`p-4 border shadow-sm ${step.complete ? "border-green-200/80 bg-green-50/30 dark:bg-green-950/20" : "border-border bg-card"}`}
+                className={`flex items-start gap-2 rounded-md border p-3 text-sm ${
+                  step.complete ? "border-green-200/80 bg-green-50/30 dark:bg-green-950/20" : "border-border bg-card"
+                }`}
               >
-                <div className="flex items-start gap-3">
-                  {step.complete ? (
-                    <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0 mt-0.5" aria-hidden />
-                  ) : (
-                    <Circle className="w-5 h-5 text-muted-foreground shrink-0 mt-0.5" aria-hidden />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <h3 className="text-[15px] font-semibold text-foreground">{step.title}</h3>
-                      <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                        {step.complete ? "Complete" : "Incomplete"}
-                      </span>
-                    </div>
-                    <p className="text-[13px] text-muted-foreground leading-relaxed">{step.description}</p>
-                    <div className="mt-3 flex flex-wrap items-center gap-2">
-                      <Button size="sm" variant={step.complete ? "outline" : "default"} asChild>
-                        <Link to={step.href}>{step.ctaLabel}</Link>
-                      </Button>
-                      <span className="text-[11px] text-muted-foreground">Opens: {step.href}</span>
-                    </div>
-                  </div>
+                {step.complete ? (
+                  <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0 mt-0.5" aria-hidden />
+                ) : (
+                  <Circle className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" aria-hidden />
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-foreground">{step.title}</p>
+                  <Button size="sm" variant={step.complete ? "ghost" : "default"} className="mt-2 h-8 px-2" asChild>
+                    <Link to={step.href}>{step.ctaLabel}</Link>
+                  </Button>
                 </div>
-              </Card>
+              </div>
             ))}
           </div>
         </Card>
       ) : (
-        <Card className="p-4 border border-green-200 bg-green-50/40 dark:bg-green-950/20 dark:border-green-900">
-          <div className="flex items-center gap-2 text-[14px] text-foreground">
-            <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0" />
-            <span>All setup steps are complete. Monitor usage and credits below.</span>
+        <Card className="p-4 border border-green-200 bg-green-50/40 dark:bg-green-950/20 dark:border-green-900 shadow-sm">
+          <div className="flex items-center gap-2 text-sm text-foreground">
+            <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+            <span>Setup complete. Monitor health metrics and the attention queue below.</span>
           </div>
         </Card>
       )}
 
-      <div className="grid grid-cols-4 gap-6">
-        <Card className="p-6 border border-border shadow-sm">
-          <div className="flex items-start justify-between mb-3">
-            <div className="w-11 h-11 rounded-xl bg-blue-500/10 flex items-center justify-center">
-              <Users className="w-5 h-5 text-blue-600" />
-            </div>
-          </div>
-          <div>
-            <p className="text-[13px] text-muted-foreground mb-1">Admin seats</p>
-            <p className="text-[32px] font-semibold text-foreground leading-none">{enterpriseOrganization.seatsUsed}</p>
-            <p className="text-[13px] text-muted-foreground mt-2">
-              of {enterpriseOrganization.seatLimit} seat limit
-            </p>
-          </div>
-        </Card>
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-foreground">Action required</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+          <KpiCard
+            label="Setup incomplete"
+            value={setupIncompleteCount}
+            hint="Checklist steps remaining"
+            footer={
+              <Button variant="link" className="px-0 h-auto text-sm" asChild>
+                <Link to="/settings">Settings</Link>
+              </Button>
+            }
+          />
+          <KpiCard
+            label="Active identity conflicts"
+            value={activeConflicts}
+            hint="Awaiting review"
+            valueClassName="text-orange-700 dark:text-orange-400"
+            footer={
+              <Button variant="link" className="px-0 h-auto text-sm" asChild>
+                <Link to="/linked-end-users">Linked end users</Link>
+              </Button>
+            }
+          />
+          <KpiCard
+            label="User risk warnings"
+            value={userRiskWarnings}
+            hint="High / critical risk band"
+            valueClassName="text-red-700 dark:text-red-400"
+            footer={
+              <Button variant="link" className="px-0 h-auto text-sm" asChild>
+                <Link to="/linked-end-users">Review records</Link>
+              </Button>
+            }
+          />
+          <KpiCard
+            label="Action-required invoices"
+            value={actionRequiredInvoices}
+            hint="Billing queue"
+            footer={
+              <Button variant="link" className="px-0 h-auto text-sm" asChild>
+                <Link to="/billing">Billing</Link>
+              </Button>
+            }
+          />
+          <KpiCard
+            label="Integration issues"
+            value={integrationIssueSteps}
+            hint="Incomplete integration steps"
+            footer={
+              <Button variant="link" className="px-0 h-auto text-sm" asChild>
+                <Link to="/api-integration">API integration</Link>
+              </Button>
+            }
+          />
+        </div>
+      </section>
 
-        <Card className="p-6 border border-border shadow-sm">
-          <div className="flex items-start justify-between mb-3">
-            <div className="w-11 h-11 rounded-xl bg-purple-500/10 flex items-center justify-center">
-              <Users className="w-5 h-5 text-purple-600" />
-            </div>
-          </div>
-          <div>
-            <p className="text-[13px] text-muted-foreground mb-1">Linked end users</p>
-            <p className="text-[32px] font-semibold text-foreground leading-none">{enterpriseEndUsers.length}</p>
-            <p className="text-[13px] text-muted-foreground mt-2">{enterpriseActiveEndUsers} active</p>
-          </div>
-        </Card>
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-foreground">Organization health</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+          <KpiCard
+            label="Active linked users"
+            value={enterpriseActiveEndUsers}
+            hint="End users with active link"
+            footer={
+              <Button variant="link" className="px-0 h-auto text-sm" asChild>
+                <Link to="/linked-end-users">Open directory</Link>
+              </Button>
+            }
+          />
+          <KpiCard
+            label="Verification sessions"
+            value={orgSessionSnap.total.toLocaleString()}
+            hint="Current org window"
+            footer={
+              <Button variant="link" className="px-0 h-auto text-sm" asChild>
+                <Link to="/verification-logs">Verification logs</Link>
+              </Button>
+            }
+          />
+          <KpiCard
+            label="ID Proof Fail rate"
+            value={`${orgSessionSnap.failRate.toFixed(1)}%`}
+            hint="Failed ÷ non-pending outcomes"
+            valueClassName="text-orange-700 dark:text-orange-400"
+          />
+          <KpiCard
+            label="Billable verification spend"
+            value={formatCurrency(enterpriseUsageSpend)}
+            hint={`${enterpriseOrganization.usage.toLocaleString()} sessions this period`}
+          />
+          <KpiCard
+            label="Credit position"
+            value={formatCurrency(enterpriseCreditRemaining)}
+            hint={
+              creditOverage > 0
+                ? `Overage exposure about ${formatCurrency(creditOverage)} vs included credit`
+                : `${enterpriseCreditUtilizationPct.toFixed(1)}% of included credit used`
+            }
+            valueClassName={creditOverage > 0 ? "text-orange-700 dark:text-orange-400" : undefined}
+            footer={
+              <Button variant="link" className="px-0 h-auto text-sm" asChild>
+                <Link to="/usage-credits">Usage & credits</Link>
+              </Button>
+            }
+          />
+        </div>
+      </section>
 
-        <Card className="p-6 border border-border shadow-sm">
-          <div className="flex items-start justify-between mb-3">
-            <div className="w-11 h-11 rounded-xl bg-green-500/10 flex items-center justify-center">
-              <CreditCard className="w-5 h-5 text-green-600" />
-            </div>
-          </div>
-          <div>
-            <p className="text-[13px] text-muted-foreground mb-1">Plan and credits</p>
-            <p className="text-[32px] font-semibold text-foreground leading-none">{enterpriseOrganization.plan}</p>
-            <p className="text-[13px] text-muted-foreground mt-2">
-              {formatCurrency(enterpriseOrganization.creditBalance)} credit balance
-            </p>
-          </div>
-        </Card>
-
-        <Card className="p-6 border border-border shadow-sm">
-          <div className="flex items-start justify-between mb-3">
-            <div className="w-11 h-11 rounded-xl bg-orange-500/10 flex items-center justify-center">
-              <BarChart3 className="w-5 h-5 text-orange-600" />
-            </div>
-          </div>
-          <div>
-            <p className="text-[13px] text-muted-foreground mb-1">Verification sessions (period)</p>
-            <p className="text-[32px] font-semibold text-foreground leading-none">
-              {enterpriseOrganization.usage.toLocaleString()}
-            </p>
-            <p className="text-[13px] text-muted-foreground mt-2">
-              {formatCurrency(enterpriseUsageSpend)} billable verification spend
-            </p>
-          </div>
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="p-4 border border-border shadow-sm">
-          <div className="flex items-center gap-2 mb-2">
-            <ScrollText className="w-4 h-4 text-primary" />
-            <p className="text-[13px] font-semibold text-foreground">Verification sessions</p>
-          </div>
-          <p className="text-[26px] font-semibold">{orgSessionSnap.total}</p>
-          <p className="text-[12px] text-muted-foreground mt-1">Current period</p>
-          <Button variant="link" className="px-0 h-auto mt-2" asChild>
-            <Link to="/verification-logs">Open verification logs</Link>
-          </Button>
-        </Card>
-        <Card className="p-4 border border-border shadow-sm">
-          <p className="text-[13px] font-semibold text-foreground mb-2">ID Proof Fail rate</p>
-          <p className="text-[26px] font-semibold text-orange-700">{orgSessionSnap.failRate.toFixed(1)}%</p>
-          <p className="text-[12px] text-muted-foreground mt-1">Failed ÷ non-pending outcomes</p>
-        </Card>
-        <Card className="p-4 border border-border shadow-sm">
-          <p className="text-[13px] font-semibold text-foreground mb-2">Billable outcomes</p>
-          <p className="text-[22px] font-semibold">
-            {orgSessionSnap.billable}{" "}
-            <span className="text-muted-foreground text-[14px] font-normal">/ {orgSessionSnap.nonBill}</span>
-          </p>
-          <p className="text-[12px] text-muted-foreground mt-2">By final outcome</p>
-          <div className="mt-2">
-            <UnifiedBadge variant="integration" value="Operational view" />
-          </div>
-        </Card>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="p-4 border border-border shadow-sm"><p className="text-xs text-muted-foreground">Setup incomplete</p><p className="text-2xl font-semibold">{enterpriseSetupSteps.filter((s) => !s.complete).length}</p></Card>
-        <Card className="p-4 border border-border shadow-sm"><p className="text-xs text-muted-foreground">Active linked users</p><p className="text-2xl font-semibold">{enterpriseActiveEndUsers}</p></Card>
-        <Card className="p-4 border border-border shadow-sm"><p className="text-xs text-muted-foreground">Active identity conflicts</p><p className="text-2xl font-semibold">{enterpriseEndUsers.filter((u) => u.status === "pending").length}</p></Card>
-        <Card className="p-4 border border-border shadow-sm"><p className="text-xs text-muted-foreground">Action-required invoices</p><p className="text-2xl font-semibold">{enterpriseInvoices.filter((i) => i.actionRequired).length}</p></Card>
-      </div>
-
-      {alerts.length > 0 && (
-        <div className="space-y-3">
-          {alerts.map((alert) => (
-            <Card
-              key={alert.id}
-              className={`p-5 border shadow-sm ${
-                alert.type === "warning"
-                  ? "border-orange-200 bg-orange-50/50"
-                  : "border-blue-200 bg-blue-50/50"
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <AlertCircle
-                    className={`w-5 h-5 ${
-                      alert.type === "warning" ? "text-orange-600" : "text-blue-600"
-                    }`}
-                  />
-                  <p className="text-[14px] text-foreground font-medium">{alert.message}</p>
+      <section className="space-y-3">
+        <h2 className="text-sm font-semibold text-foreground">Trends & activity</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <Card className="lg:col-span-2 border border-border shadow-sm">
+            <div className="p-4 border-b border-border">
+              <div className="flex items-center gap-2">
+                <ListChecks className="w-4 h-4 text-primary" />
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">Verification session volume</h3>
+                  <p className="text-xs text-muted-foreground">Recent daily trend</p>
                 </div>
-                <Button variant="outline" size="sm" asChild>
-                  <Link to={alert.action === "usage" ? "/usage-credits" : "/billing"}>
-                    {alert.action === "usage" ? "View usage and credits" : "View billing"}
-                  </Link>
+              </div>
+            </div>
+            <div className="p-4">
+              <ResponsiveContainer width="100%" height={220}>
+                <LineChart data={usageData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                  <XAxis
+                    dataKey="date"
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={11}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} width={40} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "hsl(var(--card))",
+                      border: "1px solid hsl(var(--border))",
+                      borderRadius: "8px",
+                      fontSize: "12px",
+                    }}
+                    formatter={(value: number | string) => [`${Number(value).toLocaleString()}`, "Sessions"]}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="usage"
+                    stroke="hsl(var(--primary))"
+                    strokeWidth={2}
+                    dot={{ fill: "hsl(var(--primary))", r: 3 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+
+          <Card className="border border-border shadow-sm flex flex-col">
+            <div className="p-4 border-b border-border">
+              <div className="flex items-center gap-2">
+                <ScrollText className="w-4 h-4 text-primary" />
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">Plan & seats</h3>
+                  <p className="text-xs text-muted-foreground">Managed under Team and Billing</p>
+                </div>
+              </div>
+            </div>
+            <div className="p-4 space-y-4 flex-1 flex flex-col">
+              <div>
+                <p className="text-xs text-muted-foreground">Admin seats</p>
+                <p className="text-lg font-semibold tabular-nums">
+                  {enterpriseOrganization.seatsUsed} / {enterpriseOrganization.seatLimit}
+                </p>
+                <Button variant="link" className="px-0 h-auto text-sm mt-1" asChild>
+                  <Link to="/team-roles">Team & roles</Link>
                 </Button>
               </div>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      <div className="grid grid-cols-3 gap-6">
-        <Card className="col-span-2 border border-border shadow-sm">
-          <div className="p-6 border-b border-border">
-            <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-[16px] font-semibold text-foreground">Verification session volume</h3>
-                <p className="text-[13px] text-muted-foreground">Last 9 days</p>
-              </div>
-              <Button variant="outline" size="sm">Last 30 days</Button>
-            </div>
-          </div>
-          <div className="p-6">
-            <ResponsiveContainer width="100%" height={280}>
-              <LineChart data={usageData}>
-                <CartesianGrid key="grid" strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                <XAxis
-                  key="xaxis"
-                  dataKey="date"
-                  stroke="hsl(var(--muted-foreground))"
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis
-                  key="yaxis"
-                  stroke="hsl(var(--muted-foreground))"
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(value) => `${(value / 1000).toFixed(0)}K`}
-                />
-                <Tooltip
-                  key="tooltip"
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--card))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "8px",
-                    fontSize: "12px",
-                  }}
-                  formatter={(value: number | string) => [`${Number(value).toLocaleString()} sessions`, "Volume"]}
-                />
-                <Line
-                  key="usage-line"
-                  type="monotone"
-                  dataKey="usage"
-                  stroke="hsl(var(--primary))"
-                  strokeWidth={3}
-                  dot={{ fill: "hsl(var(--primary))", r: 4 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </Card>
-
-        <Card className="border border-border shadow-sm">
-          <div className="p-6 border-b border-border">
-            <h3 className="text-[16px] font-semibold text-foreground">Credits</h3>
-            <p className="text-[13px] text-muted-foreground">Wallet vs billable spend</p>
-          </div>
-          <div className="p-6 space-y-6">
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-[13px] font-medium text-foreground">Billable verification spend</p>
-                <p className="text-[13px] text-muted-foreground">
-                  {formatCurrency(enterpriseUsageSpend)} / {formatCurrency(enterpriseOrganization.creditBalance)}
+                <p className="text-xs text-muted-foreground">Included credit utilization</p>
+                <Progress value={Math.min(enterpriseCreditUtilizationPct, 100)} className="h-2 mt-2" />
+                <p className="text-xs text-muted-foreground mt-2">
+                  Period volume {enterpriseOrganization.usage.toLocaleString()} / {enterpriseUsageLimit.toLocaleString()}{" "}
+                  sessions
                 </p>
+                <Progress value={Math.min(enterpriseUsagePct, 100)} className="h-2 mt-2" />
               </div>
-              <Progress value={Math.min(enterpriseCreditUtilizationPct, 100)} className="h-2" />
-              <p className="text-[12px] text-orange-600 mt-1.5">{enterpriseCreditUtilizationPct.toFixed(1)}% of balance used</p>
+              <Button className="w-full mt-auto" variant="outline" size="sm" asChild>
+                <Link to="/billing">Billing & plan</Link>
+              </Button>
             </div>
-
-            <div className="pt-4 space-y-2">
-              <div className="flex items-center justify-between">
-                <p className="text-[12px] text-muted-foreground">Period resets in</p>
-                <p className="text-[12px] font-medium text-foreground">12 days</p>
-              </div>
-              <div className="flex items-center justify-between">
-                <p className="text-[12px] text-muted-foreground">Avg. daily sessions</p>
-                <p className="text-[12px] font-medium text-foreground">6.9K</p>
-              </div>
-              <div className="flex items-center justify-between">
-                <p className="text-[12px] text-muted-foreground">Credit remaining</p>
-                <p className="text-[12px] font-medium text-foreground">{formatCurrency(enterpriseCreditRemaining)}</p>
-              </div>
-            </div>
-
-            <Button className="w-full" variant="outline" asChild>
-              <Link to="/usage-credits">View usage and credits</Link>
-            </Button>
-          </div>
-        </Card>
-      </div>
+          </Card>
+        </div>
+      </section>
 
       <Card className="border border-border shadow-sm">
-        <div className="p-6 border-b border-border">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-[16px] font-semibold text-foreground">Recent activity</h3>
-              <p className="text-[13px] text-muted-foreground">Verification and portal actions</p>
-            </div>
-            <Button variant="ghost" size="sm">View all</Button>
+        <div className="p-4 border-b border-border flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">Recent linked end-user activity</h3>
+            <p className="text-xs text-muted-foreground">Snapshot from your directory</p>
           </div>
+          <Button variant="outline" size="sm" asChild>
+            <Link to="/linked-end-users">View all</Link>
+          </Button>
         </div>
-        <div className="divide-y divide-border">
+        <ul className="divide-y divide-border">
           {recentActivity.map((activity) => (
-            <div key={activity.id} className="p-5 flex items-center gap-4">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <span className="text-[13px] font-medium text-primary">
-                  {activity.clientUserId.replace(/[^a-z0-9]/gi, "").slice(0, 2).toUpperCase() || "—"}
-                </span>
+            <li key={activity.id} className="px-4 py-3 flex items-center gap-3 text-sm">
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 font-mono text-xs text-primary">
+                {activity.clientUserId.replace(/[^a-z0-9]/gi, "").slice(0, 2).toUpperCase() || "—"}
               </div>
-              <div className="flex-1">
-                <p className="text-[14px] text-foreground">
-                  <span className="font-medium font-mono text-[13px]">{activity.clientUserId}</span> {activity.action}
+              <div className="flex-1 min-w-0">
+                <p className="text-foreground">
+                  <span className="font-mono text-xs">{activity.clientUserId}</span> — {activity.action}
                 </p>
-                <p className="text-[12px] text-muted-foreground mt-0.5">{activity.timestamp}</p>
+                <p className="text-xs text-muted-foreground">{activity.timestamp}</p>
               </div>
-            </div>
+            </li>
           ))}
-        </div>
+        </ul>
       </Card>
     </PortalPageFrame>
   );

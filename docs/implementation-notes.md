@@ -39,8 +39,6 @@ Routers are created through functions (e.g. `getPlatformRouter()`) rather than a
 
 Organization Detail shows organization-specific summary (info, status), usage highlights, an integration readiness checklist, and governance controls. Deep operational tables—verification sessions, audit logs, billing activity, client apps / API, identity links, and similar—live on platform-wide VerifyMe Admin routes; Organization Detail links to those views with an `organizationId` query parameter when the target page supports it.
 
-Organization Admin Portal follows the same operational UI pattern as VerifyMe Admin: summary lists, row-click details, destructive controls only inside detail views with confirmation, and no prototype wording in visible UI.
-
 **Prototype behavior:** VerifyMe Users (`/verifyme-users`), Identity Links (`/identity-links`), and Client Apps / API (`/client-apps`) read `organizationId` from the query string, match it against seeded organization ids, and pre-select the organization filter when possible. Other list screens should follow the same pattern as query-aware filtering is added.
 
 **Billing dashboard:** Top-line spend metrics aggregate `getVerificationSpend(org)` from seeded organizations — this is **verification-related spend**, not SaaS MRR. Invoice rows and governance actions use in-memory mock data (`platformBillingInvoicesMock`); confirmations do not send email or call a payments API in the prototype.
@@ -56,6 +54,8 @@ Organization Admin Portal follows the same operational UI pattern as VerifyMe Ad
 ### Detail presentation — full page vs modal
 
 Major entities use **full-page** detail views (Organizations, VerifyMe Users, Client Apps / API, Identity Links). Event, transaction, and log records use **modal/dialog** details (verification sessions, billing invoices / credit flows, audit log events).
+
+Organization Admin Portal follows the same entity-detail model and operational UI pattern as VerifyMe Admin: summary-first lists, row-click details, full-page detail for major entities (for example Linked End Users and Team members), modals for events/sessions/invoices where appropriate, confirmations for destructive controls, operational language only in visible UI, and dashboards that prioritize action-required and health metrics.
 
 ## Design system
 

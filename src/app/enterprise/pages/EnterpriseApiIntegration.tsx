@@ -14,9 +14,11 @@ import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../shared/components/ui/dialog";
 import { shouldIgnoreRowOpenClick } from "../../platform/utils/tableRowNav";
 
+type ApiConfirmAction = "rotate_secret" | "disable_redirect_uri" | "remove_redirect_uri" | null;
+
 export function EnterpriseApiIntegration() {
   const [redirectDetail, setRedirectDetail] = useState<(typeof enterpriseMockRedirectUris)[number] | null>(null);
-  const [confirming, setConfirming] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState<ApiConfirmAction>(null);
   const client = enterpriseMockClientApplication;
 
   const formatDate = (d: string) =>
@@ -73,11 +75,23 @@ export function EnterpriseApiIntegration() {
               <span className="text-[13px] text-muted-foreground">Last rotated {formatDate(client.lastRotated)}</span>
             </div>
             <p className="text-[12px] text-muted-foreground leading-relaxed">
-              Client secrets are shown once when generated and are not stored in plain text. Use{" "}
+              Client secrets are issued once and are never shown again in this portal. Use{" "}
               <strong className="text-foreground">Rotate secret</strong> to issue a new secret; previous secrets stop
-              working after rotation completes.
+              working after rotation completes. No raw <code className="text-[11px]">client_secret</code> value is displayed
+              here.
             </p>
-            <Button variant="outline" size="sm" onClick={() => setConfirming("rotate secret")}>
+            <p className="text-[12px] text-muted-foreground">
+              Last secret use:{" "}
+              <span className="text-foreground font-medium">
+                {client.lastSecretUsedAt ?? "No authenticated use recorded for the current secret"}
+              </span>
+              {client.secretRotationDue ? (
+                <span className="block mt-1 text-amber-800 dark:text-amber-200">
+                  Rotation recommended — policy or age threshold met.
+                </span>
+              ) : null}
+            </p>
+            <Button variant="outline" size="sm" onClick={() => setConfirming("rotate_secret")}>
               <KeyRound className="w-4 h-4 mr-2" />
               Rotate secret
             </Button>
@@ -235,8 +249,12 @@ export function EnterpriseApiIntegration() {
               <p>Environment: {redirectDetail.environment}</p>
               <p>Status: {redirectDetail.status === "active" ? "Active" : "Disabled"}</p>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => setConfirming("disable redirect uri")}>Disable</Button>
-                <Button variant="destructive" size="sm" onClick={() => setConfirming("remove redirect uri")}>Remove</Button>
+                <Button variant="outline" size="sm" onClick={() => setConfirming("disable_redirect_uri")}>
+                  Disable
+                </Button>
+                <Button variant="destructive" size="sm" onClick={() => setConfirming("remove_redirect_uri")}>
+                  Remove
+                </Button>
               </div>
             </div>
             <DialogFooter><Button variant="outline" onClick={() => setRedirectDetail(null)}>Close</Button></DialogFooter>
@@ -247,12 +265,45 @@ export function EnterpriseApiIntegration() {
     <Dialog open={confirming !== null} onOpenChange={(o) => !o && setConfirming(null)}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Confirm action</DialogTitle>
-          <DialogDescription>{confirming}?</DialogDescription>
+          <DialogTitle>
+            {confirming === "rotate_secret" && "Rotate client secret?"}
+            {confirming === "disable_redirect_uri" && "Disable redirect URI?"}
+            {confirming === "remove_redirect_uri" && "Remove redirect URI?"}
+          </DialogTitle>
+          <DialogDescription className="text-left space-y-2">
+            {confirming === "rotate_secret" && (
+              <>
+                <p>This will invalidate the current secret. Existing integrations must update their stored secret.</p>
+                <p className="text-xs text-muted-foreground">This action will be recorded in audit logs.</p>
+              </>
+            )}
+            {confirming === "disable_redirect_uri" && (
+              <>
+                <p>Authorization responses will no longer be sent to this URI.</p>
+                <p className="text-xs text-muted-foreground">This action will be recorded in audit logs.</p>
+              </>
+            )}
+            {confirming === "remove_redirect_uri" && (
+              <>
+                <p>This URI must be added again before it can receive authorization responses.</p>
+                <p className="text-xs text-muted-foreground">This action will be recorded in audit logs.</p>
+              </>
+            )}
+          </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setConfirming(null)}>Cancel</Button>
-          <Button onClick={() => setConfirming(null)}>Confirm</Button>
+          <Button variant="outline" onClick={() => setConfirming(null)}>
+            Cancel
+          </Button>
+          <Button
+            variant={confirming === "remove_redirect_uri" ? "destructive" : "default"}
+            onClick={() => {
+              setConfirming(null);
+              setRedirectDetail(null);
+            }}
+          >
+            Confirm
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

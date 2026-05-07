@@ -1,14 +1,6 @@
 import { useMemo, useState, useSyncExternalStore, type FormEvent } from "react";
-import {
-  AlertTriangle,
-  BookOpen,
-  Download,
-  Link2,
-  Plus,
-  Search,
-  Upload,
-  UserPlus,
-} from "lucide-react";
+import { useNavigate } from "react-router";
+import { BookOpen, Download, Link2, Plus, Search, Upload, UserPlus } from "lucide-react";
 import { Button } from "../../shared/components/ui/button";
 import { Input } from "../../shared/components/ui/input";
 import { Card } from "../../shared/components/ui/card";
@@ -36,7 +28,6 @@ import {
   bulkImportPreviewMock,
   createMockInvite,
   csvTemplateContent,
-  getInitialOrganizationUserRecords,
   inviteApiSampleRequest,
   inviteApiSampleResponse,
   inviteStatusLabel,
@@ -44,7 +35,6 @@ import {
   linkStatusLabel,
   nameConsistencyBadgeClass,
   nameConsistencyLabel,
-  orgVerificationOutcomeLabel,
   type NameMatchStatus,
   type OrganizationLinkStatus,
   type OrganizationUserRecord,
@@ -58,6 +48,13 @@ import {
 } from "../../platform/data/platformEndUserAssociationsSession";
 import { userRiskLevelForOrgAdmin } from "../../platform/data/mockPlatformRisk";
 import { shouldIgnoreRowOpenClick } from "../../platform/utils/tableRowNav";
+import {
+  getLinkedEndUserRecords,
+  getLinkedEndUsersStoreVersion,
+  setLinkedEndUserRecords,
+  subscribeLinkedEndUsersListeners,
+  updateLinkedEndUserRecord,
+} from "../data/enterpriseLinkedEndUsersSession";
 
 type RecentFilter = "all" | "invited_recent" | "verified_recent";
 
@@ -114,7 +111,13 @@ function isWithinDays(iso: string | null, days: number) {
 }
 
 export function EnterpriseEndUsers() {
-  const [records, setRecords] = useState<OrganizationUserRecord[]>(() => getInitialOrganizationUserRecords());
+  const navigate = useNavigate();
+  const linkedVersion = useSyncExternalStore(
+    subscribeLinkedEndUsersListeners,
+    getLinkedEndUsersStoreVersion,
+    getLinkedEndUsersStoreVersion,
+  );
+  const records = useMemo(() => getLinkedEndUserRecords(), [linkedVersion]);
 
   const assocVersion = useSyncExternalStore(
     subscribeEndUserAssociationListeners,
@@ -130,10 +133,7 @@ export function EnterpriseEndUsers() {
   const [addOpen, setAddOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [apiGuideOpen, setApiGuideOpen] = useState(false);
-  const [detailRecord, setDetailRecord] = useState<OrganizationUserRecord | null>(null);
   const [inviteRecord, setInviteRecord] = useState<OrganizationUserRecord | null>(null);
-  const [conflictRecord, setConflictRecord] = useState<OrganizationUserRecord | null>(null);
-  const [confirmAction, setConfirmAction] = useState<{ record: OrganizationUserRecord; action: string } | null>(null);
 
   const [addForm, setAddForm] = useState({
     clientUserId: "",
@@ -178,7 +178,7 @@ export function EnterpriseEndUsers() {
   };
 
   const updateRecord = (id: string, patch: Partial<OrganizationUserRecord>) => {
-    setRecords((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+    updateLinkedEndUserRecord(id, patch);
   };
 
   const openInvitePanel = (r: OrganizationUserRecord) => {
@@ -194,7 +194,7 @@ export function EnterpriseEndUsers() {
       linkStatus: r.linkStatus === "unlinked" ? "pending" : r.linkStatus,
       invitedAt: new Date().toISOString(),
     };
-    setRecords((prev) => prev.map((x) => (x.id === r.id ? next : x)));
+    setLinkedEndUserRecords((prev) => prev.map((x) => (x.id === r.id ? next : x)));
     setInviteRecord(next);
     bumpMessage("New invite generated. Share the link or QR from this panel.");
   };
@@ -225,7 +225,7 @@ export function EnterpriseEndUsers() {
       invite: createMockInvite(clientUserId, inviteId),
       recentOutcomes: [],
     };
-    setRecords((prev) => [row, ...prev]);
+    setLinkedEndUserRecords((prev) => [row, ...prev]);
     setAddOpen(false);
     setAddForm({ clientUserId: "", customerDisplayName: "", customerReference: "", contact: "" });
     bumpMessage(
@@ -271,7 +271,7 @@ export function EnterpriseEndUsers() {
         recentOutcomes: [],
       },
     ];
-    setRecords((prev) => [...imported, ...prev]);
+    setLinkedEndUserRecords((prev) => [...imported, ...prev]);
     setBulkOpen(false);
     bumpMessage(
       `Imported ${imported.length} valid records. Already linked and other skipped rows were not imported. Invite links generated for pending rows.`,
@@ -359,13 +359,6 @@ export function EnterpriseEndUsers() {
       default:
         break;
     }
-  };
-
-  const markConflictReviewedAndClose = () => {
-    if (!conflictRecord) return;
-    updateRecord(conflictRecord.id, { conflictReviewed: true });
-    setConflictRecord(null);
-    bumpMessage("Conflict marked as reviewed. Link state unchanged.");
   };
 
   return (
@@ -554,7 +547,7 @@ export function EnterpriseEndUsers() {
                   className="cursor-pointer hover:bg-accent/30"
                   onClick={(e) => {
                     if (shouldIgnoreRowOpenClick(e.target)) return;
-                    setDetailRecord(r);
+                    navigate(`/linked-end-users/${r.id}`);
                   }}
                 >
                   <td className="p-3 font-mono text-[13px]">{r.clientUserId}</td>
@@ -581,9 +574,7 @@ export function EnterpriseEndUsers() {
                         )}
                       </div>
                       {r.linkStatus === "unlinked" && (
-                        <span className="text-[11px] text-muted-foreground">
-                          Generate invite or Re-invite from the menu.
-                        </span>
+                        <span className="text-[11px] text-muted-foreground">Open the record to generate or view an invite.</span>
                       )}
                     </div>
                   </td>
@@ -657,7 +648,7 @@ export function EnterpriseEndUsers() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="contact">Notification email or phone (optional, design placeholder)</Label>
+              <Label htmlFor="contact">Notification email or phone (optional)</Label>
               <Input
                 id="contact"
                 placeholder="Not available"
@@ -708,7 +699,7 @@ export function EnterpriseEndUsers() {
               </p>
             </div>
             <Separator />
-            <p className="text-[14px] font-semibold">Mock validation preview</p>
+            <p className="text-[14px] font-semibold">Validation preview</p>
             <p className="text-[12px] text-muted-foreground">
               Import skips <strong className="text-foreground">already linked</strong> rows — the client_user_id already
               has an active VerifyMe link for this organization.
@@ -790,7 +781,7 @@ export function EnterpriseEndUsers() {
               <code className="bg-muted px-1.5 py-0.5 rounded text-[12px]">POST /organization-users/invites</code>
             </p>
             <div>
-              <p className="font-medium text-foreground mb-1">Sample request</p>
+              <p className="font-medium text-foreground mb-1">Example request</p>
               <pre className="bg-muted rounded-md p-3 text-[12px] overflow-x-auto font-mono">{inviteApiSampleRequest}</pre>
               <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
                 <code className="font-mono text-[11px]">customer_display_name</code> is organization-provided visual context
@@ -798,7 +789,7 @@ export function EnterpriseEndUsers() {
               </p>
             </div>
             <div>
-              <p className="font-medium text-foreground mb-1">Sample response</p>
+              <p className="font-medium text-foreground mb-1">Example response</p>
               <pre className="bg-muted rounded-md p-3 text-[12px] overflow-x-auto font-mono">{inviteApiSampleResponse}</pre>
             </div>
             <Separator />
@@ -913,280 +904,6 @@ export function EnterpriseEndUsers() {
             </>
             );
           })()}
-        </DialogContent>
-      </Dialog>
-
-      {/* Detail */}
-      <Dialog open={detailRecord !== null} onOpenChange={(o) => !o && setDetailRecord(null)}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          {detailRecord && (
-            <>
-              <DialogHeader>
-                <DialogTitle>End-user details</DialogTitle>
-                <DialogDescription>Organization-scoped view — no full VerifyMe profile.</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-3 text-[13px]">
-                <p className="rounded-md border border-border/80 bg-muted/30 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
-                  Customer display information is provided by the organization for reference only. VerifyMe verifies the
-                  linked user, not the displayed name.
-                </p>
-                <div>
-                  <p className="text-[11px] text-muted-foreground uppercase">Summary</p>
-                  <p className="text-[13px]">Organization-scoped linked end-user record.</p>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <p className="text-[11px] text-muted-foreground uppercase">client_user_id</p>
-                    <p className="font-mono">{detailRecord.clientUserId}</p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] text-muted-foreground uppercase">Customer display name</p>
-                    <p>{detailRecord.customerDisplayName?.trim() || "—"}</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <p className="text-[11px] text-muted-foreground uppercase">Name consistency</p>
-                    <span
-                      className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${nameConsistencyBadgeClass(detailRecord.nameMatchStatus)}`}
-                    >
-                      {nameConsistencyLabel(detailRecord.nameMatchStatus)}
-                    </span>
-                    <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
-                      Risk signal only — not proof of identity.
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] text-muted-foreground uppercase">Customer reference</p>
-                    <p>{detailRecord.customerReference?.trim() || "—"}</p>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-[11px] text-muted-foreground uppercase">User risk status</p>
-                  {(() => {
-                    const lvl = userRiskLevelForOrgAdmin(detailRecord.platformRiskVerifymeId, platformAssociations);
-                    return lvl ? <UserRiskStatusBadge level={lvl} /> : <span className="text-muted-foreground">Not available</span>;
-                  })()}
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <p className="text-[11px] text-muted-foreground uppercase">Link status</p>
-                    <UnifiedBadge variant="status" value={linkStatusLabel(detailRecord.linkStatus)} />
-                  </div>
-                  <div>
-                    <p className="text-[11px] text-muted-foreground uppercase">Invite status</p>
-                    <UnifiedBadge variant="status" value={inviteStatusLabel(detailRecord.inviteStatus)} />
-                  </div>
-                </div>
-                <div>
-                  <p className="text-[11px] text-muted-foreground uppercase">VerifyMe ID (masked)</p>
-                  <p className="font-mono">{detailRecord.maskedVerifymeId ?? "—"}</p>
-                  <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
-                    Not shown: VerifyMe email, full VerifyMe profile, other linked organizations, passcode, OTP, biometric
-                    data, raw one-time token, Encrypted_Auth_Cred, Transaction_Code, or raw encrypted QR payload.
-                  </p>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <p className="text-[11px] text-muted-foreground uppercase">Linked date</p>
-                    <p>{detailRecord.linkStatus === "linked" ? formatDate(detailRecord.invitedAt) : "—"}</p>
-                  </div>
-                  <div>
-                    <p className="text-[11px] text-muted-foreground uppercase">Last verified</p>
-                    <p>{formatDateTime(detailRecord.lastVerifiedAt)}</p>
-                  </div>
-                </div>
-                <div>
-                  <p className="text-[11px] text-muted-foreground uppercase">Verification count (org)</p>
-                  <p>{detailRecord.verificationCount}</p>
-                </div>
-                <Separator />
-                <p className="font-medium text-foreground">Invite controls</p>
-                <div className="flex flex-wrap gap-2">
-                  <Button variant="outline" size="sm" onClick={() => openInvitePanel(detailRecord)}>
-                    Generate / view invite
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setConfirmAction({ record: detailRecord, action: "reinvite" })}
-                    disabled={
-                      detailRecord.linkStatus === "linked" &&
-                      detailRecord.inviteStatus !== "expired"
-                    }
-                  >
-                    Re-invite
-                  </Button>
-                </div>
-                <p className="font-medium text-foreground">Restricted controls</p>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={detailRecord.linkStatus !== "linked"}
-                    onClick={() => setConfirmAction({ record: detailRecord, action: "suspend" })}
-                  >
-                    Suspend link
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={detailRecord.linkStatus !== "suspended"}
-                    onClick={() => setConfirmAction({ record: detailRecord, action: "reactivate" })}
-                  >
-                    Reactivate link
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={detailRecord.linkStatus !== "linked"}
-                    onClick={() => setConfirmAction({ record: detailRecord, action: "revoke" })}
-                  >
-                    Revoke link
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    disabled={detailRecord.linkStatus === "disabled"}
-                    onClick={() => setConfirmAction({ record: detailRecord, action: "disable" })}
-                  >
-                    Disable link
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={detailRecord.linkStatus !== "conflict"}
-                    onClick={() => setConflictRecord(detailRecord)}
-                  >
-                    Conflict review
-                  </Button>
-                </div>
-                <Separator />
-                <p className="font-medium text-foreground">Recent verification outcomes (this organization)</p>
-                <ul className="space-y-1">
-                  {detailRecord.recentOutcomes.length === 0 && (
-                    <li className="text-muted-foreground">No recent outcomes.</li>
-                  )}
-                  {detailRecord.recentOutcomes.map((o, i) => (
-                    <li key={i} className="flex justify-between gap-2">
-                      <span>{orgVerificationOutcomeLabel(o.outcome)}</span>
-                      <span className="text-muted-foreground text-[12px]">{formatDateTime(o.at)}</span>
-                    </li>
-                  ))}
-                </ul>
-                <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  This drawer is organization-scoped only. Other organizations, full VerifyMe account data, and secure
-                  verification values are not shown.
-                </p>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setDetailRecord(null)}>
-                  Close
-                </Button>
-              </DialogFooter>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Conflict resolve */}
-      <Dialog open={conflictRecord !== null} onOpenChange={(o) => !o && setConflictRecord(null)}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5 text-orange-600" />
-              Resolve conflict
-            </DialogTitle>
-            <DialogDescription>Review-only flow with confirmation and audit expectations.</DialogDescription>
-          </DialogHeader>
-          {conflictRecord && (
-            <div className="space-y-4 text-[13px]">
-              <div className="rounded-md border border-orange-200 bg-orange-50/80 px-3 py-2 text-orange-950 dark:bg-orange-950/30 dark:border-orange-900 dark:text-orange-100">
-                <strong className="text-foreground">Reason:</strong> This client_user_id appears linked to a different
-                VerifyMe ID.
-              </div>
-              <dl className="grid grid-cols-1 gap-3">
-                <div>
-                  <dt className="text-[11px] font-medium text-muted-foreground uppercase">client_user_id</dt>
-                  <dd className="font-mono">{conflictRecord.clientUserId}</dd>
-                </div>
-                <div>
-                  <dt className="text-[11px] font-medium text-muted-foreground uppercase">Customer display name</dt>
-                  <dd>{conflictRecord.customerDisplayName?.trim() || "—"}</dd>
-                </div>
-                <div>
-                  <dt className="text-[11px] font-medium text-muted-foreground uppercase">Name consistency</dt>
-                  <dd>
-                    <span
-                      className={`inline-flex rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${nameConsistencyBadgeClass(conflictRecord.nameMatchStatus)}`}
-                    >
-                      {nameConsistencyLabel(conflictRecord.nameMatchStatus)}
-                    </span>
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-[11px] font-medium text-muted-foreground uppercase">Current VerifyMe ID (masked)</dt>
-                  <dd className="font-mono">{conflictRecord.maskedVerifymeId ?? "—"}</dd>
-                </div>
-                <div>
-                  <dt className="text-[11px] font-medium text-muted-foreground uppercase">Conflicting VerifyMe ID (masked)</dt>
-                  <dd className="font-mono">{conflictRecord.conflictingMaskedVerifymeId ?? "Not available"}</dd>
-                </div>
-              </dl>
-              <p className="text-[12px] text-muted-foreground leading-relaxed">
-                Full VerifyMe email, global profile, OTP, passcode, biometric data, tokens, Encrypted_Auth_Cred, and
-                Transaction_Code are never shown in this portal.
-              </p>
-              <div className="space-y-2">
-                <p className="text-[11px] font-medium text-muted-foreground uppercase">Future actions (disabled)</p>
-                <div className="flex flex-col gap-2">
-                  <Button type="button" variant="secondary" className="justify-start" disabled>
-                    Reassign link (future)
-                  </Button>
-                  <Button type="button" variant="secondary" className="justify-start" disabled>
-                    Force re-link after review (future)
-                  </Button>
-                  <Button type="button" variant="secondary" className="justify-start" disabled>
-                    Escalate to VerifyMe support
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
-          <DialogFooter className="gap-2 flex-col-reverse sm:flex-row sm:justify-end">
-            <Button variant="outline" onClick={() => setConflictRecord(null)}>
-              Cancel
-            </Button>
-            <Button onClick={markConflictReviewedAndClose}>Mark as reviewed / close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      <Dialog open={confirmAction !== null} onOpenChange={(o) => !o && setConfirmAction(null)}>
-        <DialogContent className="max-w-md">
-          {confirmAction && (
-            <>
-              <DialogHeader>
-                <DialogTitle>Confirm action</DialogTitle>
-                <DialogDescription>
-                  {confirmAction.action} for <span className="font-mono">{confirmAction.record.clientUserId}</span>?
-                </DialogDescription>
-              </DialogHeader>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setConfirmAction(null)}>
-                  Cancel
-                </Button>
-                <Button
-                  variant={confirmAction.action === "disable" ? "destructive" : "default"}
-                  onClick={() => {
-                    applyRowAction(confirmAction.record, confirmAction.action);
-                    setConfirmAction(null);
-                  }}
-                >
-                  Confirm
-                </Button>
-              </DialogFooter>
-            </>
-          )}
         </DialogContent>
       </Dialog>
     </PortalPageFrame>

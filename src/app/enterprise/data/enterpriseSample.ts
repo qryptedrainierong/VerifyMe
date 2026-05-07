@@ -31,7 +31,19 @@ export const enterpriseUsageTrend = Array.from({ length: 9 }, (_, index) => ({
   usage: Math.round((enterpriseOrganization.usage / 9) * (0.88 + index * 0.03)),
 }));
 
-export const enterpriseInvoices = [
+export type EnterpriseInvoiceRow = {
+  id: string;
+  date: string;
+  amount: number;
+  status: "success" | "pending" | "failed" | "warning";
+  period: string;
+  actionRequired: boolean;
+  /** Billing workflow flag — shown as status note in UI. */
+  refundRequested?: boolean;
+  summary?: string;
+};
+
+export const enterpriseInvoices: EnterpriseInvoiceRow[] = [
   {
     id: `INV-${enterpriseOrganization.id}-0424`,
     date: "Apr 1, 2024",
@@ -44,14 +56,17 @@ export const enterpriseInvoices = [
           : "failed",
     period: "Apr 2024",
     actionRequired: enterpriseOrganization.paymentStanding !== "current",
+    summary: "Current period verification usage and included credits.",
   },
   {
     id: `INV-${enterpriseOrganization.id}-0324`,
     date: "Mar 1, 2024",
     amount: Math.round(enterpriseUsageSpend * 0.87),
-    status: "success",
+    status: "warning",
     period: "Mar 2024",
-    actionRequired: false,
+    actionRequired: true,
+    refundRequested: true,
+    summary: "Refund requested — under finance review.",
   },
   {
     id: `INV-${enterpriseOrganization.id}-0224`,
@@ -60,6 +75,7 @@ export const enterpriseInvoices = [
     status: "success",
     period: "Feb 2024",
     actionRequired: false,
+    summary: "Paid in full.",
   },
   {
     id: `INV-${enterpriseOrganization.id}-0124`,
@@ -68,6 +84,7 @@ export const enterpriseInvoices = [
     status: "pending",
     period: "Jan 2024",
     actionRequired: true,
+    summary: "Awaiting payment — within terms.",
   },
   {
     id: `INV-${enterpriseOrganization.id}-1223`,
@@ -76,6 +93,7 @@ export const enterpriseInvoices = [
     status: "failed",
     period: "Dec 2023",
     actionRequired: true,
+    summary: "Payment failed — update payment method.",
   },
   {
     id: `INV-${enterpriseOrganization.id}-1123`,
@@ -84,10 +102,20 @@ export const enterpriseInvoices = [
     status: "warning",
     period: "Nov 2023",
     actionRequired: true,
+    summary: "Overdue — collections follow-up.",
+  },
+  {
+    id: `INV-${enterpriseOrganization.id}-1023`,
+    date: "Oct 1, 2023",
+    amount: Math.round(enterpriseUsageSpend * 0.65),
+    status: "success",
+    period: "Oct 2023",
+    actionRequired: false,
+    summary: "Paid — no action.",
   },
 ];
 
-/** Design-phase: some steps incomplete so dashboard checklist is visible (UI only). */
+/** Some steps intentionally incomplete so the setup checklist stays visible in the UI. */
 export type EnterpriseSetupStepId =
   | "profile"
   | "api"
@@ -170,6 +198,9 @@ export const enterpriseMockClientApplication = {
   environment: "PROD" as const,
   secretStatus: "Secret active" as const,
   lastRotated: "2024-03-01",
+  /** Null = confidential client never authenticated with current secret in this demo. */
+  lastSecretUsedAt: null as string | null,
+  secretRotationDue: true,
   /** MVP: openid only. */
   allowedScopes: ["openid"],
   /** Not enabled for MVP — shown separately in the portal UI. */
@@ -252,7 +283,7 @@ export const enterpriseQrKeyRow = {
   verifyMePublicKeyStatus: "Active" as const,
   organizationPublicKeyStatus: "Missing" as const,
   keyId: "org-key-acme-2024-01",
-  algorithm: "RSA-4096 / SHA-256 (sample)",
+  algorithm: "RSA-4096 / SHA-256",
   lastRotated: "—",
 };
 

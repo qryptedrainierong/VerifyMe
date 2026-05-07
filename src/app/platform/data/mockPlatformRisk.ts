@@ -27,6 +27,8 @@ export const mockPlatformUserRiskByVerifymeId: Record<string, MockPlatformUserRi
   vmconflict1: { idProofFailCountSample: 1 },
   vmzz12xy: { idProofFailCountSample: 4, recentDeviceReplacement: true },
   vmorphan1: { idProofFailCountSample: 0, recentDeviceReplacement: false },
+  /** Demo VerifyMe User for Organization Admin “critical” user-risk band (sample only). */
+  vmorgdemo99: { idProofFailCountSample: 12, recentDeviceReplacement: true },
 };
 
 export function riskLevelFromScore(score: number): RiskLevelLabel {

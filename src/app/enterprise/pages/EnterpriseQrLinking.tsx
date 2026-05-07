@@ -117,7 +117,7 @@ export function EnterpriseQrLinking() {
       </Card>
 
       <p className="text-[12px] text-muted-foreground">
-        Sample organization: <span className="font-medium text-foreground">{enterpriseOrganization.organizationName}</span>
+        Organization: <span className="font-medium text-foreground">{enterpriseOrganization.organizationName}</span>
       </p>
     </PortalPageFrame>
   );
