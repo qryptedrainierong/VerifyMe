@@ -2,13 +2,13 @@
 
 > **VerifyMe terminology:** Product copy and new specs use **plans**, **credits**, and **verification billing** (see [`billing-credits.md`](./billing-credits.md)). This document still uses historical **audit action keys** such as `subscription.*` in several places; treat those names as **stable log identifiers** until a backend migration aliases or renames them.
 
-**Portal UX (prototype):** Governance-affecting operations are initiated only from **VerifyMe Admin** entity detail pages with **confirmation**; **audit log events** are the accountability trail. The Audit Logs screen is an **immutable, read-only** review surface (modal detail). See [`implementation-notes.md`](./implementation-notes.md) and [`audit-logs-ui.md`](./audit-logs-ui.md).
+**Portal UX:** Governance-affecting operations are initiated only from **VerifyMe Admin** entity detail pages with **confirmation**; **audit log events** are the accountability trail. The Audit Logs screen is an **immutable, read-only** review surface (modal detail). See [`implementation-notes.md`](./implementation-notes.md) and [`audit-logs-ui.md`](./audit-logs-ui.md).
 
-### Governance alignment (prototype UI — Step 7)
+### Governance alignment
 
 VerifyMe Admin treats audit logs as a **connected governance surface** aligned with entity detail pages:
 
-| Concept | Behavior (frontend prototype) |
+| Concept | Behavior (current frontend) |
 |--------|-------------------------------|
 | **Governance categories** | **Risk**, **Identity**, **Security**, **Verification**, **Governance**, **Billing** — derived from action keys with optional per-row override (`governanceCategory`). |
 | **Governance severity** | **Informational**, **Warning**, **High**, **Critical** — mapped from internal triage bands (`severity` / outcome), not duplicated as raw vendor codes in UI copy. |
@@ -841,7 +841,7 @@ These fields should be present in every audit log entry:
 ## Related VerifyMe docs
 
 - [`audit-logs-schema.md`](./audit-logs-schema.md) — storage shape and examples
-- [`audit-logs-ui.md`](./audit-logs-ui.md) — UI prototype notes
+- [`audit-logs-ui.md`](./audit-logs-ui.md) — UI behavior and interaction notes
 - [`billing-credits.md`](./billing-credits.md) — plans, credits, billable **verification session** outcomes
 - [`glossary.md`](./glossary.md) — canonical terminology
 - [`risk-scoring.md`](./risk-scoring.md) — VerifyMe User risk vs link conflict events, audit payload discipline

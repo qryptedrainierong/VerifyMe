@@ -56,7 +56,7 @@ These stay grouped as the **audit** set; they are part of `/docs` but are the ca
 |----------|---------|
 | [`audit-logs-plan.md`](./audit-logs-plan.md) | Audit event catalog by category (includes legacy `subscription.*` action keys) |
 | [`audit-logs-schema.md`](./audit-logs-schema.md) | Storage shape, SQL/Mongo sketches, retention, export examples |
-| [`audit-logs-ui.md`](./audit-logs-ui.md) | Audit logs UI prototype structure, status, and follow-ups |
+| [`audit-logs-ui.md`](./audit-logs-ui.md) | Audit logs UI behavior and governance patterns |
 
 ---
 
@@ -78,7 +78,7 @@ These stay grouped as the **audit** set; they are part of `/docs` but are the ca
 | `api-overview.md` | HTTP / OIDC overview, MVP scopes |
 | `audit-logs-plan.md` | Audit event catalog |
 | `audit-logs-schema.md` | Audit storage / retention / export sketches |
-| `audit-logs-ui.md` | Audit logs UI prototype notes |
+| `audit-logs-ui.md` | Audit logs UI behavior notes |
 | `billing-credits.md` | Credits, plans, billable outcomes |
 | `client-management.md` | Organizations, `client_id`, setup checklist |
 | `end-user-management.md` | VerifyMe Users, Linked End Users, invites |

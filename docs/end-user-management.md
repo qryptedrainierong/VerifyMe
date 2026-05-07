@@ -1,4 +1,4 @@
-# VerifyMe end-user management (design phase)
+# VerifyMe end-user management
 
 **VerifyMe Users** are people who install the **VerifyMe mobile app** and hold a verified identity used when organizations run OIDC-style **verification sessions**. They are **not** the same as **Organization Admin Portal** users.
 

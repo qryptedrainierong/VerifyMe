@@ -345,7 +345,7 @@ export function PlatformOrganizations() {
                 {filteredOrganizations.map((org) => (
                   <tr
                     key={org.id}
-                    className="hover:bg-accent/5 transition-colors cursor-pointer"
+                    className="hover:bg-accent/60 transition-colors cursor-pointer"
                     onClick={(event) => {
                       const target = event.target;
                       if (target instanceof HTMLElement) {

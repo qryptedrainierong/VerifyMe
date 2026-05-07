@@ -39,7 +39,7 @@ Routers are created through functions (e.g. `getPlatformRouter()`) rather than a
 
 Organization Detail shows organization-specific summary (info, status), usage highlights, an integration readiness checklist, and governance controls. Deep operational tables—verification sessions, audit logs, billing activity, client apps / API, identity links, and similar—live on platform-wide VerifyMe Admin routes; Organization Detail links to those views with an `organizationId` query parameter when the target page supports it.
 
-**Prototype behavior:** VerifyMe Users (`/verifyme-users`), Identity Links (`/identity-links`), and Client Apps / API (`/client-apps`) read `organizationId` from the query string, match it against seeded organization ids, and pre-select the organization filter when possible. Other list screens should follow the same pattern as query-aware filtering is added.
+**Query-aware filtering behavior:** VerifyMe Users (`/verifyme-users`), Identity Links (`/identity-links`), and Client Apps / API (`/client-apps`) read `organizationId` from the query string, match it against seeded organization ids, and pre-select the organization filter when possible. Other list screens should follow the same pattern as query-aware filtering is added.
 
 **Billing dashboard:** Top-line spend metrics aggregate `getVerificationSpend(org)` from seeded organizations — this is **verification-related spend**, not SaaS MRR. Invoice rows and governance actions use in-memory mock data (`platformBillingInvoicesMock`); confirmations do not send email or call a payments API in the prototype.
 
@@ -83,7 +83,7 @@ Pages are largely mock-driven; there is no production API layer in repo scope. A
 
 **Risk UX:** **Platform Risk** (score, signals) lives on **VerifyMe User** detail. **Identity Links** emphasize **conflict** and **name consistency**; **Organization Admin** shows **User risk status** only (no cross-org factors). See [`risk-scoring.md`](./risk-scoring.md).
 
-## Audit logs UI (prototype)
+## Audit logs UI
 
 Types: `src/app/shared/types/auditLog.ts`. Main screen: `src/app/platform/pages/PlatformAuditLogs.tsx`. Specifications: [`audit-logs-plan.md`](./audit-logs-plan.md), [`audit-logs-schema.md`](./audit-logs-schema.md), [`audit-logs-ui.md`](./audit-logs-ui.md).
 

@@ -90,15 +90,15 @@ export function computePlatformRiskSummary(group: GroupedEndUser): PlatformRiskS
     score += add;
     signals.push(
       fails === 1
-        ? "ID Proof Fail outcome observed in sample window (platform aggregate)"
-        : `Multiple ID Proof Fail outcomes in sample window (platform aggregate · ${fails})`,
+        ? "ID Proof Fail outcome observed in review window (platform aggregate)"
+        : `Multiple ID Proof Fail outcomes in review window (platform aggregate · ${fails})`,
     );
   }
 
   const totalSessions = group.totalVerificationSessions;
   if (totalSessions >= 4500) {
     score += 14;
-    signals.push("High verification session frequency (sample aggregate)");
+    signals.push("High verification session frequency (platform aggregate)");
   } else if (totalSessions >= 2000) {
     score += 8;
     signals.push("Elevated verification session volume");

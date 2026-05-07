@@ -149,7 +149,7 @@ export function PlatformDashboard() {
           <KpiCard
             label="Verification sessions"
             value={sessionSnapshot.total.toLocaleString()}
-            hint="Settled + in progress (sample window)"
+            hint="Settled + in progress"
             footer={
               <Button variant="link" className="px-0 h-auto text-sm" asChild>
                 <Link to="/verification-sessions">Open sessions</Link>
@@ -225,7 +225,7 @@ export function PlatformDashboard() {
                 <ScrollText className="w-4 h-4 text-primary" />
                 <div>
                   <h3 className="text-sm font-semibold text-foreground">Recent governance events</h3>
-                  <p className="text-xs text-muted-foreground">From audit log sample</p>
+                  <p className="text-xs text-muted-foreground">Recent governance activity</p>
                 </div>
               </div>
               <Button variant="outline" size="sm" asChild>

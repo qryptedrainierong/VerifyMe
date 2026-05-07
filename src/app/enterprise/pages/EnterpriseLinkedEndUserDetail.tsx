@@ -98,7 +98,7 @@ export function EnterpriseLinkedEndUserDetail() {
     );
   }
 
-  const auditHint = "This action will be recorded in audit logs in a production deployment.";
+  const auditHint = "This action will be recorded in audit logs.";
   const liveInvite = getLinkedEndUserRecordById(recordId) ?? record;
   const inv = liveInvite.invite;
   const riskLevel = userRiskLevelForOrgAdmin(liveInvite.platformRiskVerifymeId, platformAssociations);

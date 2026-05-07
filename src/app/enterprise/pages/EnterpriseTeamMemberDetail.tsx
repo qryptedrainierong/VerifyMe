@@ -43,7 +43,7 @@ export function EnterpriseTeamMemberDetail() {
     return <div className="p-8 text-sm text-muted-foreground">Team member not found.</div>;
   }
 
-  const auditHint = "This action will be recorded in audit logs in a production deployment.";
+  const auditHint = "This action will be recorded in audit logs.";
 
   return (
     <>

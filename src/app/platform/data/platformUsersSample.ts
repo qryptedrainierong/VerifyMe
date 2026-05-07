@@ -144,7 +144,7 @@ export const platformEndUserAssociations: PlatformEndUserAssociation[] = [
     verificationSessions: 2450,
     lastActive: "2024-04-09T10:30:00",
     created: "2024-01-15",
-    device: d("iPhone 15 Pro", "iOS", "active", "2024-01-15T09:00:00Z", "2024-04-09T10:30:00Z", "Bound · step-up OK (sample)"),
+    device: d("iPhone 15 Pro", "iOS", "active", "2024-01-15T09:00:00Z", "2024-04-09T10:30:00Z", "Bound · step-up OK"),
   },
   {
     id: "link-usr-00145-dsp",
@@ -158,7 +158,7 @@ export const platformEndUserAssociations: PlatformEndUserAssociation[] = [
     verificationSessions: 980,
     lastActive: "2024-04-08T11:20:00",
     created: "2024-02-19",
-    device: d("iPhone 15 Pro", "iOS", "active", "2024-01-15T09:00:00Z", "2024-04-09T10:30:00Z", "Bound · step-up OK (sample)"),
+    device: d("iPhone 15 Pro", "iOS", "active", "2024-01-15T09:00:00Z", "2024-04-09T10:30:00Z", "Bound · step-up OK"),
   },
   {
     id: "link-usr-00238",
@@ -172,7 +172,7 @@ export const platformEndUserAssociations: PlatformEndUserAssociation[] = [
     verificationSessions: 1823,
     lastActive: "2024-04-09T09:15:00",
     created: "2024-02-03",
-    device: d("Pixel 8", "Android", "active", "2024-02-03T14:20:00Z", "2024-04-09T09:15:00Z", "Bound · healthy (sample)"),
+    device: d("Pixel 8", "Android", "active", "2024-02-03T14:20:00Z", "2024-04-09T09:15:00Z", "Bound · healthy"),
   },
   {
     id: "link-usr-00421-gv",
@@ -186,7 +186,7 @@ export const platformEndUserAssociations: PlatformEndUserAssociation[] = [
     verificationSessions: 3912,
     lastActive: "2024-04-09T10:15:00",
     created: "2023-12-08",
-    device: d("Galaxy S24", "Android", "active", "2023-12-08T11:00:00Z", "2024-04-09T10:15:00Z", "Bound (sample)"),
+    device: d("Galaxy S24", "Android", "active", "2023-12-08T11:00:00Z", "2024-04-09T10:15:00Z", "Bound"),
   },
   {
     id: "link-usr-00421-cs",
@@ -200,7 +200,7 @@ export const platformEndUserAssociations: PlatformEndUserAssociation[] = [
     verificationSessions: 1245,
     lastActive: "2024-04-09T11:00:00",
     created: "2024-02-10",
-    device: d("Galaxy S24", "Android", "active", "2023-12-08T11:00:00Z", "2024-04-09T10:15:00Z", "Bound (sample)"),
+    device: d("Galaxy S24", "Android", "active", "2023-12-08T11:00:00Z", "2024-04-09T10:15:00Z", "Bound"),
   },
   {
     id: "link-usr-00892",
@@ -214,7 +214,7 @@ export const platformEndUserAssociations: PlatformEndUserAssociation[] = [
     verificationSessions: 0,
     lastActive: null,
     created: "2024-03-22",
-    device: d("Pending device", "—", "pending_enrollment", "2024-03-22T08:00:00Z", null, "Enrollment not completed (sample)"),
+    device: d("Pending device", "—", "pending_enrollment", "2024-03-22T08:00:00Z", null, "Enrollment not completed"),
   },
   {
     id: "link-usr-00893",
@@ -228,7 +228,7 @@ export const platformEndUserAssociations: PlatformEndUserAssociation[] = [
     verificationSessions: 0,
     lastActive: null,
     created: "2024-04-01",
-    device: d("Pending device", "—", "pending_enrollment", "2024-04-01T10:00:00Z", null, "Enrollment not completed (sample)"),
+    device: d("Pending device", "—", "pending_enrollment", "2024-04-01T10:00:00Z", null, "Enrollment not completed"),
   },
   {
     id: "link-usr-01204",
@@ -242,7 +242,7 @@ export const platformEndUserAssociations: PlatformEndUserAssociation[] = [
     verificationSessions: 5234,
     lastActive: "2024-04-08T16:45:00",
     created: "2024-01-28",
-    device: d("iPhone 14", "iOS", "active", "2024-01-28T13:00:00Z", "2024-04-08T16:45:00Z", "Bound (sample)"),
+    device: d("iPhone 14", "iOS", "active", "2024-01-28T13:00:00Z", "2024-04-08T16:45:00Z", "Bound"),
   },
   {
     id: "link-usr-01567",
@@ -256,7 +256,7 @@ export const platformEndUserAssociations: PlatformEndUserAssociation[] = [
     verificationSessions: 1567,
     lastActive: "2024-04-09T08:20:00",
     created: "2023-11-12",
-    device: d("iPhone 13", "iOS", "active", "2023-11-12T15:30:00Z", "2024-04-09T08:20:00Z", "Bound (sample)"),
+    device: d("iPhone 13", "iOS", "active", "2023-11-12T15:30:00Z", "2024-04-09T08:20:00Z", "Bound"),
   },
   {
     id: "link-usr-01892",
@@ -270,7 +270,7 @@ export const platformEndUserAssociations: PlatformEndUserAssociation[] = [
     verificationSessions: 892,
     lastActive: "2024-03-15T14:30:00",
     created: "2024-02-14",
-    device: d("Pixel 7", "Android", "active", "2024-02-14T09:45:00Z", "2024-03-15T14:30:00Z", "Suspended account · device frozen (sample)"),
+    device: d("Pixel 7", "Android", "active", "2024-02-14T09:45:00Z", "2024-03-15T14:30:00Z", "Suspended account · device frozen"),
   },
   {
     id: "link-usr-02134",
@@ -284,13 +284,13 @@ export const platformEndUserAssociations: PlatformEndUserAssociation[] = [
     verificationSessions: 2981,
     lastActive: "2024-04-09T07:50:00",
     created: "2024-03-05",
-    device: d("iPhone 15", "iOS", "active", "2024-03-05T12:00:00Z", "2024-04-09T07:50:00Z", "Bound (sample)"),
+    device: d("iPhone 15", "iOS", "active", "2024-03-05T12:00:00Z", "2024-04-09T07:50:00Z", "Bound"),
   },
   {
     id: "link-usr-conflict1-ts",
     verifymeUserId: "a0000011-0000-4000-8000-000000000011",
     verifymeId: "vmconflict1",
-    email: "conflict.sample@example.com",
+    email: "ops.review@techstart.io",
     clientUserId: "ts_contractor_901",
     organization: "TechStart Inc.",
     organizationId: "ORG-002",
@@ -298,7 +298,7 @@ export const platformEndUserAssociations: PlatformEndUserAssociation[] = [
     verificationSessions: 142,
     lastActive: "2024-04-07T16:20:00",
     created: "2024-03-18",
-    device: d("iPhone 15", "iOS", "active", "2024-03-18T12:00:00Z", "2024-04-07T16:20:00Z", "Bound (sample)"),
+    device: d("iPhone 15", "iOS", "active", "2024-03-18T12:00:00Z", "2024-04-07T16:20:00Z", "Bound"),
   },
   {
     id: "link-usr-03001-disabled",

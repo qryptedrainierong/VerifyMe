@@ -1,4 +1,4 @@
-# Schema notes (design phase)
+# Schema notes
 
 **High-level table list only.** No SQL migrations, no ORM models, and no enforced constraints are delivered in this repository as part of this documentation step.
 

@@ -9,7 +9,7 @@ import { platformEndUserAssociations } from "../../platform/data/platformUsersSa
 const associatedOrganization = getSampleOrganizationById("ORG-001");
 
 if (!associatedOrganization) {
-  throw new Error("Associated enterprise organization sample is missing.");
+  throw new Error("Associated enterprise organization data is missing.");
 }
 
 export const enterpriseOrganization = associatedOrganization;
