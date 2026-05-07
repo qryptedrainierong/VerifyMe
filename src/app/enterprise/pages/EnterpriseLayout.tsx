@@ -20,11 +20,11 @@ export function EnterpriseLayout() {
     { label: "Dashboard", href: "/", icon: <LayoutDashboard className="w-5 h-5" />, end: true },
     { label: "Linked End Users", href: "/linked-end-users", icon: <Link2 className="w-5 h-5" /> },
     { label: "Verification Logs", href: "/verification-logs", icon: <ScrollText className="w-5 h-5" /> },
+    { label: "Usage & Credits", href: "/usage-credits", icon: <CircleDollarSign className="w-5 h-5" /> },
+    { label: "Billing", href: "/billing", icon: <CreditCard className="w-5 h-5" /> },
     { label: "API Integration", href: "/api-integration", icon: <Plug className="w-5 h-5" /> },
     { label: "QR Linking", href: "/qr-linking", icon: <QrCode className="w-5 h-5" /> },
     { label: "Team & Roles", href: "/team-roles", icon: <UsersRound className="w-5 h-5" /> },
-    { label: "Usage & Credits", href: "/usage-credits", icon: <CircleDollarSign className="w-5 h-5" /> },
-    { label: "Billing", href: "/billing", icon: <CreditCard className="w-5 h-5" /> },
     { label: "Settings", href: "/settings", icon: <Settings className="w-5 h-5" /> },
   ];
 
