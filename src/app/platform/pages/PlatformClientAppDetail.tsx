@@ -13,6 +13,7 @@ import {
 } from "../../shared/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../shared/components/ui/tabs";
 import { UnifiedBadge } from "../../shared/components/UnifiedBadge";
+import { AuditHintText } from "../../shared/components/AuditHintText";
 import {
   getClientAppById,
   getClientAppsStoreVersion,
@@ -267,9 +268,7 @@ export function PlatformClientAppDetail() {
               displayed in this portal.
             </DialogDescription>
           </DialogHeader>
-          <p className="rounded-md border border-border/80 bg-muted/30 px-3 py-2 text-[12px] text-muted-foreground">
-            This action will be recorded in audit logs.
-          </p>
+          <AuditHintText />
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setRotateOpen(false)}>
               Cancel
@@ -296,9 +295,7 @@ export function PlatformClientAppDetail() {
               not configured until restored.
             </DialogDescription>
           </DialogHeader>
-          <p className="rounded-md border border-border/80 bg-muted/30 px-3 py-2 text-[12px] text-muted-foreground">
-            This action will be recorded in audit logs.
-          </p>
+          <AuditHintText />
           <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setDisableOpen(false)}>
               Cancel

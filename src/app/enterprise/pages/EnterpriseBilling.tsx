@@ -1,5 +1,6 @@
 import { CreditCard, Download, AlertCircle } from "lucide-react";
 import { useMemo, useState } from "react";
+import { Link } from "react-router";
 import { Card } from "../../shared/components/ui/card";
 import { Button } from "../../shared/components/ui/button";
 import { StatusBadge } from "../../shared/components/StatusBadge";
@@ -19,6 +20,8 @@ import {
   type EnterpriseInvoiceRow,
 } from "../data/enterpriseSample";
 import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
+import { HelperCallout } from "../../shared/components/HelperCallout";
+import { AuditHintText } from "../../shared/components/AuditHintText";
 
 function parseInvoiceDate(dateStr: string): number {
   const t = Date.parse(dateStr);
@@ -63,7 +66,13 @@ export function EnterpriseBilling() {
     <>
     <PortalPageFrame
       title="Billing"
-      description="Plan, invoices or billing history, credit purchases, top-ups, and payment-related settings."
+      description="Invoices, payment standing, plan and financial operations. For consumption analytics and credit posture, use Usage & Credits."
+      headerExtra={
+        <HelperCallout>
+          Payment and invoice controls in this bundle are frontend demo workflows. Backend integration is required for
+          persistent billing operations.
+        </HelperCallout>
+      }
       bodyClassName="max-w-7xl space-y-6"
     >
       {/* Current Plan */}
@@ -100,7 +109,9 @@ export function EnterpriseBilling() {
 
         <div className="flex gap-3">
           <Button>Upgrade Plan</Button>
-          <Button variant="outline">View Usage</Button>
+          <Button variant="outline" asChild>
+            <Link to="/usage-credits">View Usage & Credits</Link>
+          </Button>
         </div>
       </Card>
 
@@ -259,7 +270,10 @@ export function EnterpriseBilling() {
                   Request refund
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">Billing controls require confirmation and are recorded in audit logs when live.</p>
+              <p className="text-xs text-muted-foreground">
+                Billing controls require confirmation and are recorded in audit logs when live. In this bundle, actions
+                are demo-only until backend billing workflows are connected.
+              </p>
             </div>
             <DialogFooter><Button variant="outline" onClick={() => setInvoiceDetail(null)}>Close</Button></DialogFooter>
           </>
@@ -274,13 +288,13 @@ export function EnterpriseBilling() {
             {confirming === "reminder" && (
               <>
                 <p>Send a reminder for invoice {invoiceDetail?.id} ({invoiceDetail?.period})?</p>
-                <p className="text-xs text-muted-foreground">This action will be recorded in audit logs.</p>
+                <AuditHintText className="text-xs" />
               </>
             )}
             {confirming === "refund" && (
               <>
                 <p>Request a refund review for invoice {invoiceDetail?.id}? Finance will follow your organization policy.</p>
-                <p className="text-xs text-muted-foreground">This action will be recorded in audit logs.</p>
+                <AuditHintText className="text-xs" />
               </>
             )}
           </DialogDescription>

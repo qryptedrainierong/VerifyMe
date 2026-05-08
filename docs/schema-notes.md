@@ -87,6 +87,19 @@ Rotation of **`verifyme_id`** (public display id) does **not** break organizatio
 |-------|---------|
 | **audit_logs** | Platform and org actions, security-sensitive changes, API lifecycle — see [`audit-logs-plan.md`](./audit-logs-plan.md), [`audit-logs-schema.md`](./audit-logs-schema.md), [`audit-logs-ui.md`](./audit-logs-ui.md). |
 
+## Platform policy settings
+
+| Table | Purpose |
+|-------|---------|
+| **platform_policy_settings** | Category-keyed policy store for VerifyMe Admin Platform Settings (general, verification, risk, org defaults, billing, audit, team access, feature controls). Includes `category`, `policy_key`, `policy_value_json`, `effective_at`, `updated_by_admin_user_id`, and revision metadata. |
+| **platform_policy_revisions** | Optional immutable revision ledger for policy diffs and rollout traceability; links to audit events and change tickets. |
+
+**Constraint model (important):**
+
+- Platform-enforced limits are authoritative guardrails (for example max retries, max timeout, retention ranges).
+- Organization-configurable values must be validated against those limits.
+- Settings schemas should keep risk policy controls high-level and must not store raw fraud heuristic internals as user-facing config blobs.
+
 ## Next steps (not now)
 
 - Entity-relationship diagram

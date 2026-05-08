@@ -24,6 +24,7 @@ import {
 import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
 import { shouldIgnoreRowOpenClick } from "../../platform/utils/tableRowNav";
 import { enterpriseTeamRoleOptions, enterpriseTeamSample } from "../data/enterpriseTeamSample";
+import { HelperCallout } from "../../shared/components/HelperCallout";
 
 export function EnterpriseTeam() {
   const navigate = useNavigate();
@@ -42,6 +43,12 @@ export function EnterpriseTeam() {
     <PortalPageFrame
       title="Team & Roles"
       description="Organization portal users: Owner, Admin, Operations, Technical / API Manager, Finance / Billing, Compliance / Auditor. Each member has one role at a time."
+      headerExtra={
+        <HelperCallout>
+          Create user and invite controls in this bundle are demo-only workflow previews. Backend integration is required
+          for persistent user provisioning and invite delivery.
+        </HelperCallout>
+      }
       headerActions={
         <Dialog>
           <DialogTrigger asChild>
@@ -53,7 +60,9 @@ export function EnterpriseTeam() {
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Create User</DialogTitle>
-              <DialogDescription>Add a new portal user to your organization.</DialogDescription>
+              <DialogDescription>
+                Add a new portal user to your organization. This action is a frontend demo flow in the current bundle.
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">

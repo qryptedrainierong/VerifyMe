@@ -254,6 +254,6 @@ export const platformIdentityLinks: PlatformIdentityLinkRow[] = [
     riskNotes: "Organization label mismatch vs verified identity — conflict queue.",
     inviteRiskNotes: null,
     conflictReason:
-      "Customer-facing label inconsistent with verified VerifyMe profile — ID Proof Pass does not clear naming conflict.",
+      "Conflict reopened: customer-facing label remains inconsistent with verified VerifyMe profile after a later review.",
   },
 ];

@@ -104,9 +104,9 @@ export function OrganizationDetailTabs({
     },
     {
       id: "verify",
-      label: "Configure verification settings",
+      label: "Review platform policy bounds for this organization",
       done: organization.integrationStatus === "production_active" || organization.integrationStatus === "sandbox_active",
-      cta: { to: `/settings?organizationId=${encodeURIComponent(orgId)}`, label: "Platform settings" },
+      cta: { to: `/settings?organizationId=${encodeURIComponent(orgId)}`, label: "Global policy center" },
     },
     { id: "test", label: "Test integration", done: organization.integrationStatus === "production_active" },
   ];
@@ -380,7 +380,8 @@ export function OrganizationDetailTabs({
             <div className="p-6 border-b border-border">
               <h3 className="text-[16px] font-semibold text-foreground">Integration setup checklist</h3>
               <p className="text-[13px] text-muted-foreground mt-1">
-                Remaining steps are completed in the Organization Admin Portal unless noted.
+                Remaining steps are completed in the Organization Admin Portal unless noted. Platform Settings opens global
+                policy controls, not tenant-local configuration.
               </p>
               <p className="text-[12px] text-muted-foreground mt-2 leading-relaxed">
                 This checklist is a readiness guide. Links open VerifyMe Admin pages for deeper API, redirect, identity,

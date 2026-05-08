@@ -25,6 +25,8 @@ import { shouldIgnoreRowOpenClick } from "../utils/tableRowNav";
 import { maskEmail, rowStatusLabel } from "../utils/verifyMeUserFormatters";
 import { UserRiskStatusBadge } from "../../shared/components/RiskSummary";
 import { computePlatformRiskSummary } from "../data/mockPlatformRisk";
+import { ScopedFilterBanner } from "../../shared/components/ScopedFilterBanner";
+import { HelperCallout } from "../../shared/components/HelperCallout";
 
 export function PlatformUsers() {
   const navigate = useNavigate();
@@ -105,15 +107,18 @@ export function PlatformUsers() {
       description="VerifyMe ID, masked account email, links per organization, and verification activity."
       headerExtra={
         <>
+          <HelperCallout className="leading-relaxed">
+            Use <span className="font-medium text-foreground">VerifyMe Users</span> for platform-level identity posture,
+            account status, and cross-organization activity. Use <span className="font-medium text-foreground">Identity Links</span>{" "}
+            when investigating organization-specific `client_user_id` link quality or conflict workflows.
+          </HelperCallout>
           {urlOrganizationId ? (
-            <p className="text-xs leading-relaxed text-muted-foreground sm:text-sm">
-              URL filter: <span className="font-mono text-foreground">{urlOrganizationId}</span>
-              {!knownOrgIds.has(urlOrganizationId) ? (
-                <> — not found in configured organizations; showing all until you pick a valid org.</>
-              ) : (
-                <> — list filtered to this organization when present in configured data.</>
-              )}
-            </p>
+            <ScopedFilterBanner
+              entityLabel="organization"
+              scopedValue={urlOrganizationId}
+              isKnown={knownOrgIds.has(urlOrganizationId)}
+              unknownHelperText="Organization was not found in configured organizations."
+            />
           ) : null}
           <div className="flex flex-wrap items-center gap-3">
             <div className="relative min-w-[200px] max-w-md flex-1">
@@ -157,6 +162,7 @@ export function PlatformUsers() {
               variant="outline"
               size="icon"
               className="h-10 w-10"
+              aria-label="Clear filters"
               onClick={() => {
                 setSearchQuery("");
                 setOrganizationFilter("all-orgs");

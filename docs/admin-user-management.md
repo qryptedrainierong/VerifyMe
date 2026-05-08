@@ -1,4 +1,4 @@
-# Admin user management (design phase)
+# Admin user management
 
 Human operators of the two admin portals: who they are, how they authenticate (design intent), and what they can do. Not an implementation spec for auth providers or password policies.
 
@@ -46,4 +46,4 @@ Each organization portal user has **one primary role** at a time in the MVP desi
 
 ## UI / codebase note
 
-The React prototype may use sample labels. Role names in the UI should converge on the tables above as screens are refined.
+Role names in the UI should remain aligned with the tables above.

@@ -78,6 +78,8 @@ Where IDs are available and route-supported, modal links can navigate to:
 - Client App detail
 - Verification Session context
 
+The page also provides lightweight continuity affordances (for example returning to Platform Settings) to support governance investigation flows without introducing state-changing actions.
+
 ## Sensitive data handling
 
 UI must not expose raw secrets or private credentials, including:

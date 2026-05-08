@@ -64,7 +64,7 @@ Each portal builds its router via a function and memoizes it inside the portal a
 
 ### Static and mock data
 
-Many screens are design-phase shells. Confirm mock vs future API contracts before embedding heavy logic in page components.
+Many screens are mock-backed shells. Confirm mock vs future API contracts before embedding heavy logic in page components.
 
 ## Suggested future refactors
 
@@ -72,6 +72,47 @@ Many screens are design-phase shells. Confirm mock vs future API contracts befor
 - `services/` or `api/` layer
 - Route metadata shared with navigation
 - Tests around portal switching and critical shared components
+- Consolidate confirmation dialogs into a shared `ConfirmActionDialog` pattern across platform and enterprise pages (only after backend validation/error payload contracts settle).
+- Introduce a shared status/filter toolbar pattern for list pages to reduce repeated inline filter layout logic (after server-driven filter contracts are stable).
+- Add a `TechnicalDetailsDisclosure` helper for consistent internal-ID and debug-field presentation (after API schema metadata fields are finalized).
+- Evaluate moving unused legacy pages under `src/app/platform/legacy/` once downstream references are fully audited.
+
+## Shared primitives (current state)
+
+The following shared primitives are already introduced and safe for incremental use where markup patterns match:
+
+- `SummaryStatCard`
+- `TableEmptyStateRow`
+- `AuditHintText`
+- `ScopedFilterBanner`
+- `HelperCallout`
+
+Adopt these in low-risk, mechanical cases only. If a page needs variant logic or custom behavior, prefer local markup until the pattern stabilizes.
+
+## Defer until backend/API contracts settle
+
+Do not aggressively abstract the following before backend integration locks request/response and error contracts:
+
+1. **Unified server-driven filtering model**
+   - Wait for canonical query parameter names, multi-filter behavior, sorting semantics, and pagination metadata from APIs.
+2. **Audit mutation receipts / persisted audit feedback**
+   - Wait for backend receipts (event id, actor id, timestamp, correlation/request id) before centralizing post-action success patterns.
+3. **Backend-dependent confirmation payloads**
+   - Wait for server validation payloads and business-rule error shapes before broad confirmation-dialog abstraction.
+4. **Advanced empty/error/unauthorized states**
+   - Wait for standardized API error taxonomy (`empty`, `not_found`, `forbidden`, transient failure) before global empty/error wrappers.
+5. **Technical metadata blocks tied to API schemas**
+   - Wait for stable metadata fields (ids, version hashes, policy revision refs, etags, audit refs) before shared metadata panels.
+6. **`ConfirmActionDialog` broad extraction**
+   - Defer broad extraction if behavior must branch on backend validation, retry logic, async progress, or structured server errors.
+
+## Anti-over-abstraction rule
+
+Before backend contracts settle, optimize for clarity and local correctness over sweeping reuse:
+
+- Prefer small shared primitives for stable visual shells.
+- Keep behaviorful flows local when server outcomes are unknown.
+- Avoid introducing "one component for all cases" patterns that will need breaking changes once live APIs arrive.
 
 ## Testing gaps
 

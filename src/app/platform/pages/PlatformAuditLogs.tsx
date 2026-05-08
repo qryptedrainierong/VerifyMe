@@ -34,6 +34,8 @@ import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
 import { platformAuditLogsSample } from "../data/platformAuditLogsSample";
 import { buildInitialOrganizations } from "../data/platformOrganizationsSample";
 import { shouldIgnoreRowOpenClick } from "../utils/tableRowNav";
+import { SummaryStatCard } from "../../shared/components/SummaryStatCard";
+import { TableEmptyStateRow } from "../../shared/components/TableEmptyStateRow";
 
 const AUDIT_LOGS_PER_PAGE = 10;
 
@@ -362,10 +364,15 @@ export function PlatformAuditLogs() {
         title="Audit Logs"
         description="Governance-aligned audit trail across VerifyMe Users, identity links, organizations, client apps, verification sessions, and billing. Filters support deep links from entity pages."
         headerActions={
-          <Button variant="outline" type="button">
-            <Download className="mr-2 h-4 w-4" />
-            Export Logs
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" type="button" asChild>
+              <Link to="/settings">Back to Platform Settings</Link>
+            </Button>
+            <Button variant="outline" type="button">
+              <Download className="mr-2 h-4 w-4" />
+              Export Logs
+            </Button>
+          </div>
         }
         headerExtra={
           <div className="flex w-full flex-col gap-4">
@@ -538,26 +545,11 @@ export function PlatformAuditLogs() {
         bodyClassName="space-y-6"
       >
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <Card className="border border-border p-4 shadow-sm">
-            <p className="text-xs text-muted-foreground">Total events</p>
-            <p className="mt-1 text-xl font-semibold tabular-nums">{summary.total}</p>
-          </Card>
-          <Card className="border border-border p-4 shadow-sm">
-            <p className="text-xs text-muted-foreground">Security events</p>
-            <p className="mt-1 text-xl font-semibold tabular-nums">{summary.security}</p>
-          </Card>
-          <Card className="border border-border p-4 shadow-sm">
-            <p className="text-xs text-muted-foreground">Admin actions</p>
-            <p className="mt-1 text-xl font-semibold tabular-nums">{summary.admin}</p>
-          </Card>
-          <Card className="border border-border p-4 shadow-sm">
-            <p className="text-xs text-muted-foreground">Integration events</p>
-            <p className="mt-1 text-xl font-semibold tabular-nums">{summary.integration}</p>
-          </Card>
-          <Card className="border border-border p-4 shadow-sm">
-            <p className="text-xs text-muted-foreground">Billing / credits</p>
-            <p className="mt-1 text-xl font-semibold tabular-nums">{summary.billing}</p>
-          </Card>
+          <SummaryStatCard label="Total events" value={summary.total} />
+          <SummaryStatCard label="Security events" value={summary.security} />
+          <SummaryStatCard label="Admin actions" value={summary.admin} />
+          <SummaryStatCard label="Integration events" value={summary.integration} />
+          <SummaryStatCard label="Billing / credits" value={summary.billing} />
         </div>
 
         <Card className="overflow-hidden border border-border shadow-sm">
@@ -596,18 +588,18 @@ export function PlatformAuditLogs() {
             <table className="w-full text-[13px]">
               <thead className="sticky top-0 border-b border-border bg-accent/5">
                 <tr>
-                  <th className="p-4 text-left font-medium text-muted-foreground">
+                  <th className="p-4 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                     <span className="inline-flex items-center gap-1">
                       Timestamp
                       <ArrowUpDown className="h-3 w-3" />
                     </span>
                   </th>
-                  <th className="p-4 text-left font-medium text-muted-foreground">Event</th>
-                  <th className="p-4 text-left font-medium text-muted-foreground">Governance category</th>
-                  <th className="p-4 text-left font-medium text-muted-foreground">Severity</th>
-                  <th className="p-4 text-left font-medium text-muted-foreground">Subject</th>
-                  <th className="p-4 text-left font-medium text-muted-foreground">Actor</th>
-                  <th className="p-4 text-left font-medium text-muted-foreground">Organization</th>
+                  <th className="p-4 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Event</th>
+                  <th className="p-4 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Governance category</th>
+                  <th className="p-4 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Severity</th>
+                  <th className="p-4 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Subject</th>
+                  <th className="p-4 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Actor</th>
+                  <th className="p-4 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Organization</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -656,13 +648,9 @@ export function PlatformAuditLogs() {
                     </tr>
                   );
                 })}
-                {visibleLogs.length === 0 && (
-                  <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center text-sm text-muted-foreground">
-                      No audit logs match the current filters.
-                    </td>
-                  </tr>
-                )}
+                {visibleLogs.length === 0 ? (
+                  <TableEmptyStateRow colSpan={7} title="No audit logs match current filters." />
+                ) : null}
               </tbody>
             </table>
           </div>

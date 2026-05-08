@@ -14,6 +14,7 @@ import {
   enterpriseVerificationSettingsMock,
 } from "../data/enterpriseSample";
 import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
+import { HelperCallout } from "../../shared/components/HelperCallout";
 
 export function EnterpriseSettings() {
   const location = useLocation();
@@ -31,6 +32,12 @@ export function EnterpriseSettings() {
     <PortalPageFrame
       title="Settings"
       description="Organization profile, verification behavior, notifications, and security preferences."
+      headerExtra={
+        <HelperCallout>
+          Save actions in this bundle are frontend demo interactions. Backend integration is required for persistent
+          organization settings.
+        </HelperCallout>
+      }
       bodyClassName="max-w-5xl space-y-6"
     >
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">

@@ -85,6 +85,13 @@ export function EnterpriseDashboard() {
   const integrationIssueSteps = enterpriseSetupSteps.filter(
     (s) => !s.complete && ["redirect", "qr", "verification", "test", "api"].includes(s.id),
   ).length;
+  const setupPrimaryRoute = useMemo(() => {
+    const incompleteIds = new Set(enterpriseSetupSteps.filter((step) => !step.complete).map((step) => step.id));
+    if (incompleteIds.has("api") || incompleteIds.has("redirect") || incompleteIds.has("test")) return "/api-integration";
+    if (incompleteIds.has("qr")) return "/qr-linking";
+    if (incompleteIds.has("verification") || incompleteIds.has("profile")) return "/settings";
+    return "/settings";
+  }, []);
 
   const creditOverage = Math.max(0, enterpriseUsageSpend - enterpriseOrganization.creditBalance);
 
@@ -169,7 +176,13 @@ export function EnterpriseDashboard() {
             hint="Checklist steps remaining"
             footer={
               <Button variant="link" className="px-0 h-auto text-sm" asChild>
-                <Link to="/settings">Settings</Link>
+                <Link to={setupPrimaryRoute}>
+                  {setupPrimaryRoute === "/api-integration"
+                    ? "API integration"
+                    : setupPrimaryRoute === "/qr-linking"
+                      ? "QR linking"
+                      : "Settings"}
+                </Link>
               </Button>
             }
           />

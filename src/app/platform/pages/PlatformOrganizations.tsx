@@ -30,6 +30,9 @@ import {
   subscribePlatformOrganizationListeners,
 } from "../data/platformOrganizationSessionOverrides";
 import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
+import { shouldIgnoreRowOpenClick } from "../utils/tableRowNav";
+import { SummaryStatCard } from "../../shared/components/SummaryStatCard";
+import { TableEmptyStateRow } from "../../shared/components/TableEmptyStateRow";
 
 export function PlatformOrganizations() {
   const navigate = useNavigate();
@@ -203,31 +206,11 @@ export function PlatformOrganizations() {
             ) : null}
 
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <Card className="min-h-[92px] border border-border p-4 shadow-sm">
-            <p className="text-xs text-muted-foreground">Total organizations</p>
-            <p className="mt-1 text-xl font-semibold tabular-nums text-foreground">
-              {formatNumber(overviewStats.totalOrganizations)}
-            </p>
-          </Card>
-          <Card className="min-h-[92px] border border-border p-4 shadow-sm">
-            <p className="text-xs text-muted-foreground">Active organizations</p>
-            <p className="mt-1 text-xl font-semibold tabular-nums text-foreground">
-              {formatNumber(overviewStats.activeOrganizations)}
-            </p>
-          </Card>
-          <Card className="min-h-[92px] border border-border p-4 shadow-sm">
-            <p className="text-xs text-muted-foreground">Credit utilization (billable sessions)</p>
-            <p className="mt-1 text-xl font-semibold tabular-nums text-foreground">
-              {overviewStats.utilizationRate.toFixed(1)}%
-            </p>
-          </Card>
-          <Card className="min-h-[92px] border border-border p-4 shadow-sm">
-            <p className="text-xs text-muted-foreground">Credits remaining</p>
-            <p className="mt-1 text-xl font-semibold tabular-nums text-foreground">
-              {formatCurrency(overviewStats.totalCreditRemaining)}
-            </p>
-          </Card>
-        </div>
+              <SummaryStatCard className="min-h-[92px]" label="Total organizations" value={formatNumber(overviewStats.totalOrganizations)} />
+              <SummaryStatCard className="min-h-[92px]" label="Active organizations" value={formatNumber(overviewStats.activeOrganizations)} />
+              <SummaryStatCard className="min-h-[92px]" label="Credit utilization (billable sessions)" value={`${overviewStats.utilizationRate.toFixed(1)}%`} />
+              <SummaryStatCard className="min-h-[92px]" label="Credits remaining" value={formatCurrency(overviewStats.totalCreditRemaining)} />
+            </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
           <div className="relative flex-1 min-w-[240px] md:max-w-md">
@@ -347,33 +330,7 @@ export function PlatformOrganizations() {
                     key={org.id}
                     className="hover:bg-accent/60 transition-colors cursor-pointer"
                     onClick={(event) => {
-                      const target = event.target;
-                      if (target instanceof HTMLElement) {
-                        if (
-                          target.closest(
-                            [
-                              "button",
-                              "a",
-                              "input",
-                              "textarea",
-                              "select",
-                              "label",
-                              "[role='button']",
-                              "[role='checkbox']",
-                              "[role='switch']",
-                              "[role='combobox']",
-                              "[role='menu']",
-                              "[role='menuitem']",
-                              "[role='listbox']",
-                              "[role='option']",
-                              "[role='tab']",
-                              "[data-no-row-nav]",
-                            ].join(", "),
-                          )
-                        ) {
-                          return;
-                        }
-                      }
+                      if (shouldIgnoreRowOpenClick(event.target)) return;
                       navigate(`/organizations/${org.id}`);
                     }}
                   >
@@ -428,14 +385,9 @@ export function PlatformOrganizations() {
                     </td>
                   </tr>
                 ))}
-                {filteredOrganizations.length === 0 && (
-                  <tr>
-                    <td colSpan={9} className="p-10 text-center">
-                      <p className="text-sm font-medium text-foreground">No organizations found</p>
-                      <p className="text-xs text-muted-foreground mt-1">Try adjusting search or filters.</p>
-                    </td>
-                  </tr>
-                )}
+                {filteredOrganizations.length === 0 ? (
+                  <TableEmptyStateRow colSpan={9} title="No organizations match current filters." className="p-10" />
+                ) : null}
               </tbody>
             </table>
           </div>

@@ -2,10 +2,13 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { Card } from "../../shared/components/ui/card";
 import { Input } from "../../shared/components/ui/input";
-import { Search } from "lucide-react";
+import { Filter, Search } from "lucide-react";
+import { Button } from "../../shared/components/ui/button";
 import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../shared/components/ui/select";
 import { UnifiedBadge } from "../../shared/components/UnifiedBadge";
+import { SummaryStatCard } from "../../shared/components/SummaryStatCard";
+import { TableEmptyStateRow } from "../../shared/components/TableEmptyStateRow";
 import { platformTeamSample, type PlatformMfaStatus, type PlatformTeamRole, type PlatformTeamStatus } from "../data/platformTeamSample";
 import { shouldIgnoreRowOpenClick } from "../utils/tableRowNav";
 
@@ -45,11 +48,11 @@ export function PlatformTeamAccess() {
       bodyClassName="space-y-6"
     >
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <Card className="p-4"><p className="text-xs text-muted-foreground">Total platform users</p><p className="text-2xl font-semibold">{stats.total}</p></Card>
-        <Card className="p-4"><p className="text-xs text-muted-foreground">Active users</p><p className="text-2xl font-semibold">{stats.active}</p></Card>
-        <Card className="p-4"><p className="text-xs text-muted-foreground">MFA attention required</p><p className="text-2xl font-semibold">{stats.mfaAttention}</p></Card>
-        <Card className="p-4"><p className="text-xs text-muted-foreground">Suspended / disabled</p><p className="text-2xl font-semibold">{stats.suspendedDisabled}</p></Card>
-        <Card className="p-4"><p className="text-xs text-muted-foreground">Recent admin activity</p><p className="text-2xl font-semibold">{stats.recent}</p></Card>
+        <SummaryStatCard label="Total platform users" value={stats.total} />
+        <SummaryStatCard label="Active users" value={stats.active} />
+        <SummaryStatCard label="MFA attention required" value={stats.mfaAttention} />
+        <SummaryStatCard label="Suspended / disabled" value={stats.suspendedDisabled} />
+        <SummaryStatCard label="Recent admin activity" value={stats.recent} />
       </div>
       <div className="flex flex-wrap gap-3">
         <div className="relative min-w-[220px] flex-1 max-w-md">
@@ -57,14 +60,14 @@ export function PlatformTeamAccess() {
           <Input className="pl-10" placeholder="Search name, email, platform admin ID..." value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
         <Select value={role} onValueChange={(v) => setRole(v as PlatformTeamRole | "all")}>
-          <SelectTrigger className="w-[220px]"><SelectValue placeholder="Role" /></SelectTrigger>
+          <SelectTrigger className="h-10 w-[220px]"><SelectValue placeholder="Role" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All roles</SelectItem>
             {Array.from(new Set(platformTeamSample.map((m) => m.role))).map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={status} onValueChange={(v) => setStatus(v as PlatformTeamStatus | "all")}>
-          <SelectTrigger className="w-[180px]"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectTrigger className="h-10 w-[180px]"><SelectValue placeholder="Status" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All status</SelectItem>
             <SelectItem value="active">Active</SelectItem>
@@ -74,7 +77,7 @@ export function PlatformTeamAccess() {
           </SelectContent>
         </Select>
         <Select value={mfa} onValueChange={(v) => setMfa(v as PlatformMfaStatus | "all")}>
-          <SelectTrigger className="w-[190px]"><SelectValue placeholder="MFA" /></SelectTrigger>
+          <SelectTrigger className="h-10 w-[190px]"><SelectValue placeholder="MFA" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All MFA status</SelectItem>
             <SelectItem value="enabled">Enabled</SelectItem>
@@ -82,11 +85,26 @@ export function PlatformTeamAccess() {
             <SelectItem value="not_configured">Not configured</SelectItem>
           </SelectContent>
         </Select>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="h-10 w-10 shrink-0"
+          aria-label="Clear filters"
+          onClick={() => {
+            setSearch("");
+            setRole("all");
+            setStatus("all");
+            setMfa("all");
+          }}
+        >
+          <Filter className="h-4 w-4" />
+        </Button>
       </div>
       <Card className="overflow-hidden border border-border shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="border-b border-border bg-accent/40">
+            <thead className="border-b border-border bg-accent/5">
               <tr>
                 <th className="p-3 text-left text-[11px] uppercase text-muted-foreground">Platform admin</th>
                 <th className="p-3 text-left text-[11px] uppercase text-muted-foreground">Email</th>
@@ -112,6 +130,9 @@ export function PlatformTeamAccess() {
                   <td className="p-3 text-muted-foreground">{m.lastLoginAt ? new Date(m.lastLoginAt).toLocaleString() : "Never"}</td>
                 </tr>
               ))}
+              {filtered.length === 0 ? (
+                <TableEmptyStateRow colSpan={7} title="No platform admins match current filters." />
+              ) : null}
             </tbody>
           </table>
         </div>

@@ -15,7 +15,7 @@ VerifyMe Admin treats audit logs as a **connected governance surface** aligned w
 | **Change tracking** | Optional structured **`changeTracking`** on each row: `{ label, before, after }` tuples for accountable review — **never** secrets, tokens, biometric material, passcodes, or raw cross-org dumps. |
 | **Deep links** | Entity headers link to **`/audit-logs?…`** with filters such as **`verifymeId`**, **`identityLinkId`**, **`organizationId`**, **`clientAppId`**, **`verificationSessionId`**, **`focus=risk`** (risk-only), **`focus=conflict`** (conflict workflow events). Built via `auditLogsHref()` in `src/app/platform/utils/auditLogsNavigation.ts`. |
 | **Related entities** | Modal lists links to Organization, VerifyMe User, Identity Link, Client App, and Verification Session routes where IDs exist in mock data. |
-| **New actions (mock)** | `verifyme_user.risk_level_changed`, `identity_link.conflict_detected`, `identity_link.conflict_resolved` complement existing lifecycle keys. |
+| **New actions (mock)** | `verifyme_user.risk_level_changed`, `identity_link.conflict_detected`, `identity_link.conflict_resolved`, and policy actions (`platform_settings.updated`, `verification_policy.updated`, `risk_policy.updated`, `organization_defaults.updated`, `billing_policy.updated`, `audit_policy.updated`, `feature_control.updated`) complement existing lifecycle keys. |
 
 Product-facing tables also retain a legacy **event area** facet (`getAuditTableCategory`) for coloring continuity; governance category is the **primary** operator filter.
 

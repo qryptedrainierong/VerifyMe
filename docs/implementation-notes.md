@@ -39,7 +39,7 @@ Routers are created through functions (e.g. `getPlatformRouter()`) rather than a
 
 Organization Detail shows organization-specific summary (info, status), usage highlights, an integration readiness checklist, and governance controls. Deep operational tables—verification sessions, audit logs, billing activity, client apps / API, identity links, and similar—live on platform-wide VerifyMe Admin routes; Organization Detail links to those views with an `organizationId` query parameter when the target page supports it.
 
-**Query-aware filtering behavior:** VerifyMe Users (`/verifyme-users`), Identity Links (`/identity-links`), and Client Apps / API (`/client-apps`) read `organizationId` from the query string, match it against seeded organization ids, and pre-select the organization filter when possible. Other list screens should follow the same pattern as query-aware filtering is added.
+**Query-aware filtering behavior:** VerifyMe Users (`/verifyme-users`), Identity Links (`/identity-links`), Client Apps / API (`/client-apps`), Verification Sessions (`/verification-sessions`), and Billing & Credits (`/billing`) read `organizationId` from the query string. When the id matches seeded organizations, pages apply organization scope and expose a visible “filtered by organization” indicator with a clear action. Existing in-page/manual filters remain available.
 
 **Billing dashboard:** Top-line spend metrics aggregate `getVerificationSpend(org)` from seeded organizations — this is **verification-related spend**, not SaaS MRR. Invoice rows and governance actions use in-memory mock data (`platformBillingInvoicesMock`); confirmations do not send email or call a payments API in the prototype.
 
@@ -50,6 +50,8 @@ Organization Detail shows organization-specific summary (info, status), usage hi
 **Identity link conflict resolution:** Confirming resolution updates the identity link session row; reviewer attribution in mocks is a placeholder string, not an authenticated principal.
 
 **Client app controls:** Rotate secret and disable app mutate the client apps session only; no credential material is generated or shown.
+
+**Platform Settings architecture:** Platform Settings is category-driven and policy-oriented (General Platform, Verification Policy, Risk & Governance, Organization Defaults, Billing & Credits Policy, Audit & Retention, Platform Team & Access Policy, Feature Controls, and Super Admin-only Developer/Internal diagnostics). Risky changes require explicit confirmation copy and audit hinting, and policy metadata surfaces last update/effective timing for operational governance.
 
 ### Detail presentation — full page vs modal
 
@@ -75,9 +77,56 @@ Platform Team & Access uses the same list/detail behavior: no destructive contro
 
 Governance actions must be performed from **entity detail pages**, require **confirmation**, and **produce audit log events** in a live system. **List pages** (including Audit Logs) must **not** expose destructive controls on rows; Audit Logs is read-only with modal detail. Confirmation copy states that the action **will be recorded in audit logs**. The current bundle does not persist new audit rows from these controls unless wired to a backend later.
 
+### Role/access assumptions (frontend scope)
+
+Role-based visibility patterns in this repository are UI assumptions for flow validation. They are not authenticated authorization boundaries.
+
+- Example: Platform Settings “Developer / Internal” section is shown for mock Super Admin role only.
+- Backend integration must enforce role/permission checks server-side and treat current UI gating as presentation intent, not security.
+
 ## Data and state
 
 Pages are largely mock-driven; there is no production API layer in repo scope. Adding live data will need a deliberate client/model strategy.
+
+### Backend-era abstraction boundaries (defer list)
+
+The following abstractions should wait until backend/API contracts are stable:
+
+1. **Unified server-driven filtering model**
+   - Requires settled API query semantics (filter keys, sort, pagination, and precedence rules).
+2. **Audit mutation receipts / persisted audit feedback**
+   - Requires backend receipt fields (event id, actor, timestamp, correlation id) and persistence guarantees.
+3. **Backend-dependent confirmation payloads**
+   - Requires stable validation/error payload contracts for action confirmations and post-submit handling.
+4. **Advanced empty/error/unauthorized states**
+   - Requires standardized backend error taxonomy to avoid brittle global wrappers.
+5. **Technical metadata blocks tied to API schemas**
+   - Requires finalized API metadata fields and versioning details.
+6. **Broad `ConfirmActionDialog` extraction**
+   - Defer if action behavior depends on backend validation, retries, or structured server-side errors.
+
+Current shared primitives (`SummaryStatCard`, `TableEmptyStateRow`, `AuditHintText`, `ScopedFilterBanner`, `HelperCallout`) are intentionally lightweight visual wrappers. Keep adoption mechanical and avoid behavior-heavy convergence before backend integration.
+
+### Organization Admin mock/persistence boundaries
+
+- **Session-state mutations (frontend in-memory):**
+  - Linked End Users actions mutate `enterpriseLinkedEndUsersSession` (invite issuance, link lifecycle state updates, conflict-reviewed marker).
+- **Frontend-only local state actions (non-persistent):**
+  - Team member detail role/status control confirmations.
+  - Billing reminder/refund/mark-reviewed actions.
+  - Settings save actions.
+  - API Integration and QR Linking control buttons.
+- **Static sample data sources:**
+  - `enterpriseSample.ts` (organization profile, usage, billing/integration samples).
+  - `enterpriseTeamSample.ts` (team roster and role/security snapshots).
+  - `enterpriseLinkedEndUsersMock.ts` (linked-user sample records and invite helpers).
+
+**Replace first during backend integration (Organization Admin):**
+
+1. Linked End Users session mutations with server-backed endpoints and conflict/invite lifecycle APIs.
+2. Team member role/status actions with authenticated role-governance APIs.
+3. Billing action controls and invoice workflow state.
+4. Settings persistence and server-side validation of platform-enforced policy limits.
 
 **Identity fields in mocks:** `PlatformEndUserAssociation` keeps `verifymeUserId` (UUID) for relational joins only; **VerifyMe Admin normal UI** surfaces **`verifymeId` (`vm…`)**, masked email, and `client_user_id` where relevant — not internal UUIDs. Verification sessions use `maskedVerifymeId` in data as the display VerifyMe ID field. Naming follows [`glossary.md`](./glossary.md).
 

@@ -1,4 +1,4 @@
-# API overview (design phase)
+# API overview
 
 VerifyMe exposes **HTTP APIs** and **OIDC-style patterns** so organizations can integrate identity verification into call-center and messaging workflows. This document is **conceptual**; OpenAPI URLs and exact paths are TBD when backend stubs ship.
 
@@ -14,7 +14,7 @@ Terms: [`glossary.md`](./glossary.md). Flow detail: [`verification-flow.md`](./v
 4. Organization backend exchanges **`auth_code`** on **`/token`**.
 5. For **MVP**, **`id_token`** is the primary token consumed; other token types are secondary unless product extends scope.
 
-No request/response schemas are frozen in this repo during the design phase.
+No request/response schemas are frozen in this repository yet.
 
 ## MVP scopes
 

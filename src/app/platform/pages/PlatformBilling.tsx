@@ -1,5 +1,6 @@
 import { Download, Filter, Search, TrendingUp } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router";
 import { Card } from "../../shared/components/ui/card";
 import { Button } from "../../shared/components/ui/button";
 import { Input } from "../../shared/components/ui/input";
@@ -37,8 +38,14 @@ import {
 } from "../data/platformBillingInvoicesMock";
 import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
 import { shouldIgnoreRowOpenClick } from "../utils/tableRowNav";
+import { ScopedFilterBanner } from "../../shared/components/ScopedFilterBanner";
+import { SummaryStatCard } from "../../shared/components/SummaryStatCard";
+import { TableEmptyStateRow } from "../../shared/components/TableEmptyStateRow";
+import { AuditHintText } from "../../shared/components/AuditHintText";
 
 export function PlatformBilling() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlOrganizationId = searchParams.get("organizationId");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedInvoice, setSelectedInvoice] = useState<PlatformBillingInvoiceRow | null>(null);
   const [invoiceListMode, setInvoiceListMode] = useState<"action" | "all">("action");
@@ -47,30 +54,38 @@ export function PlatformBilling() {
   const [reviewedConfirmOpen, setReviewedConfirmOpen] = useState(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const organizations = useMemo(() => buildInitialOrganizations(), []);
-  const monthlyVerificationSpend = organizations.reduce((sum, org) => sum + getVerificationSpend(org), 0);
-  const activeOrganizations = organizations.length;
+  const knownOrgIds = useMemo(() => new Set(organizations.map((organization) => organization.id)), [organizations]);
+  // Handoff note: URL organization scope is intentional cross-page continuity from organization detail links.
+  // Unknown ids are surfaced in UI but do not force invalid dataset filtering.
+  const effectiveOrganizationId = urlOrganizationId && knownOrgIds.has(urlOrganizationId) ? urlOrganizationId : null;
+  const scopedOrganizations = useMemo(
+    () => (effectiveOrganizationId ? organizations.filter((organization) => organization.id === effectiveOrganizationId) : organizations),
+    [organizations, effectiveOrganizationId],
+  );
+  const monthlyVerificationSpend = scopedOrganizations.reduce((sum, org) => sum + getVerificationSpend(org), 0);
+  const activeOrganizations = scopedOrganizations.length;
 
   const plans = [
     {
       name: "Enterprise",
-      organizations: organizations.filter((org) => org.plan === "Enterprise").length,
-      monthlySpend: organizations
+      organizations: scopedOrganizations.filter((org) => org.plan === "Enterprise").length,
+      monthlySpend: scopedOrganizations
         .filter((org) => org.plan === "Enterprise")
         .reduce((sum, org) => sum + getVerificationSpend(org), 0),
       growth: 18.5,
     },
     {
       name: "Professional",
-      organizations: organizations.filter((org) => org.plan === "Professional").length,
-      monthlySpend: organizations
+      organizations: scopedOrganizations.filter((org) => org.plan === "Professional").length,
+      monthlySpend: scopedOrganizations
         .filter((org) => org.plan === "Professional")
         .reduce((sum, org) => sum + getVerificationSpend(org), 0),
       growth: 12.3,
     },
     {
       name: "Starter",
-      organizations: organizations.filter((org) => org.plan === "Starter").length,
-      monthlySpend: organizations
+      organizations: scopedOrganizations.filter((org) => org.plan === "Starter").length,
+      monthlySpend: scopedOrganizations
         .filter((org) => org.plan === "Starter")
         .reduce((sum, org) => sum + getVerificationSpend(org), 0),
       growth: 8.7,
@@ -78,7 +93,11 @@ export function PlatformBilling() {
   ];
 
   const invoiceSource = useMemo(() => getPlatformBillingInvoices(), []);
-  const sortedInvoices = useMemo(() => sortInvoicesForDisplay(invoiceSource), [invoiceSource]);
+  const scopedInvoiceSource = useMemo(
+    () => (effectiveOrganizationId ? invoiceSource.filter((invoice) => invoice.organizationId === effectiveOrganizationId) : invoiceSource),
+    [invoiceSource, effectiveOrganizationId],
+  );
+  const sortedInvoices = useMemo(() => sortInvoicesForDisplay(scopedInvoiceSource), [scopedInvoiceSource]);
 
   const filteredInvoices = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -94,7 +113,7 @@ export function PlatformBilling() {
     });
   }, [sortedInvoices, searchQuery, invoiceListMode]);
 
-  const billingAlerts = invoiceSource
+  const billingAlerts = scopedInvoiceSource
     .filter(
       (invoice) =>
         invoice.actionRequired ||
@@ -122,7 +141,7 @@ export function PlatformBilling() {
       time: `${index + 1} hour${index === 0 ? "" : "s"} ago`,
     }));
 
-  const recentBillingActivity = sortInvoicesForDisplay(invoiceSource)
+  const recentBillingActivity = sortInvoicesForDisplay(scopedInvoiceSource)
     .slice(0, 6)
     .map((invoice, index) => ({
       id: invoice.id,
@@ -140,9 +159,9 @@ export function PlatformBilling() {
       amount: invoice.amount,
       time: `${10 + index * 15} min ago`,
     }));
-  const failedPayments = invoiceSource.filter((invoice) => invoice.status === "failed").length;
-  const overdueInvoices = invoiceSource.filter((invoice) => invoice.status === "overdue").length;
-  const overdueValue = invoiceSource
+  const failedPayments = scopedInvoiceSource.filter((invoice) => invoice.status === "failed").length;
+  const overdueInvoices = scopedInvoiceSource.filter((invoice) => invoice.status === "overdue").length;
+  const overdueValue = scopedInvoiceSource
     .filter((invoice) => invoice.status === "overdue")
     .reduce((sum, invoice) => sum + invoice.amount, 0);
 
@@ -195,6 +214,26 @@ export function PlatformBilling() {
       <PortalPageFrame
         title="Billing & Credits"
         description="Invoices, payment standing, and verification-related charges."
+        headerExtra={
+          urlOrganizationId ? (
+            <ScopedFilterBanner
+              entityLabel="organization"
+              scopedValue={urlOrganizationId}
+              isKnown={knownOrgIds.has(urlOrganizationId)}
+              unknownHelperText="Organization was not found in configured organizations."
+              onClear={() =>
+                setSearchParams(
+                  (prev) => {
+                    const next = new URLSearchParams(prev);
+                    next.delete("organizationId");
+                    return next;
+                  },
+                  { replace: true },
+                )
+              }
+            />
+          ) : null
+        }
         headerActions={
           <>
             <Button variant="outline">
@@ -213,23 +252,14 @@ export function PlatformBilling() {
       ) : null}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Card className="border border-border p-4 shadow-sm">
-          <p className="text-xs text-muted-foreground">Monthly verification spend</p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight">{formatCurrency(monthlyVerificationSpend)}</p>
-        </Card>
-        <Card className="border border-border p-4 shadow-sm">
-          <p className="text-xs text-muted-foreground">Active organizations</p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums">{formatNumber(activeOrganizations)}</p>
-        </Card>
-        <Card className="border border-border p-4 shadow-sm">
-          <p className="text-xs text-muted-foreground">Failed payments</p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums">{failedPayments}</p>
-        </Card>
-        <Card className="border border-border p-4 shadow-sm">
-          <p className="text-xs text-muted-foreground">Overdue invoices</p>
-          <p className="mt-1 text-2xl font-semibold tabular-nums">{overdueInvoices}</p>
-          <p className="mt-1 text-xs text-muted-foreground">Outstanding {formatCurrency(overdueValue)}</p>
-        </Card>
+        <SummaryStatCard label="Monthly verification spend" value={formatCurrency(monthlyVerificationSpend)} />
+        <SummaryStatCard label="Active organizations" value={formatNumber(activeOrganizations)} />
+        <SummaryStatCard label="Failed payments" value={failedPayments} />
+        <SummaryStatCard
+          label="Overdue invoices"
+          value={overdueInvoices}
+          hint={`Outstanding ${formatCurrency(overdueValue)}`}
+        />
       </div>
 
       {/* Invoices Table */}
@@ -270,8 +300,11 @@ export function PlatformBilling() {
               variant="outline"
               size="icon"
               className="h-10 w-10 shrink-0"
-              aria-label="Clear search"
-              onClick={() => setSearchQuery("")}
+              aria-label="Clear filters"
+              onClick={() => {
+                setSearchQuery("");
+                setInvoiceListMode("action");
+              }}
             >
               <Filter className="h-4 w-4" />
             </Button>
@@ -281,24 +314,20 @@ export function PlatformBilling() {
           <table className="w-full min-w-[1000px]">
             <thead className="border-b border-border bg-accent/5">
               <tr>
-                <th className="p-4 text-left text-[13px] font-medium text-muted-foreground">Invoice ID</th>
-                <th className="p-4 text-left text-[13px] font-medium text-muted-foreground">Organization</th>
-                <th className="p-4 text-left text-[13px] font-medium text-muted-foreground">Period</th>
-                <th className="p-4 text-left text-[13px] font-medium text-muted-foreground">Amount</th>
-                <th className="p-4 text-left text-[13px] font-medium text-muted-foreground">Status</th>
-                <th className="p-4 text-left text-[13px] font-medium text-muted-foreground">Action required</th>
-                <th className="p-4 text-left text-[13px] font-medium text-muted-foreground">Issued</th>
-                <th className="p-4 text-left text-[13px] font-medium text-muted-foreground">Due</th>
-                <th className="p-4 text-left text-[13px] font-medium text-muted-foreground">Last updated</th>
+                <th className="p-4 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Invoice ID</th>
+                <th className="p-4 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Organization</th>
+                <th className="p-4 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Period</th>
+                <th className="p-4 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Amount</th>
+                <th className="p-4 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Status</th>
+                <th className="p-4 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Action required</th>
+                <th className="p-4 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Issued</th>
+                <th className="p-4 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Due</th>
+                <th className="p-4 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Last updated</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {filteredInvoices.length === 0 ? (
-                <tr>
-                  <td colSpan={9} className="p-8 text-center text-sm text-muted-foreground">
-                    No invoices match your filters.
-                  </td>
-                </tr>
+                <TableEmptyStateRow colSpan={9} title="No invoices match current filters." className="p-8" />
               ) : null}
               {filteredInvoices.map((invoice) => (
                 <tr
@@ -526,9 +555,7 @@ export function PlatformBilling() {
               <span className="block">
                 Queues a payment reminder for the organization&apos;s billing contact when delivery is configured.
               </span>
-              <span className="block rounded-md border border-border/80 bg-muted/30 px-3 py-2 text-[12px] text-muted-foreground">
-                This action will be recorded in audit logs.
-              </span>
+              <AuditHintText className="block" />
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -555,9 +582,7 @@ export function PlatformBilling() {
               <span className="block">
                 Submits a refund request for operations to process. No payment identifiers are shown in this portal.
               </span>
-              <span className="block rounded-md border border-border/80 bg-muted/30 px-3 py-2 text-[12px] text-muted-foreground">
-                This action will be recorded in audit logs.
-              </span>
+              <AuditHintText className="block" />
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -582,9 +607,7 @@ export function PlatformBilling() {
             <AlertDialogTitle>Mark dispute reviewed?</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
               <span className="block">Marks this dispute as reviewed for the operations queue.</span>
-              <span className="block rounded-md border border-border/80 bg-muted/30 px-3 py-2 text-[12px] text-muted-foreground">
-                This action will be recorded in audit logs.
-              </span>
+              <AuditHintText className="block" />
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

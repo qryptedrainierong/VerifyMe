@@ -4,7 +4,7 @@ Conceptual end-to-end flow for organization-integrated identity verification. **
 
 For terms, see [`glossary.md`](./glossary.md). For billing, see [`billing-credits.md`](./billing-credits.md).
 
-Authorize requests carry the organization’s **`client_user_id`** (and registered **`client_id`**). The platform resolves the linked **`verifyme_user_id`** internally. Admin UIs show **VerifyMe ID** (`vm…`), **session status** (Pending, Awaiting verification, Verified, Not verified, Expired, Error, Cancelled), and **ID proof result** (**ID Proof Pass** / **ID Proof Fail** / Unavailable / Indeterminate) as distinct concepts; they must not present **`verifyme_user_id`** UUIDs as primary identifiers.
+Authorize requests carry the organization’s **`client_user_id`** (and registered **`client_id`**). The platform resolves the linked **`verifyme_user_id`** internally. Admin UIs show **VerifyMe ID** (`vm…`), **session status** (Pending, Awaiting verification, Verified, Not verified, Expired, Error, Indeterminate, Cancelled), and **ID proof result** (**ID Proof Pass** / **ID Proof Fail** / Unavailable / Indeterminate) as distinct concepts; they must not present **`verifyme_user_id`** UUIDs as primary identifiers.
 
 **Copy helpers:** **ID Proof Fail** means the user attempted verification but did not successfully prove identity. **Session status** and **ID proof result** are separate — a session may complete as **Not verified** because the ID proof failed. **Risk status** is separate from the current proof result.
 

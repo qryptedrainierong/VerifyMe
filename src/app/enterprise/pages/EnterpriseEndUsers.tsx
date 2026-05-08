@@ -1,6 +1,6 @@
 import { useMemo, useState, useSyncExternalStore, type FormEvent } from "react";
 import { useNavigate } from "react-router";
-import { BookOpen, Download, Link2, Plus, Search, Upload, UserPlus } from "lucide-react";
+import { BookOpen, Download, Filter, Link2, Plus, Search, Upload, UserPlus } from "lucide-react";
 import { Button } from "../../shared/components/ui/button";
 import { Input } from "../../shared/components/ui/input";
 import { Card } from "../../shared/components/ui/card";
@@ -55,6 +55,7 @@ import {
   subscribeLinkedEndUsersListeners,
   updateLinkedEndUserRecord,
 } from "../data/enterpriseLinkedEndUsersSession";
+import { TableEmptyStateRow } from "../../shared/components/TableEmptyStateRow";
 
 type RecentFilter = "all" | "invited_recent" | "verified_recent";
 
@@ -397,23 +398,23 @@ export function EnterpriseEndUsers() {
       <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
         <Card className="p-4 border border-border shadow-sm">
           <p className="text-[12px] text-muted-foreground uppercase tracking-wide">Total records</p>
-          <p className="text-2xl font-semibold mt-1">{stats.total}</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight">{stats.total}</p>
         </Card>
         <Card className="p-4 border border-border shadow-sm">
           <p className="text-[12px] text-muted-foreground uppercase tracking-wide">Linked</p>
-          <p className="text-2xl font-semibold mt-1 text-green-700">{stats.linked}</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-green-700">{stats.linked}</p>
         </Card>
         <Card className="p-4 border border-border shadow-sm">
           <p className="text-[12px] text-muted-foreground uppercase tracking-wide">Pending invites</p>
-          <p className="text-2xl font-semibold mt-1 text-amber-700">{stats.pendingInvites}</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-amber-700">{stats.pendingInvites}</p>
         </Card>
         <Card className="p-4 border border-border shadow-sm">
           <p className="text-[12px] text-muted-foreground uppercase tracking-wide">Suspended / disabled</p>
-          <p className="text-2xl font-semibold mt-1 text-red-700">{stats.suspendedDisabled}</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-red-700">{stats.suspendedDisabled}</p>
         </Card>
         <Card className="p-4 border border-border shadow-sm">
           <p className="text-[12px] text-muted-foreground uppercase tracking-wide">Conflicts</p>
-          <p className="text-2xl font-semibold mt-1 text-orange-700">{stats.conflicts}</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums tracking-tight text-orange-700">{stats.conflicts}</p>
         </Card>
       </div>
 
@@ -494,6 +495,20 @@ export function EnterpriseEndUsers() {
             <SelectItem value="verified_recent">Recently verified</SelectItem>
           </SelectContent>
         </Select>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="h-10 w-10 shrink-0"
+          aria-label="Clear filters"
+          onClick={() => {
+            setSearchQuery("");
+            setStatusFilter("all");
+            setRecentFilter("all");
+          }}
+        >
+          <Filter className="h-4 w-4" />
+        </Button>
       </div>
 
       <p className="text-[12px] leading-relaxed text-muted-foreground max-w-3xl">
@@ -591,12 +606,12 @@ export function EnterpriseEndUsers() {
                   </td>
                 </tr>
               ))}
+              {filtered.length === 0 ? (
+                <TableEmptyStateRow colSpan={9} title="No linked end-user records match current filters." />
+              ) : null}
             </tbody>
           </table>
         </div>
-        {filtered.length === 0 && (
-          <p className="px-6 py-12 text-center text-sm text-muted-foreground sm:px-8">No records match your filters.</p>
-        )}
       </Card>
 
       {/* Add End-user */}

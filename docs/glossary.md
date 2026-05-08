@@ -5,7 +5,7 @@ Canonical terminology for VerifyMe docs and UI copy. Other documents should **li
 ## Portals and people
 
 **VerifyMe Admin Portal**  
-Internal Qrypted / VerifyMe operator console: organizations, VerifyMe Users, identity links, verification sessions, client apps / API, billing & credits, audit logs, platform settings.
+Internal Qrypted / VerifyMe operator console: organizations, VerifyMe Users, identity links, verification sessions, risk & governance, client apps / API, billing & credits, audit logs, platform team & access, platform settings.
 
 **Organization Admin Portal**  
 Customer tenant console: Linked End Users, verification logs, API integration, QR linking, team & roles, usage & credits, billing, settings.

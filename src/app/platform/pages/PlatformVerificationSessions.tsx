@@ -47,6 +47,9 @@ import {
 import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
 import { shouldIgnoreRowOpenClick } from "../utils/tableRowNav";
 import { auditLogsHref } from "../utils/auditLogsNavigation";
+import { ScopedFilterBanner } from "../../shared/components/ScopedFilterBanner";
+import { SummaryStatCard } from "../../shared/components/SummaryStatCard";
+import { TableEmptyStateRow } from "../../shared/components/TableEmptyStateRow";
 
 type OutcomeFilter = "all" | VerificationSessionOutcome;
 type BillableFilter = "all" | "billable" | "not_billable";
@@ -64,7 +67,9 @@ function withinTimeFilter(createdAt: string, tf: TimeFilter): boolean {
 export function PlatformVerificationSessions() {
   const allSessions = useMemo(() => getVerificationSessionsMock(), []);
   const organizations = useMemo(() => buildInitialOrganizations(), []);
+  const knownOrgIds = useMemo(() => new Set(organizations.map((org) => org.id)), [organizations]);
   const [searchParams, setSearchParams] = useSearchParams();
+  const urlOrganizationId = searchParams.get("organizationId");
 
   const [search, setSearch] = useState("");
   const [orgFilter, setOrgFilter] = useState<string>("all");
@@ -73,6 +78,16 @@ export function PlatformVerificationSessions() {
   const [channelFilter, setChannelFilter] = useState<ChannelFilter>("all");
   const [timeFilter, setTimeFilter] = useState<TimeFilter>("all");
   const [detail, setDetail] = useState<MockVerificationSession | null>(null);
+
+  useEffect(() => {
+    if (urlOrganizationId && knownOrgIds.has(urlOrganizationId)) {
+      setOrgFilter(urlOrganizationId);
+    }
+  }, [urlOrganizationId, knownOrgIds]);
+
+  // Handoff note: URL organization scope (when valid) takes precedence over manual org dropdown selection.
+  // This keeps deep-linked org journeys stable while preserving other local filters.
+  const effectiveOrgFilter = urlOrganizationId && knownOrgIds.has(urlOrganizationId) ? urlOrganizationId : orgFilter;
 
   useEffect(() => {
     const sid = searchParams.get("sessionId") ?? searchParams.get("verificationSessionId");
@@ -96,7 +111,7 @@ export function PlatformVerificationSessions() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return allSessions.filter((s) => {
-      if (orgFilter !== "all" && s.organizationId !== orgFilter) return false;
+      if (effectiveOrgFilter !== "all" && s.organizationId !== effectiveOrgFilter) return false;
       if (outcomeFilter !== "all" && s.outcome !== outcomeFilter) return false;
       if (billableFilter === "billable" && !s.billable) return false;
       if (billableFilter === "not_billable" && s.billable) return false;
@@ -109,7 +124,7 @@ export function PlatformVerificationSessions() {
       }
       return true;
     });
-  }, [allSessions, search, orgFilter, outcomeFilter, billableFilter, channelFilter, timeFilter]);
+  }, [allSessions, search, effectiveOrgFilter, outcomeFilter, billableFilter, channelFilter, timeFilter]);
 
   const stats = useMemo(() => {
     const list = allSessions;
@@ -131,37 +146,36 @@ export function PlatformVerificationSessions() {
         rootClassName="h-full"
         title="Verification Sessions"
         description="Platform-wide sessions: session status, ID proof result, billing, and risk context."
+        headerExtra={
+          urlOrganizationId ? (
+            <ScopedFilterBanner
+              entityLabel="organization"
+              scopedValue={urlOrganizationId}
+              isKnown={knownOrgIds.has(urlOrganizationId)}
+              unknownHelperText="Organization was not found in configured organizations."
+              onClear={() =>
+                setSearchParams(
+                  (prev) => {
+                    const next = new URLSearchParams(prev);
+                    next.delete("organizationId");
+                    return next;
+                  },
+                  { replace: true },
+                )
+              }
+            />
+          ) : null
+        }
         bodyClassName="space-y-6"
       >
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
-        <Card className="border border-border p-4 shadow-sm">
-          <p className="text-xs text-muted-foreground">Total sessions</p>
-          <p className="mt-1 text-xl font-semibold tabular-nums">{stats.total}</p>
-        </Card>
-        <Card className="border border-border p-4 shadow-sm">
-          <p className="text-xs text-muted-foreground">ID Proof Pass</p>
-          <p className="mt-1 text-xl font-semibold tabular-nums text-green-700">{stats.verified}</p>
-        </Card>
-        <Card className="border border-border p-4 shadow-sm">
-          <p className="text-xs text-muted-foreground">ID Proof Fail</p>
-          <p className="mt-1 text-xl font-semibold tabular-nums text-red-700">{stats.failed}</p>
-        </Card>
-        <Card className="border border-border p-4 shadow-sm">
-          <p className="text-xs text-muted-foreground">Expired / cancelled</p>
-          <p className="mt-1 text-xl font-semibold tabular-nums">{stats.expiredCancelled}</p>
-        </Card>
-        <Card className="border border-border p-4 shadow-sm">
-          <p className="text-xs text-muted-foreground">Errors / indeterminate</p>
-          <p className="mt-1 text-xl font-semibold tabular-nums text-orange-700">{stats.errInd}</p>
-        </Card>
-        <Card className="border border-border p-4 shadow-sm">
-          <p className="text-xs text-muted-foreground">Billable amount</p>
-          <p className="mt-1 text-xl font-semibold tabular-nums">${stats.billableAmt.toFixed(2)}</p>
-        </Card>
-        <Card className="border border-border p-4 shadow-sm">
-          <p className="text-xs text-muted-foreground">Avg attempts</p>
-          <p className="mt-1 text-xl font-semibold tabular-nums">{stats.avgAttempts.toFixed(2)}</p>
-        </Card>
+        <SummaryStatCard label="Total sessions" value={stats.total} />
+        <SummaryStatCard label="ID Proof Pass" value={stats.verified} valueClassName="text-green-700" />
+        <SummaryStatCard label="ID Proof Fail" value={stats.failed} valueClassName="text-red-700" />
+        <SummaryStatCard label="Expired / cancelled" value={stats.expiredCancelled} />
+        <SummaryStatCard label="Errors / indeterminate" value={stats.errInd} valueClassName="text-orange-700" />
+        <SummaryStatCard label="Billable amount" value={`$${stats.billableAmt.toFixed(2)}`} />
+        <SummaryStatCard label="Avg attempts" value={stats.avgAttempts.toFixed(2)} />
       </div>
 
       <VerificationBillingCallout />
@@ -191,10 +205,10 @@ export function PlatformVerificationSessions() {
         </Select>
         <Select value={outcomeFilter} onValueChange={(v) => setOutcomeFilter(v as OutcomeFilter)}>
           <SelectTrigger className="w-[180px] h-10">
-            <SelectValue placeholder="Outcome" />
+            <SelectValue placeholder="Session lifecycle status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All ID proof outcomes</SelectItem>
+            <SelectItem value="all">All session lifecycle statuses</SelectItem>
             <SelectItem value="verified">{verificationOutcomeLabel("verified")}</SelectItem>
             <SelectItem value="failed">{verificationOutcomeLabel("failed")}</SelectItem>
             <SelectItem value="expired">Expired</SelectItem>
@@ -254,6 +268,9 @@ export function PlatformVerificationSessions() {
           <Filter className="h-4 w-4" />
         </Button>
       </div>
+      <p className="text-xs text-muted-foreground">
+        Session lifecycle status and ID proof result are tracked separately; both are shown in dedicated table columns.
+      </p>
 
       <Card className="border border-border shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
@@ -320,12 +337,12 @@ export function PlatformVerificationSessions() {
                   </td>
                 </tr>
               ))}
+              {filtered.length === 0 ? (
+                <TableEmptyStateRow colSpan={11} title="No verification sessions match current filters." />
+              ) : null}
             </tbody>
           </table>
         </div>
-        {filtered.length === 0 && (
-          <p className="px-6 py-12 text-center text-sm text-muted-foreground sm:px-8">No sessions match filters.</p>
-        )}
       </Card>
       </PortalPageFrame>
 

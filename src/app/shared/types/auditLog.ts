@@ -130,6 +130,14 @@ export type AuditAction =
   | "client_app.disabled"
   | "redirect_uri.added"
   | "redirect_uri.disabled"
+  // Platform settings governance
+  | "platform_settings.updated"
+  | "verification_policy.updated"
+  | "risk_policy.updated"
+  | "organization_defaults.updated"
+  | "billing_policy.updated"
+  | "audit_policy.updated"
+  | "feature_control.updated"
   // Identity links
   | "identity_link.created"
   | "identity_link.conflict_detected"
@@ -585,6 +593,13 @@ export function getActionLabel(action: string): string {
     "client_app.disabled": "Client app disabled",
     "redirect_uri.added": "Redirect URI added",
     "redirect_uri.disabled": "Redirect URI disabled",
+    "platform_settings.updated": "Platform settings updated",
+    "verification_policy.updated": "Verification policy updated",
+    "risk_policy.updated": "Risk policy updated",
+    "organization_defaults.updated": "Organization defaults updated",
+    "billing_policy.updated": "Billing policy updated",
+    "audit_policy.updated": "Audit policy updated",
+    "feature_control.updated": "Feature control updated",
     "identity_link.created": "Identity link created",
     "identity_link.conflict_detected": "Identity link conflict detected",
     "identity_link.conflict_reviewed": "Identity link conflict reviewed",
@@ -606,6 +621,17 @@ export function getActionLabel(action: string): string {
 /** Filter / table facet — product-facing category column. */
 export function getAuditTableCategory(action: string): string {
   if (action.startsWith("organization.")) return "Organization";
+  if (
+    action.startsWith("platform_settings.") ||
+    action.startsWith("verification_policy.") ||
+    action.startsWith("risk_policy.") ||
+    action.startsWith("organization_defaults.") ||
+    action.startsWith("billing_policy.") ||
+    action.startsWith("audit_policy.") ||
+    action.startsWith("feature_control.")
+  ) {
+    return "Platform settings";
+  }
   if (action.startsWith("verifyme_user.")) return "VerifyMe User";
   if (action.startsWith("platform_admin.")) return "Platform admin";
   if (action.startsWith("client_app.") || action.startsWith("redirect_uri.")) return "Client app / API";
@@ -635,6 +661,13 @@ export function getAuditSummaryBucket(action: string): AuditSummaryBucket {
   if (/^(mfa\.|api_key\.|sso\.|admin\.login|admin\.logout)/.test(action)) return "security";
   if (/^(client_app\.|redirect_uri\.|identity_link\.|verification_session\.)/.test(action)) return "integration";
   if (/^platform_admin\./.test(action)) return "admin";
+  if (
+    /^(platform_settings\.|verification_policy\.|risk_policy\.|organization_defaults\.|billing_policy\.|audit_policy\.|feature_control\.)/.test(
+      action,
+    )
+  ) {
+    return "admin";
+  }
   return "admin";
 }
 
@@ -656,6 +689,13 @@ export function getCategoryColorForAction(action: string): string {
     redirect_uri: "text-cyan-600",
     identity_link: "text-teal-600",
     verification_session: "text-sky-600",
+    platform_settings: "text-violet-600",
+    verification_policy: "text-violet-600",
+    risk_policy: "text-violet-600",
+    organization_defaults: "text-violet-600",
+    billing_policy: "text-violet-600",
+    audit_policy: "text-violet-600",
+    feature_control: "text-violet-600",
     api_key: "text-red-600",
     sso: "text-red-600",
     mfa: "text-red-600",
@@ -726,6 +766,13 @@ export function deriveGovernanceCategoryFromAction(action: string): GovernanceCa
   if (action === "verifyme_user.risk_reviewed") return "Risk";
   if (/^platform_admin\.(mfa_reset_requested|force_signed_out|login_failed|suspended|disabled|reactivated)/.test(action)) {
     return "Security";
+  }
+  if (
+    /^(platform_settings\.|verification_policy\.|risk_policy\.|organization_defaults\.|billing_policy\.|audit_policy\.|feature_control\.)/.test(
+      action,
+    )
+  ) {
+    return "Governance";
   }
   if (/^platform_admin\./.test(action)) return "Governance";
   if (

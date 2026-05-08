@@ -41,7 +41,7 @@ export function EnterpriseUsage() {
   return (
     <PortalPageFrame
       title="Usage & credits"
-      description="Credit balance (monetary wallet), plan, billable verification sessions, delivery add-ons, and how outcomes map to credits."
+      description="Consumption analytics and credit posture: verification volume, billable outcomes, and credit utilization trends. For invoices and payment operations, use Billing."
       headerActions={
         <div className="flex flex-wrap items-center gap-3">
           <Select defaultValue="current">

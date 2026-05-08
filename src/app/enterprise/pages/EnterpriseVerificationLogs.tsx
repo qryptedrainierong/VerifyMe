@@ -1,5 +1,5 @@
 import { useMemo, useState, useSyncExternalStore } from "react";
-import { ScrollText, Search } from "lucide-react";
+import { Filter, ScrollText, Search } from "lucide-react";
 import { Button } from "../../shared/components/ui/button";
 import { Card } from "../../shared/components/ui/card";
 import { Input } from "../../shared/components/ui/input";
@@ -44,6 +44,8 @@ import {
 } from "../../platform/data/mockPlatformRisk";
 import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
 import { shouldIgnoreRowOpenClick } from "../../platform/utils/tableRowNav";
+import { SummaryStatCard } from "../../shared/components/SummaryStatCard";
+import { TableEmptyStateRow } from "../../shared/components/TableEmptyStateRow";
 
 type OutcomeFilter = "all" | VerificationSessionOutcome;
 type BillableFilter = "all" | "billable" | "not_billable";
@@ -123,30 +125,12 @@ export function EnterpriseVerificationLogs() {
         bodyClassName="space-y-6"
       >
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-        <Card className="p-4 border border-border shadow-sm">
-          <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Total sessions</p>
-          <p className="text-xl font-semibold mt-1">{stats.total}</p>
-        </Card>
-        <Card className="p-4 border border-border shadow-sm">
-          <p className="text-[11px] text-muted-foreground uppercase tracking-wide">ID Proof Pass</p>
-          <p className="text-xl font-semibold mt-1 text-green-700">{stats.verified}</p>
-        </Card>
-        <Card className="p-4 border border-border shadow-sm">
-          <p className="text-[11px] text-muted-foreground uppercase tracking-wide">ID Proof Fail</p>
-          <p className="text-xl font-semibold mt-1 text-red-700">{stats.failed}</p>
-        </Card>
-        <Card className="p-4 border border-border shadow-sm">
-          <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Expired</p>
-          <p className="text-xl font-semibold mt-1">{stats.expired}</p>
-        </Card>
-        <Card className="p-4 border border-border shadow-sm">
-          <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Billable spend</p>
-          <p className="text-xl font-semibold mt-1">${stats.billableSpend.toFixed(2)}</p>
-        </Card>
-        <Card className="p-4 border border-border shadow-sm">
-          <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Avg attempts</p>
-          <p className="text-xl font-semibold mt-1">{stats.avgAttempts.toFixed(2)}</p>
-        </Card>
+        <SummaryStatCard label="Total sessions" value={stats.total} />
+        <SummaryStatCard label="ID Proof Pass" value={stats.verified} valueClassName="text-green-700" />
+        <SummaryStatCard label="ID Proof Fail" value={stats.failed} valueClassName="text-red-700" />
+        <SummaryStatCard label="Expired" value={stats.expired} />
+        <SummaryStatCard label="Billable spend" value={`$${stats.billableSpend.toFixed(2)}`} />
+        <SummaryStatCard label="Avg attempts" value={stats.avgAttempts.toFixed(2)} />
       </div>
 
       <VerificationBillingCallout />
@@ -163,10 +147,10 @@ export function EnterpriseVerificationLogs() {
         </div>
         <Select value={outcomeFilter} onValueChange={(v) => setOutcomeFilter(v as OutcomeFilter)}>
           <SelectTrigger className="w-[180px] h-10">
-            <SelectValue placeholder="Outcome" />
+            <SelectValue placeholder="Session lifecycle status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All ID proof outcomes</SelectItem>
+            <SelectItem value="all">All session lifecycle statuses</SelectItem>
             <SelectItem value="verified">{verificationOutcomeLabel("verified")}</SelectItem>
             <SelectItem value="failed">{verificationOutcomeLabel("failed")}</SelectItem>
             <SelectItem value="expired">Expired</SelectItem>
@@ -207,7 +191,27 @@ export function EnterpriseVerificationLogs() {
             <SelectItem value="30d">Last 30 days</SelectItem>
           </SelectContent>
         </Select>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="h-10 w-10 shrink-0"
+          aria-label="Clear filters"
+          onClick={() => {
+            setSearch("");
+            setOutcomeFilter("all");
+            setBillableFilter("all");
+            setChannelFilter("all");
+            setDateFilter("all");
+          }}
+        >
+          <Filter className="h-4 w-4" />
+        </Button>
       </div>
+      <p className="text-[12px] text-muted-foreground">
+        Session lifecycle status and ID proof result are separate. Lifecycle filtering controls session state, while the
+        table keeps ID proof result in its own column.
+      </p>
 
       <Card className="border border-border shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
@@ -270,12 +274,12 @@ export function EnterpriseVerificationLogs() {
                   </td>
                 </tr>
               ))}
+              {filtered.length === 0 ? (
+                <TableEmptyStateRow colSpan={10} title="No verification sessions match current filters." />
+              ) : null}
             </tbody>
           </table>
         </div>
-        {filtered.length === 0 && (
-          <p className="px-6 py-12 text-center text-sm text-muted-foreground sm:px-8">No sessions match filters.</p>
-        )}
       </Card>
       </PortalPageFrame>
 

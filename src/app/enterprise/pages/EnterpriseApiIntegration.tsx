@@ -13,6 +13,7 @@ import {
 import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../shared/components/ui/dialog";
 import { shouldIgnoreRowOpenClick } from "../../platform/utils/tableRowNav";
+import { AuditHintText } from "../../shared/components/AuditHintText";
 
 type ApiConfirmAction = "rotate_secret" | "disable_redirect_uri" | "remove_redirect_uri" | null;
 
@@ -274,19 +275,19 @@ export function EnterpriseApiIntegration() {
             {confirming === "rotate_secret" && (
               <>
                 <p>This will invalidate the current secret. Existing integrations must update their stored secret.</p>
-                <p className="text-xs text-muted-foreground">This action will be recorded in audit logs.</p>
+                <AuditHintText className="text-xs" />
               </>
             )}
             {confirming === "disable_redirect_uri" && (
               <>
                 <p>Authorization responses will no longer be sent to this URI.</p>
-                <p className="text-xs text-muted-foreground">This action will be recorded in audit logs.</p>
+                <AuditHintText className="text-xs" />
               </>
             )}
             {confirming === "remove_redirect_uri" && (
               <>
                 <p>This URI must be added again before it can receive authorization responses.</p>
-                <p className="text-xs text-muted-foreground">This action will be recorded in audit logs.</p>
+                <AuditHintText className="text-xs" />
               </>
             )}
           </DialogDescription>

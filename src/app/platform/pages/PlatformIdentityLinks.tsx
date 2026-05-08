@@ -28,6 +28,10 @@ import { computePlatformRiskSummaryForVerifymeId } from "../data/mockPlatformRis
 import { UserRiskStatusBadge } from "../../shared/components/RiskSummary";
 import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
 import { shouldIgnoreRowOpenClick } from "../utils/tableRowNav";
+import { ScopedFilterBanner } from "../../shared/components/ScopedFilterBanner";
+import { SummaryStatCard } from "../../shared/components/SummaryStatCard";
+import { TableEmptyStateRow } from "../../shared/components/TableEmptyStateRow";
+import { HelperCallout } from "../../shared/components/HelperCallout";
 
 function linkStatusLabel(s: IdentityLinkStatus): string {
   const map: Record<IdentityLinkStatus, string> = {
@@ -156,39 +160,33 @@ export function PlatformIdentityLinks() {
       description="Organization customer identifiers linked to VerifyMe accounts."
       headerExtra={
         <>
+          <p className="rounded-md border border-border/80 bg-muted/30 px-3 py-2 text-xs leading-relaxed text-muted-foreground sm:text-sm">
+            Use <span className="font-medium text-foreground">Identity Links</span> to investigate organization-specific
+            link state, name consistency, and conflict workflow. Use <span className="font-medium text-foreground">VerifyMe Users</span>{" "}
+            for platform-wide user risk and account-level activity.
+          </p>
           {urlOrganizationId ? (
-            <p className="text-xs text-muted-foreground sm:text-sm">
-              URL filter: <span className="font-mono text-foreground">{urlOrganizationId}</span>
-              {!knownOrgIds.has(urlOrganizationId)
-                ? " — unknown organization id; adjust filters manually."
-                : " — applied when recognized in configured organizations."}
-            </p>
+            <ScopedFilterBanner
+              entityLabel="organization"
+              scopedValue={urlOrganizationId}
+              isKnown={knownOrgIds.has(urlOrganizationId)}
+              unknownHelperText="Organization was not found in configured organizations."
+            />
           ) : null}
+          <HelperCallout>
+            Filter and status updates in this bundle are frontend demonstrations; backend data wiring is required for
+            persistence.
+          </HelperCallout>
         </>
       }
       bodyClassName="space-y-6"
     >
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <Card className="border border-border p-4 shadow-sm">
-          <p className="text-xs text-muted-foreground">Total links</p>
-          <p className="mt-1 text-xl font-semibold tabular-nums">{summary.total}</p>
-        </Card>
-        <Card className="border border-border p-4 shadow-sm">
-          <p className="text-xs text-muted-foreground">Linked</p>
-          <p className="mt-1 text-xl font-semibold tabular-nums">{summary.linked}</p>
-        </Card>
-        <Card className="border border-border p-4 shadow-sm">
-          <p className="text-xs text-muted-foreground">Pending</p>
-          <p className="mt-1 text-xl font-semibold tabular-nums">{summary.pending}</p>
-        </Card>
-        <Card className="border border-border p-4 shadow-sm">
-          <p className="text-xs text-muted-foreground">Suspended / disabled / revoked</p>
-          <p className="mt-1 text-xl font-semibold tabular-nums">{summary.suspendedDisabled}</p>
-        </Card>
-        <Card className="border border-border p-4 shadow-sm">
-          <p className="text-xs text-muted-foreground">Conflicts (pending review)</p>
-          <p className="mt-1 text-xl font-semibold tabular-nums">{summary.conflicts}</p>
-        </Card>
+        <SummaryStatCard label="Total links" value={summary.total} />
+        <SummaryStatCard label="Linked" value={summary.linked} />
+        <SummaryStatCard label="Pending" value={summary.pending} />
+        <SummaryStatCard label="Suspended / disabled / revoked" value={summary.suspendedDisabled} />
+        <SummaryStatCard label="Conflicts (pending review)" value={summary.conflicts} />
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -243,6 +241,7 @@ export function PlatformIdentityLinks() {
           variant="outline"
           size="icon"
           className="h-10 w-10"
+          aria-label="Clear filters"
           onClick={() => {
             setSearchQuery("");
             setOrganizationFilter("all-orgs");
@@ -259,19 +258,19 @@ export function PlatformIdentityLinks() {
           <table className="w-full text-[13px]">
             <thead className="border-b border-border bg-accent/5">
               <tr>
-                <th className="p-3 text-left font-medium text-muted-foreground">Organization</th>
-                <th className="p-3 text-left font-medium text-muted-foreground">client_user_id</th>
-                <th className="p-3 text-left font-medium text-muted-foreground">Customer</th>
-                <th className="p-3 text-left font-medium text-muted-foreground">VerifyMe ID</th>
-                <th className="p-3 text-left font-medium text-muted-foreground">Link status</th>
-                <th className="p-3 text-left font-medium text-muted-foreground">Conflict status</th>
-                <th className="p-3 text-left font-medium text-muted-foreground">Name consistency</th>
-                <th className="p-3 text-left font-medium text-muted-foreground">
+                <th className="p-3 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Organization</th>
+                <th className="p-3 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">client_user_id</th>
+                <th className="p-3 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Customer</th>
+                <th className="p-3 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">VerifyMe ID</th>
+                <th className="p-3 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Link status</th>
+                <th className="p-3 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Conflict status</th>
+                <th className="p-3 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Name consistency</th>
+                <th className="p-3 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   <span className="block">User risk</span>
                   <span className="block text-[10px] font-normal normal-case text-muted-foreground">(VerifyMe User)</span>
                 </th>
-                <th className="p-3 text-left font-medium text-muted-foreground">Last verified</th>
-                <th className="p-3 text-left font-medium text-muted-foreground">Created / linked</th>
+                <th className="p-3 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Last verified</th>
+                <th className="p-3 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Created / linked</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -315,6 +314,9 @@ export function PlatformIdentityLinks() {
                   <td className="p-3 align-top text-muted-foreground">{formatDate(r.createdLinkedAt)}</td>
                 </tr>
               ))}
+              {filtered.length === 0 ? (
+                <TableEmptyStateRow colSpan={10} title="No identity links match current filters." />
+              ) : null}
             </tbody>
           </table>
         </div>

@@ -37,6 +37,7 @@ All paths below are under `./` (this `docs/` directory).
 | [`qr-linking.md`](./qr-linking.md) | QR linking payloads, keys, deep links (no raw payload storage in UI) |
 | [`api-overview.md`](./api-overview.md) | HTTP / OIDC-style integration overview, MVP scopes |
 | [`risk-scoring.md`](./risk-scoring.md) | VerifyMe User risk, identity-link conflict/consistency, privacy, UI, audit |
+| [`platform-settings.md`](./platform-settings.md) | Platform policy categories, override model, and governance controls |
 
 ---
 
@@ -66,6 +67,7 @@ These stay grouped as the **audit** set; they are part of `/docs` but are the ca
 |----------|---------|
 | [`maintenance.md`](./maintenance.md) | Where to change routes, shared UI, themes, high-risk areas |
 | [`implementation-notes.md`](./implementation-notes.md) | Repo layout, stack, routing/cache notes, third-party attributions |
+| [`developer-handoff.md`](./developer-handoff.md) | Fast onboarding guide for third-party developers |
 
 ---
 
@@ -84,7 +86,9 @@ These stay grouped as the **audit** set; they are part of `/docs` but are the ca
 | `end-user-management.md` | VerifyMe Users, Linked End Users, invites |
 | `glossary.md` | Canonical definitions |
 | `implementation-notes.md` | Repo layout, stack, cache/version context, attributions |
+| `developer-handoff.md` | Third-party developer onboarding and boundaries |
 | `maintenance.md` | Where to edit code safely |
+| `platform-settings.md` | Platform policy center and override boundaries |
 | `product-spec.md` | Vision, surfaces, verification sessions (UI notes) |
 | `qr-linking.md` | QR linking design |
 | `risk-scoring.md` | User risk & link conflict design |
