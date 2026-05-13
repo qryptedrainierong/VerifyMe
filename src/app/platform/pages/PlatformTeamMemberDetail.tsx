@@ -9,8 +9,11 @@ import { platformTeamSample, type PlatformTeamStatus } from "../data/platformTea
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../shared/components/ui/dialog";
 import { Input } from "../../shared/components/ui/input";
 import { auditLogsHref } from "../utils/auditLogsNavigation";
+import { usePlatformRole } from "../context/PlatformRoleContext";
+import { canPerformPlatformAction, platformRoleLabel } from "../utils/platformRolePermissions";
 
 export function PlatformTeamMemberDetail() {
+  const { role } = usePlatformRole();
   const navigate = useNavigate();
   const { platformAdminId } = useParams();
   const [tab, setTab] = useState("profile");
@@ -25,13 +28,15 @@ export function PlatformTeamMemberDetail() {
     return <div className="p-8">Platform admin user not found.</div>;
   }
 
+  const canMutateMember = canPerformPlatformAction(role, "manage_platform_team");
+
   const disableConfirmOk = typedConfirm.trim().toLowerCase() === member.platformAdminId.toLowerCase() || typedConfirm.trim().toLowerCase() === member.email.toLowerCase();
   const statusActions: Array<{ label: string; key: string; disabled?: boolean }> = [
-    { label: "Suspend access", key: "suspend", disabled: member.status !== "active" },
-    { label: "Reactivate access", key: "reactivate", disabled: member.status !== "suspended" },
-    { label: "Disable account", key: "disable", disabled: member.status === "disabled" },
-    { label: "Reset MFA", key: "reset_mfa" },
-    { label: "Force sign out", key: "force_sign_out" },
+    { label: "Suspend access", key: "suspend", disabled: member.status !== "active" || !canMutateMember },
+    { label: "Reactivate access", key: "reactivate", disabled: member.status !== "suspended" || !canMutateMember },
+    { label: "Disable account", key: "disable", disabled: member.status === "disabled" || !canMutateMember },
+    { label: "Reset MFA", key: "reset_mfa", disabled: !canMutateMember },
+    { label: "Force sign out", key: "force_sign_out", disabled: !canMutateMember },
   ];
 
   return (
@@ -48,6 +53,10 @@ export function PlatformTeamMemberDetail() {
             <UnifiedBadge variant="role" value={member.role} />
             <UnifiedBadge variant="status" value={member.status} />
           </div>
+          <p className="text-sm text-muted-foreground mt-2 max-w-2xl">
+            Signed in as <span className="font-medium text-foreground">{platformRoleLabel(role)}</span> (preview). Member
+            controls respect this preview role; production enforcement remains on the server.
+          </p>
         </div>
         <div className="min-h-0 flex-1 overflow-auto p-8">
           <Tabs value={tab} onValueChange={setTab}>
@@ -77,7 +86,9 @@ export function PlatformTeamMemberDetail() {
                 <p className="text-sm"><strong>Current role:</strong> {member.role}</p>
                 <p className="text-sm text-muted-foreground">{member.permissionsSummary}</p>
                 <p className="text-sm"><strong>Restricted areas:</strong> {member.restrictedAreas.length > 0 ? member.restrictedAreas.join(", ") : "Not available"}</p>
-                <Button size="sm" onClick={() => setConfirmAction("change_role")}>Change role</Button>
+                <Button size="sm" disabled={!canMutateMember} onClick={() => setConfirmAction("change_role")}>
+                  Change role
+                </Button>
               </Card>
             </TabsContent>
             <TabsContent value="security">
@@ -88,9 +99,30 @@ export function PlatformTeamMemberDetail() {
                 <p><strong>Last known device/browser:</strong> {member.lastKnownDeviceSummary}</p>
                 <p><strong>Last known IP:</strong> {member.lastKnownIp ?? "Not available"}</p>
                 <div className="flex gap-2 pt-2">
-                  <Button size="sm" variant="outline" onClick={() => setConfirmAction("reset_mfa")}>Reset MFA</Button>
-                  <Button size="sm" variant="outline" onClick={() => setConfirmAction("force_sign_out")}>Force sign out</Button>
-                  <Button size="sm" variant="outline" onClick={() => setConfirmAction("reset_recovery")}>Reset password / recovery flow</Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={!canMutateMember}
+                    onClick={() => setConfirmAction("reset_mfa")}
+                  >
+                    Reset MFA
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={!canMutateMember}
+                    onClick={() => setConfirmAction("force_sign_out")}
+                  >
+                    Force sign out
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={!canMutateMember}
+                    onClick={() => setConfirmAction("reset_recovery")}
+                  >
+                    Reset password / recovery flow
+                  </Button>
                 </div>
               </Card>
             </TabsContent>
@@ -118,8 +150,16 @@ export function PlatformTeamMemberDetail() {
             <TabsContent value="controls">
               <Card className="p-6 space-y-3">
                 {member.role === "Super Admin" && (
-                  <p className="text-sm rounded border border-amber-300 bg-amber-50 px-3 py-2">Warning: this is a Super Admin account.</p>
+                  <p className="text-sm rounded border border-amber-300 bg-amber-50 px-3 py-2">
+                    Warning: this is a Super Admin account.
+                  </p>
                 )}
+                {!canMutateMember ? (
+                  <p className="text-xs text-muted-foreground">
+                    Mutations are disabled for the current preview role (for example Compliance / Auditor or Platform Admin
+                    team limits).
+                  </p>
+                ) : null}
                 <div className="flex flex-wrap gap-2">
                   {statusActions.map((a) => (
                     <Button key={a.key} variant={a.key === "disable" ? "destructive" : "outline"} size="sm" disabled={a.disabled} onClick={() => setConfirmAction(a.key)}>

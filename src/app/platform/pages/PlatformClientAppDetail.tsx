@@ -23,6 +23,8 @@ import {
 import type { PlatformClientAppRow } from "../data/platformClientAppsSample";
 import { formatIntegrationStatus } from "../data/platformOrganizationsSample";
 import { auditLogsHref } from "../utils/auditLogsNavigation";
+import { usePlatformRole } from "../context/PlatformRoleContext";
+import { canPerformPlatformAction } from "../utils/platformRolePermissions";
 
 function formatDateTime(iso: string | null) {
   return iso
@@ -50,6 +52,9 @@ function secretLabel(s: PlatformClientAppRow["secretStatus"]) {
 }
 
 export function PlatformClientAppDetail() {
+  const { role } = usePlatformRole();
+  const canRotateSecret = canPerformPlatformAction(role, "rotate_secret");
+  const canManageClientApps = canPerformPlatformAction(role, "manage_client_apps");
   const navigate = useNavigate();
   const { clientAppId } = useParams();
 
@@ -246,13 +251,22 @@ export function PlatformClientAppDetail() {
                 <p className="text-xs font-medium text-muted-foreground">Client App Controls</p>
                 <p className="mt-2 text-sm text-muted-foreground">Confirmation required. No secret values are displayed.</p>
                 <div className="mt-4 flex flex-wrap gap-2">
-                  <Button type="button" variant="outline" size="sm" onClick={() => setRotateOpen(true)}>
-                    Rotate secret…
-                  </Button>
-                  <Button type="button" variant="outline" size="sm" onClick={() => setDisableOpen(true)}>
-                    Disable app…
-                  </Button>
+                  {canRotateSecret ? (
+                    <Button type="button" variant="outline" size="sm" onClick={() => setRotateOpen(true)}>
+                      Rotate secret…
+                    </Button>
+                  ) : null}
+                  {canManageClientApps ? (
+                    <Button type="button" variant="outline" size="sm" onClick={() => setDisableOpen(true)}>
+                      Disable app…
+                    </Button>
+                  ) : null}
                 </div>
+                {!canRotateSecret && !canManageClientApps ? (
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Integration controls are not available for this preview role.
+                  </p>
+                ) : null}
               </Card>
             </TabsContent>
           </Tabs>

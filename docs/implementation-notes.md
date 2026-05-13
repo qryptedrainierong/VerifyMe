@@ -81,8 +81,29 @@ Governance actions must be performed from **entity detail pages**, require **con
 
 Role-based visibility patterns in this repository are UI assumptions for flow validation. They are not authenticated authorization boundaries.
 
-- Example: Platform Settings “Developer / Internal” section is shown for mock Super Admin role only.
-- Backend integration must enforce role/permission checks server-side and treat current UI gating as presentation intent, not security.
+- Example: Platform Settings “Developer / Internal” section is shown for mock Super Admin role only; Technical / API Manager sees a subset of settings categories when technical policy applies.
+- Backend integration must enforce role/permission checks server-side and treat current UI gating as presentation intent, **not** security. Direct navigation, API calls, and data exposure must all be authorized on the server.
+
+#### VerifyMe Admin — preview role switcher (local only)
+
+The platform shell (`PlatformLayout`) wraps the portal in `PlatformRoleProvider` (`src/app/platform/context/PlatformRoleContext.tsx`). The upper-right account menu lets operators pick a **preview role** (stored in `localStorage` under `verifyme_platform_role`). That selection drives:
+
+- **Navigation:** Sidebar shows only sections permitted for the selected role (`canShowNavSection`, `NAV_BY_ROLE` in `src/app/platform/utils/platformRolePermissions.ts`). Items the role cannot access are **hidden**, not dimmed.
+- **Direct routes:** `PlatformRouteGuard` (`src/app/platform/components/PlatformRouteGuard.tsx`) maps the URL to a section and, when access is denied, renders **only** `PlatformAccessDenied` — no restricted page body, data tables, or controls behind a banner.
+- **Dashboard:** A compact three-part layout (attention queue, platform snapshot KPIs, recent governance activity); visibility and filters follow `getPlatformDashboardConfig` per preview role. Detailed analytics live on dedicated module routes, not on the dashboard.
+- **Page controls:** Mutation affordances use `canPerformPlatformAction` (and related helpers). **Compliance / Auditor** is read-only in preview: no account lifecycle, billing management, client secret rotation, or platform-team mutations unless explicitly allowed as view-only patterns.
+- **Audit Logs:** Remains visible where navigation allows; helper copy notes that production audit scope must come from backend RBAC.
+
+**Security:** This is **not** authentication and **not** authorization. **UI filtering is not a security boundary.** Anyone with the SPA can change the stored preview role in dev tools or request arbitrary URLs. **Production RBAC must be enforced by the backend** on every API; the UI behavior exists only to preview operator experiences.
+
+#### Platform operator self-service (frontend only)
+
+Routes such as `/platform-profile`, `/platform-security`, `/platform-notifications`, and `/platform-preferences` are **not** behind `PlatformRouteGuard` section checks: they represent the **signed-in platform administrator’s** account workspace (distinct from **VerifyMe Users** or tenant admins). They use `PlatformOperatorExperienceProvider` (`src/app/platform/context/PlatformOperatorExperienceContext.tsx`) for **local-only** state: notification read markers (`verifyme_platform_notification_read_ids`), operator preferences (`verifyme_platform_operator_prefs`), and ephemeral UI feedback for security actions.
+
+- **Preview role** still only changes portal RBAC preview; it is **not** authentication. The operator profile surfaces the selected preview role as **role context**, not as proof of identity.
+- **Sign out** and live session revocation require **backend authentication** and identity APIs; in-repo controls are confirmation-gated and show local feedback only.
+- **Security actions** (MFA reset request, password reset request, revoke session) must be **audited server-side** in production; the UI repeats governance hints but does not write audit rows here.
+- **No secrets** are shown (passwords, OTPs, MFA seeds, tokens, recovery material, client secrets).
 
 ## Data and state
 

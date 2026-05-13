@@ -28,6 +28,8 @@ Core domains:
 9. Platform Team & Access
 10. Platform Settings
 
+The **Preview role** entry in the platform top bar (`PlatformUserMenu`, `PlatformRoleProvider`, key `verifyme_platform_role` in `localStorage`) drives **UI demonstration only**: it **hides** sidebar entries the role cannot use, scopes dashboard blocks and metrics, gates destructive controls via `canPerformPlatformAction`, and blocks restricted URLs with `PlatformRouteGuard` + `PlatformAccessDenied` (no underlying page content when denied). **This is not authorization** — **backend RBAC is required** for any real environment; see `src/app/platform/utils/platformRolePermissions.ts`, `src/app/platform/components/PlatformRouteGuard.tsx`, and `docs/implementation-notes.md`.
+
 ### Organization Admin
 
 Core domains:
@@ -82,7 +84,7 @@ Use this as the canonical route-to-responsibility map for the Organization Admin
 
 Use this as the canonical route-to-responsibility map for the Platform Admin Portal:
 
-- `/` — Dashboard: cross-domain operational summary and action-required queues.
+- `/` — Dashboard: compact attention queue, platform snapshot KPIs (max five), and recent governance activity; deep analysis is on the dedicated module routes.
 - `/organizations` — Organizations list: create/filter organizations and open organization detail.
 - `/organizations/:id` — Organization detail: organization summary, readiness checklist, governance controls, links to platform-wide operational pages.
 - `/verifyme-users` — VerifyMe Users list: platform-level user posture and cross-organization activity.
@@ -97,6 +99,12 @@ Use this as the canonical route-to-responsibility map for the Platform Admin Por
 - `/platform-team` — Platform Team & Access list: platform admin user management summary.
 - `/platform-team/:platformAdminId` — Platform Team member detail: role/security/activity controls.
 - `/settings` — Platform Settings: global policy categories and governance controls (not tenant-local settings).
+- `/platform-profile` — Platform **operator** profile & status (Alex Tan preview identity), role context, activity summary, preferences summary.
+- `/platform-security` — Operator authentication posture, active sessions (with `#active-sessions`), security activity timeline; confirmation-gated actions are local-only.
+- `/platform-notifications` — Operator notification inbox and delivery/category toggles; read state persisted in `localStorage` for this browser only.
+- `/platform-preferences` — Operator display, localization, default views, and accessibility preferences; save/reset updates `localStorage` until a backend exists.
+
+The platform shell wraps routes in `PlatformRoleProvider` and `PlatformOperatorExperienceProvider` (`src/app/platform/pages/PlatformLayout.tsx`). The header uses `PlatformShellTopBar` (search, notification bell popover, preferences shortcut, `PlatformUserMenu`). **Operator self-service pages are not a substitute for IdP sign-in or API authorization.**
 
 ### Platform Settings model
 

@@ -11,8 +11,11 @@ import { SummaryStatCard } from "../../shared/components/SummaryStatCard";
 import { TableEmptyStateRow } from "../../shared/components/TableEmptyStateRow";
 import { platformTeamSample, type PlatformMfaStatus, type PlatformTeamRole, type PlatformTeamStatus } from "../data/platformTeamSample";
 import { shouldIgnoreRowOpenClick } from "../utils/tableRowNav";
+import { usePlatformRole } from "../context/PlatformRoleContext";
+import { canPerformPlatformAction, platformRoleLabel } from "../utils/platformRolePermissions";
 
 export function PlatformTeamAccess() {
+  const { role: previewRole } = usePlatformRole();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [role, setRole] = useState<PlatformTeamRole | "all">("all");
@@ -45,7 +48,16 @@ export function PlatformTeamAccess() {
     <PortalPageFrame
       title="Platform Team & Access"
       description="Operational view of internal VerifyMe platform admin users and operator access posture."
-      bodyClassName="space-y-6"
+      headerExtra={
+        <div className="rounded-md border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+          <p>
+            Preview role: <span className="font-medium text-foreground">{platformRoleLabel(previewRole)}</span>.{" "}
+            {!canPerformPlatformAction(previewRole, "manage_platform_team")
+              ? "Directory browsing is available; member mutations follow the same preview limits as detail pages."
+              : "You can open a member to exercise status and security controls in this preview environment."}
+          </p>
+        </div>
+      }
     >
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <SummaryStatCard label="Total platform users" value={stats.total} />

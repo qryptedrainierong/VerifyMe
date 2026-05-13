@@ -36,6 +36,8 @@ import { buildInitialOrganizations } from "../data/platformOrganizationsSample";
 import { shouldIgnoreRowOpenClick } from "../utils/tableRowNav";
 import { SummaryStatCard } from "../../shared/components/SummaryStatCard";
 import { TableEmptyStateRow } from "../../shared/components/TableEmptyStateRow";
+import { usePlatformRole } from "../context/PlatformRoleContext";
+import { canPerformPlatformAction, canShowNavSection } from "../utils/platformRolePermissions";
 
 const AUDIT_LOGS_PER_PAGE = 10;
 
@@ -163,6 +165,9 @@ function parseGovernanceSeverityParam(
 }
 
 export function PlatformAuditLogs() {
+  const { role } = usePlatformRole();
+  const canExportLogs = canPerformPlatformAction(role, "export_audit");
+  const showSettingsBackLink = canShowNavSection(role, "settings");
   const knownOrgIds = useMemo(() => new Set(buildInitialOrganizations().map((o) => o.id)), []);
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -365,17 +370,24 @@ export function PlatformAuditLogs() {
         description="Governance-aligned audit trail across VerifyMe Users, identity links, organizations, client apps, verification sessions, and billing. Filters support deep links from entity pages."
         headerActions={
           <div className="flex items-center gap-2">
-            <Button variant="outline" type="button" asChild>
-              <Link to="/settings">Back to Platform Settings</Link>
-            </Button>
-            <Button variant="outline" type="button">
-              <Download className="mr-2 h-4 w-4" />
-              Export Logs
-            </Button>
+            {showSettingsBackLink ? (
+              <Button variant="outline" type="button" asChild>
+                <Link to="/settings">Back to Platform Settings</Link>
+              </Button>
+            ) : null}
+            {canExportLogs ? (
+              <Button variant="outline" type="button">
+                <Download className="mr-2 h-4 w-4" />
+                Export Logs
+              </Button>
+            ) : null}
           </div>
         }
         headerExtra={
           <div className="flex w-full flex-col gap-4">
+            <div className="rounded-md border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+              Audit visibility is shown for preview. Production audit access must be scoped by backend RBAC.
+            </div>
             <div className="flex flex-wrap items-center gap-3">
               <div className="relative max-w-md min-w-[200px] flex-1">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

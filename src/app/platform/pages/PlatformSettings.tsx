@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { Card } from "../../shared/components/ui/card";
 import { Button } from "../../shared/components/ui/button";
@@ -16,6 +16,8 @@ import {
 } from "../../shared/components/ui/select";
 import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../../shared/components/ui/dialog";
+import { usePlatformRole } from "../context/PlatformRoleContext";
+import { settingsCategoriesForRole, type PlatformSettingsCategoryId } from "../utils/platformRolePermissions";
 
 type SettingsCategory =
   | "general"
@@ -58,10 +60,11 @@ function SectionHeader({ title, description }: { title: string; description?: st
 }
 
 export function PlatformSettings() {
+  const { role } = usePlatformRole();
+  const isSuperAdmin = role === "super_admin";
+  const settingsScope = settingsCategoriesForRole(role);
   const [searchParams] = useSearchParams();
   const scopedOrganizationId = searchParams.get("organizationId");
-  const currentAdminRole = "Super Admin";
-  const isSuperAdmin = currentAdminRole === "Super Admin";
   const [activeCategory, setActiveCategory] = useState<SettingsCategory>("general");
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [confirmRiskyChange, setConfirmRiskyChange] = useState<RiskyChange | null>(null);
@@ -166,9 +169,21 @@ export function PlatformSettings() {
   });
 
   const visibleCategories = useMemo(
-    () => categoryNav.filter((item) => !item.superAdminOnly || isSuperAdmin),
-    [isSuperAdmin],
+    () =>
+      categoryNav.filter((item) => {
+        if (item.superAdminOnly && !isSuperAdmin) return false;
+        if (settingsScope === "all") return true;
+        return settingsScope.includes(item.id as PlatformSettingsCategoryId);
+      }),
+    [isSuperAdmin, settingsScope],
   );
+
+  useEffect(() => {
+    const ids = visibleCategories.map((c) => c.id);
+    if (ids.length > 0 && !ids.includes(activeCategory)) {
+      setActiveCategory(ids[0]!);
+    }
+  }, [visibleCategories, activeCategory]);
 
   const metadata = {
     updatedAt: "2026-05-07 15:55 UTC+8",

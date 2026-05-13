@@ -28,8 +28,12 @@ import { computePlatformRiskSummary } from "../data/mockPlatformRisk";
 import { getRiskHistoryForVerifymeId } from "../data/platformVerifymeUserRiskHistorySample";
 import { GovernanceTimeline } from "../../shared/components/GovernanceTimeline";
 import { auditLogsHref } from "../utils/auditLogsNavigation";
+import { usePlatformRole } from "../context/PlatformRoleContext";
+import { canPerformPlatformAction } from "../utils/platformRolePermissions";
 
 export function PlatformVerifyMeUserDetail() {
+  const { role } = usePlatformRole();
+  const canMutateVerifymeUser = canPerformPlatformAction(role, "suspend_user");
   const navigate = useNavigate();
   const { verifymeId: verifymeIdParam } = useParams();
 
@@ -488,42 +492,46 @@ export function PlatformVerifyMeUserDetail() {
                   Each action opens a confirmation step. Passcodes, OTPs, biometrics, generated tokens, Encrypted_Auth_Cred,
                   Transaction_Code, and raw recovery secrets are never shown here.
                 </p>
-                <div className="flex flex-wrap gap-2">
-                  {selectedRowGroup.rowStatus === "active" || selectedRowGroup.rowStatus === "pending" ? (
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      onClick={() => {
-                        setControlsFeedback(null);
-                        setSuspendOpen(true);
-                      }}
-                    >
-                      Suspend user
-                    </Button>
-                  ) : null}
-                  {selectedRowGroup.rowStatus === "suspended" ? (
-                    <Button
-                      type="button"
-                      onClick={() => {
-                        setControlsFeedback(null);
-                        setReactivateOpen(true);
-                      }}
-                    >
-                      Reactivate user
-                    </Button>
-                  ) : null}
-                  {selectedRowGroup.rowStatus === "disabled" ? (
-                    <Button
-                      type="button"
-                      onClick={() => {
-                        setControlsFeedback(null);
-                        setRestoreOpen(true);
-                      }}
-                    >
-                      Restore user access
-                    </Button>
-                  ) : null}
-                </div>
+                {canMutateVerifymeUser ? (
+                  <div className="flex flex-wrap gap-2">
+                    {selectedRowGroup.rowStatus === "active" || selectedRowGroup.rowStatus === "pending" ? (
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        onClick={() => {
+                          setControlsFeedback(null);
+                          setSuspendOpen(true);
+                        }}
+                      >
+                        Suspend user
+                      </Button>
+                    ) : null}
+                    {selectedRowGroup.rowStatus === "suspended" ? (
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          setControlsFeedback(null);
+                          setReactivateOpen(true);
+                        }}
+                      >
+                        Reactivate user
+                      </Button>
+                    ) : null}
+                    {selectedRowGroup.rowStatus === "disabled" ? (
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          setControlsFeedback(null);
+                          setRestoreOpen(true);
+                        }}
+                      >
+                        Restore user access
+                      </Button>
+                    ) : null}
+                  </div>
+                ) : (
+                  <p className="text-[12px] text-muted-foreground">Account lifecycle changes are not available for this preview role.</p>
+                )}
               </Card>
 
               <Card className="space-y-3 border border-border p-6 shadow-sm">
@@ -533,22 +541,26 @@ export function PlatformVerifyMeUserDetail() {
                 <p className="text-[12px] leading-relaxed text-muted-foreground">
                   Starts a recovery reset for this account. Recovery secrets are never shown or stored in this portal.
                 </p>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    disabled={selectedRowGroup.rowStatus === "disabled"}
-                    onClick={() => {
-                      setControlsFeedback(null);
-                      setResetOpen(true);
-                    }}
-                  >
-                    Start recovery reset
-                  </Button>
-                  {selectedRowGroup.rowStatus === "disabled" ? (
-                    <span className="text-[12px] text-muted-foreground">Unavailable while the account is disabled.</span>
-                  ) : null}
-                </div>
+                {canMutateVerifymeUser ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={selectedRowGroup.rowStatus === "disabled"}
+                      onClick={() => {
+                        setControlsFeedback(null);
+                        setResetOpen(true);
+                      }}
+                    >
+                      Start recovery reset
+                    </Button>
+                    {selectedRowGroup.rowStatus === "disabled" ? (
+                      <span className="text-[12px] text-muted-foreground">Unavailable while the account is disabled.</span>
+                    ) : null}
+                  </div>
+                ) : (
+                  <p className="text-[12px] text-muted-foreground">Recovery controls are not available for this preview role.</p>
+                )}
               </Card>
 
               <Card className="space-y-3 border border-destructive/25 bg-destructive/5 p-6 shadow-sm">
@@ -560,18 +572,22 @@ export function PlatformVerifyMeUserDetail() {
                     Admin.
                   </p>
                 </div>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  disabled={selectedRowGroup.rowStatus === "disabled"}
-                  onClick={() => {
-                    setControlsFeedback(null);
-                    setDisableTyped("");
-                    setDisableOpen(true);
-                  }}
-                >
-                  Disable user
-                </Button>
+                {canMutateVerifymeUser ? (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    disabled={selectedRowGroup.rowStatus === "disabled"}
+                    onClick={() => {
+                      setControlsFeedback(null);
+                      setDisableTyped("");
+                      setDisableOpen(true);
+                    }}
+                  >
+                    Disable user
+                  </Button>
+                ) : (
+                  <p className="text-[12px] text-muted-foreground">Disable actions are not available for this preview role.</p>
+                )}
               </Card>
             </TabsContent>
           </Tabs>

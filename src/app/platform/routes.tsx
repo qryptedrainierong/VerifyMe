@@ -15,7 +15,12 @@ import { PlatformIdentityLinkDetail } from "./pages/PlatformIdentityLinkDetail";
 import { PlatformVerificationSessions } from "./pages/PlatformVerificationSessions";
 import { PlatformTeamAccess } from "./pages/PlatformTeamAccess";
 import { PlatformTeamMemberDetail } from "./pages/PlatformTeamMemberDetail";
+import { PlatformProfile } from "./pages/PlatformProfile";
+import { PlatformSecurity } from "./pages/PlatformSecurity";
+import { PlatformNotifications } from "./pages/PlatformNotifications";
+import { PlatformPreferences } from "./pages/PlatformPreferences";
 import { PortalNotFound } from "../shared/components/PortalNotFound";
+import { PlatformRouteGuard } from "./components/PlatformRouteGuard";
 
 // Lazy router creation to prevent HMR connection errors
 // Reset router on each call to ensure fresh state
@@ -26,28 +31,37 @@ export function getPlatformRouter() {
         path: "/",
         Component: PlatformLayout,
         children: [
-          { index: true, Component: PlatformDashboard },
           {
-            path: "organizations",
-            Component: PlatformOrganizations,
+            Component: PlatformRouteGuard,
+            children: [
+              { index: true, Component: PlatformDashboard },
+              {
+                path: "organizations",
+                Component: PlatformOrganizations,
+              },
+              {
+                path: "organizations/:id",
+                Component: PlatformOrganizationDetail,
+              },
+              { path: "verifyme-users", Component: PlatformUsers },
+              { path: "verifyme-users/:verifymeId", Component: PlatformVerifyMeUserDetail },
+              { path: "identity-links", Component: PlatformIdentityLinks },
+              { path: "identity-links/:identityLinkId", Component: PlatformIdentityLinkDetail },
+              { path: "verification-sessions", Component: PlatformVerificationSessions },
+              { path: "platform-team", Component: PlatformTeamAccess },
+              { path: "platform-team/:platformAdminId", Component: PlatformTeamMemberDetail },
+              { path: "client-apps", Component: PlatformClientApps },
+              { path: "client-apps/:clientAppId", Component: PlatformClientAppDetail },
+              { path: "billing", Component: PlatformBilling },
+              { path: "audit-logs", Component: PlatformAuditLogs },
+              { path: "settings", Component: PlatformSettings },
+              { path: "platform-profile", Component: PlatformProfile },
+              { path: "platform-security", Component: PlatformSecurity },
+              { path: "platform-notifications", Component: PlatformNotifications },
+              { path: "platform-preferences", Component: PlatformPreferences },
+              { path: "*", Component: PlatformNotFoundPage },
+            ],
           },
-          {
-            path: "organizations/:id",
-            Component: PlatformOrganizationDetail,
-          },
-          { path: "verifyme-users", Component: PlatformUsers },
-          { path: "verifyme-users/:verifymeId", Component: PlatformVerifyMeUserDetail },
-          { path: "identity-links", Component: PlatformIdentityLinks },
-          { path: "identity-links/:identityLinkId", Component: PlatformIdentityLinkDetail },
-          { path: "verification-sessions", Component: PlatformVerificationSessions },
-          { path: "platform-team", Component: PlatformTeamAccess },
-          { path: "platform-team/:platformAdminId", Component: PlatformTeamMemberDetail },
-          { path: "client-apps", Component: PlatformClientApps },
-          { path: "client-apps/:clientAppId", Component: PlatformClientAppDetail },
-          { path: "billing", Component: PlatformBilling },
-          { path: "audit-logs", Component: PlatformAuditLogs },
-          { path: "settings", Component: PlatformSettings },
-          { path: "*", Component: PlatformNotFoundPage },
         ],
       },
     ],

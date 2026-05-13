@@ -42,8 +42,13 @@ import { ScopedFilterBanner } from "../../shared/components/ScopedFilterBanner";
 import { SummaryStatCard } from "../../shared/components/SummaryStatCard";
 import { TableEmptyStateRow } from "../../shared/components/TableEmptyStateRow";
 import { AuditHintText } from "../../shared/components/AuditHintText";
+import { usePlatformRole } from "../context/PlatformRoleContext";
+import { canPerformPlatformAction } from "../utils/platformRolePermissions";
 
 export function PlatformBilling() {
+  const { role } = usePlatformRole();
+  const canManageBilling = canPerformPlatformAction(role, "manage_billing");
+  const canExportAudit = canPerformPlatformAction(role, "export_audit");
   const [searchParams, setSearchParams] = useSearchParams();
   const urlOrganizationId = searchParams.get("organizationId");
   const [searchQuery, setSearchQuery] = useState("");
@@ -236,11 +241,13 @@ export function PlatformBilling() {
         }
         headerActions={
           <>
-            <Button variant="outline">
-              <Download className="mr-2 h-4 w-4" />
-              Export Report
-            </Button>
-            <Button>Generate Invoices</Button>
+            {canExportAudit ? (
+              <Button variant="outline" type="button">
+                <Download className="mr-2 h-4 w-4" />
+                Export Report
+              </Button>
+            ) : null}
+            {canManageBilling ? <Button type="button">Generate Invoices</Button> : null}
           </>
         }
         bodyClassName="space-y-6"
@@ -521,22 +528,28 @@ export function PlatformBilling() {
                   Payment references and bank identifiers are not shown here.
                 </p>
               </div>
-              <div className="space-y-2 border-t border-border pt-4">
-                <p className="text-xs font-medium text-muted-foreground">Billing controls</p>
-                <div className="flex flex-wrap gap-2">
-                  <Button type="button" variant="outline" size="sm" onClick={() => setReminderConfirmOpen(true)}>
-                    Send payment reminder…
-                  </Button>
-                  <Button type="button" variant="outline" size="sm" onClick={() => setRefundConfirmOpen(true)}>
-                    Request refund…
-                  </Button>
-                  {selectedInvoice.status === "dispute_review" ? (
-                    <Button type="button" variant="secondary" size="sm" onClick={() => setReviewedConfirmOpen(true)}>
-                      Mark reviewed…
+              {canManageBilling ? (
+                <div className="space-y-2 border-t border-border pt-4">
+                  <p className="text-xs font-medium text-muted-foreground">Billing controls</p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" variant="outline" size="sm" onClick={() => setReminderConfirmOpen(true)}>
+                      Send payment reminder…
                     </Button>
-                  ) : null}
+                    <Button type="button" variant="outline" size="sm" onClick={() => setRefundConfirmOpen(true)}>
+                      Request refund…
+                    </Button>
+                    {selectedInvoice.status === "dispute_review" ? (
+                      <Button type="button" variant="secondary" size="sm" onClick={() => setReviewedConfirmOpen(true)}>
+                        Mark reviewed…
+                      </Button>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <p className="text-xs text-muted-foreground border-t border-border pt-4">
+                  Billing actions are not available for this preview role.
+                </p>
+              )}
             </div>
           ) : null}
           <DialogFooter className="shrink-0 border-t border-border px-0 pt-4">

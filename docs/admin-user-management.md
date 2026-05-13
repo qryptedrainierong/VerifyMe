@@ -17,7 +17,17 @@ Internal Qrypted / VerifyMe staff operating the **VerifyMe Admin Portal**:
 | **Finance / Billing** | **Credit** wallets, pricing, invoices, top-ups. |
 | **Compliance / Auditor** | Read-heavy access to audit trails, **verification session** metadata, export for regulators. |
 
+The VerifyMe Admin SPA also ships a **Preview role** control (top bar). It persists in browser `localStorage` (`verifyme_platform_role`) and changes what operators **see** in the shell: permitted sidebar sections only, role-scoped dashboard content, hidden or disabled controls when an action is not allowed for that role, and a dedicated access-denied screen when a URL is not permitted for the preview role (without rendering the real page behind it). **None of this is proof of identity or server-side authorization** — **UI filtering is not a security boundary.** Wire real roles from your IdP and enforce RBAC on every API in production.
+
 **Suspend vs disable:** Roles permitted by policy may **suspend** an organization. **Only Super Admin** may **permanently disable or archive** an organization.
+
+### Platform operator account (VerifyMe Admin shell)
+
+Staff using the VerifyMe Admin Portal also have an **operator account** workspace in the UI: profile, security, notification center, and preferences (`/platform-profile`, `/platform-security`, `/platform-notifications`, `/platform-preferences`). This is **only** for **platform administrators** (Qrypted / VerifyMe staff), not **VerifyMe Users** and not **Organization Admin** users.
+
+- In this repository, identity is **not** wired to an IdP: **Sign out** is disabled with copy that **backend authentication** is required.
+- Preferences, notification read state, and “session revoked” markers are **browser-local** until backend persistence and audit exist.
+- **Compliance / Auditor** preview role: credential-changing actions (e.g. MFA reset, password reset request) are disabled in the security UI; notification preferences and read-only review remain available where implemented (`canPerformOperatorSecurityAction` in `platformRolePermissions.ts`).
 
 ## Organization Admin Portal — tenant roles
 
