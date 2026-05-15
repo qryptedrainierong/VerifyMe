@@ -1,9 +1,10 @@
-import { Download, Filter, Search, TrendingUp } from "lucide-react";
+import { Download, Search } from "lucide-react";
 import { useMemo, useState } from "react";
-import { useSearchParams } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { Card } from "../../shared/components/ui/card";
 import { Button } from "../../shared/components/ui/button";
 import { Input } from "../../shared/components/ui/input";
+import { Badge } from "../../shared/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -32,8 +33,14 @@ import {
 import { UnifiedBadge } from "../../shared/components/UnifiedBadge";
 import { buildInitialOrganizations, getVerificationSpend } from "../data/platformOrganizationsSample";
 import {
+  buildBillingActionRequiredRows,
+  buildRecentBillingActivityRows,
+  computeBillingSnapshotMetrics,
   getPlatformBillingInvoices,
   sortInvoicesForDisplay,
+  type BillingActionRequiredRow,
+  type BillingActionSeverity,
+  type BillingActionStatus,
   type PlatformBillingInvoiceRow,
 } from "../data/platformBillingInvoicesMock";
 import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
@@ -42,11 +49,87 @@ import { ScopedFilterBanner } from "../../shared/components/ScopedFilterBanner";
 import { SummaryStatCard } from "../../shared/components/SummaryStatCard";
 import { TableEmptyStateRow } from "../../shared/components/TableEmptyStateRow";
 import { AuditHintText } from "../../shared/components/AuditHintText";
+import { cn } from "../../shared/components/ui/utils";
 import { usePlatformRole } from "../context/PlatformRoleContext";
-import { canPerformPlatformAction } from "../utils/platformRolePermissions";
+import { canPerformPlatformAction, isReadOnlyPreviewRole } from "../utils/platformRolePermissions";
+
+const INVOICES_PER_PAGE = 10;
+
+function formatCurrency(amount: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+function formatDate(dateString: string) {
+  return new Date(dateString).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function formatDateTime(iso: string) {
+  return new Date(iso).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "UTC",
+  });
+}
+
+function billingStatusLabel(invoice: PlatformBillingInvoiceRow) {
+  const map: Record<PlatformBillingInvoiceRow["status"], string> = {
+    paid: "Paid",
+    current: "Current",
+    pending: "Payment pending",
+    overdue: "Invoice overdue",
+    failed: "Failed payment",
+    refund_requested: "Refund requested",
+    dispute_review: "Dispute under review",
+  };
+  return map[invoice.status];
+}
+
+function actionStatusBadgeClass(status: BillingActionStatus) {
+  switch (status) {
+    case "Failed":
+      return "border-red-200 bg-red-50 text-red-800 dark:border-red-900/50 dark:bg-red-950/45 dark:text-red-200";
+    case "Overdue":
+      return "border-orange-200 bg-orange-50 text-orange-900 dark:border-orange-900/45 dark:bg-orange-950/35 dark:text-orange-100";
+    case "Pending":
+      return "border-amber-200 bg-amber-50 text-amber-950 dark:border-amber-900/45 dark:bg-amber-950/35 dark:text-amber-100";
+    case "Refund":
+      return "border-sky-200 bg-sky-50 text-sky-900 dark:border-sky-900/45 dark:bg-sky-950/35 dark:text-sky-100";
+    case "Dispute":
+      return "border-violet-200 bg-violet-50 text-violet-900 dark:border-violet-900/45 dark:bg-violet-950/35 dark:text-violet-100";
+    case "Overage":
+      return "border-fuchsia-200 bg-fuchsia-50 text-fuchsia-900 dark:border-fuchsia-900/45 dark:bg-fuchsia-950/35 dark:text-fuchsia-100";
+    default:
+      return "border-border bg-muted text-foreground";
+  }
+}
+
+function severityBadgeClass(severity: BillingActionSeverity) {
+  switch (severity) {
+    case "Critical":
+      return "border-red-400/80 bg-red-50 font-semibold text-red-900 dark:border-red-900/60 dark:bg-red-950/45 dark:text-red-100";
+    case "High":
+      return "border-orange-300/80 bg-orange-50 text-orange-950 dark:bg-orange-950/35 dark:text-orange-50";
+    case "Medium":
+      return "border-amber-200 bg-amber-50 text-amber-950 dark:bg-amber-950/35 dark:text-amber-100";
+  }
+  return "border-border bg-muted text-muted-foreground";
+}
 
 export function PlatformBilling() {
   const { role } = usePlatformRole();
+  const isComplianceReadOnly = isReadOnlyPreviewRole(role);
   const canManageBilling = canPerformPlatformAction(role, "manage_billing");
   const canExportAudit = canPerformPlatformAction(role, "export_audit");
   const [searchParams, setSearchParams] = useSearchParams();
@@ -54,48 +137,19 @@ export function PlatformBilling() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedInvoice, setSelectedInvoice] = useState<PlatformBillingInvoiceRow | null>(null);
   const [invoiceListMode, setInvoiceListMode] = useState<"action" | "all">("action");
+  const [invoicePage, setInvoicePage] = useState(1);
   const [refundConfirmOpen, setRefundConfirmOpen] = useState(false);
   const [reminderConfirmOpen, setReminderConfirmOpen] = useState(false);
   const [reviewedConfirmOpen, setReviewedConfirmOpen] = useState(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
+
   const organizations = useMemo(() => buildInitialOrganizations(), []);
   const knownOrgIds = useMemo(() => new Set(organizations.map((organization) => organization.id)), [organizations]);
-  // Handoff note: URL organization scope is intentional cross-page continuity from organization detail links.
-  // Unknown ids are surfaced in UI but do not force invalid dataset filtering.
   const effectiveOrganizationId = urlOrganizationId && knownOrgIds.has(urlOrganizationId) ? urlOrganizationId : null;
   const scopedOrganizations = useMemo(
     () => (effectiveOrganizationId ? organizations.filter((organization) => organization.id === effectiveOrganizationId) : organizations),
     [organizations, effectiveOrganizationId],
   );
-  const monthlyVerificationSpend = scopedOrganizations.reduce((sum, org) => sum + getVerificationSpend(org), 0);
-  const activeOrganizations = scopedOrganizations.length;
-
-  const plans = [
-    {
-      name: "Enterprise",
-      organizations: scopedOrganizations.filter((org) => org.plan === "Enterprise").length,
-      monthlySpend: scopedOrganizations
-        .filter((org) => org.plan === "Enterprise")
-        .reduce((sum, org) => sum + getVerificationSpend(org), 0),
-      growth: 18.5,
-    },
-    {
-      name: "Professional",
-      organizations: scopedOrganizations.filter((org) => org.plan === "Professional").length,
-      monthlySpend: scopedOrganizations
-        .filter((org) => org.plan === "Professional")
-        .reduce((sum, org) => sum + getVerificationSpend(org), 0),
-      growth: 12.3,
-    },
-    {
-      name: "Starter",
-      organizations: scopedOrganizations.filter((org) => org.plan === "Starter").length,
-      monthlySpend: scopedOrganizations
-        .filter((org) => org.plan === "Starter")
-        .reduce((sum, org) => sum + getVerificationSpend(org), 0),
-      growth: 8.7,
-    },
-  ];
 
   const invoiceSource = useMemo(() => getPlatformBillingInvoices(), []);
   const scopedInvoiceSource = useMemo(
@@ -104,115 +158,74 @@ export function PlatformBilling() {
   );
   const sortedInvoices = useMemo(() => sortInvoicesForDisplay(scopedInvoiceSource), [scopedInvoiceSource]);
 
+  const creditOverageOrganizations = useMemo(
+    () =>
+      scopedOrganizations
+        .filter((organization) => getVerificationSpend(organization) > organization.creditBalance)
+        .map((organization) => ({
+          id: organization.id,
+          organizationName: organization.organizationName,
+          amount: getVerificationSpend(organization) - organization.creditBalance,
+          lastUpdated: organization.sessionUpdatedAt ?? `${organization.created}T12:00:00Z`,
+        })),
+    [scopedOrganizations],
+  );
+
+  const monthlyVerificationSpend = scopedOrganizations.reduce((sum, organization) => sum + getVerificationSpend(organization), 0);
+
+  const snapshot = useMemo(
+    () =>
+      computeBillingSnapshotMetrics(
+        scopedInvoiceSource,
+        monthlyVerificationSpend,
+        creditOverageOrganizations.length,
+      ),
+    [scopedInvoiceSource, monthlyVerificationSpend, creditOverageOrganizations.length],
+  );
+
+  const actionRequiredRows = useMemo(
+    () => buildBillingActionRequiredRows(scopedInvoiceSource, creditOverageOrganizations),
+    [scopedInvoiceSource, creditOverageOrganizations],
+  );
+
+  const recentBillingActivity = useMemo(() => buildRecentBillingActivityRows(scopedInvoiceSource, 5), [scopedInvoiceSource]);
+
   const filteredInvoices = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    return sortedInvoices.filter((inv) => {
-      if (invoiceListMode === "action" && !inv.actionRequired) return false;
+    return sortedInvoices.filter((invoice) => {
+      if (invoiceListMode === "action" && !invoice.actionRequired) return false;
       if (q.length === 0) return true;
       return (
-        inv.id.toLowerCase().includes(q) ||
-        inv.organization.toLowerCase().includes(q) ||
-        inv.organizationId.toLowerCase().includes(q) ||
-        inv.periodLabel.toLowerCase().includes(q)
+        invoice.id.toLowerCase().includes(q) ||
+        invoice.organization.toLowerCase().includes(q) ||
+        invoice.organizationId.toLowerCase().includes(q) ||
+        invoice.periodLabel.toLowerCase().includes(q)
       );
     });
   }, [sortedInvoices, searchQuery, invoiceListMode]);
 
-  const billingAlerts = scopedInvoiceSource
-    .filter(
-      (invoice) =>
-        invoice.actionRequired ||
-        invoice.status === "failed" ||
-        invoice.status === "overdue" ||
-        invoice.status === "pending",
-    )
-    .slice(0, 8)
-    .map((invoice, index) => ({
-      id: index + 1,
-      type: invoice.status,
-      organization: invoice.organization,
-      message:
-        invoice.status === "failed"
-          ? "Payment failed — retry or contact billing"
-          : invoice.status === "overdue"
-            ? "Invoice overdue"
-            : invoice.status === "refund_requested"
-              ? "Refund requested"
-              : invoice.status === "dispute_review"
-                ? "Dispute under review"
-                : "Pending payment",
-      amount: invoice.amount,
-      severity: invoice.status === "failed" ? "critical" : invoice.status === "overdue" ? "high" : "medium",
-      time: `${index + 1} hour${index === 0 ? "" : "s"} ago`,
-    }));
+  const totalInvoicePages = Math.max(1, Math.ceil(filteredInvoices.length / INVOICES_PER_PAGE));
+  const safeInvoicePage = Math.min(invoicePage, totalInvoicePages);
+  const invoiceStartIndex = (safeInvoicePage - 1) * INVOICES_PER_PAGE;
+  const invoiceEndIndex = Math.min(invoiceStartIndex + INVOICES_PER_PAGE, filteredInvoices.length);
+  const visibleInvoices = filteredInvoices.slice(invoiceStartIndex, invoiceEndIndex);
 
-  const recentBillingActivity = sortInvoicesForDisplay(scopedInvoiceSource)
-    .slice(0, 6)
-    .map((invoice, index) => ({
-      id: invoice.id,
-      action:
-        invoice.status === "paid"
-          ? "Invoice paid"
-          : invoice.status === "pending"
-            ? "Invoice issued"
-            : invoice.status === "overdue"
-              ? "Payment reminder"
-              : invoice.status === "failed"
-                ? "Payment retry"
-                : "Billing update",
-      organization: invoice.organization,
-      amount: invoice.amount,
-      time: `${10 + index * 15} min ago`,
-    }));
-  const failedPayments = scopedInvoiceSource.filter((invoice) => invoice.status === "failed").length;
-  const overdueInvoices = scopedInvoiceSource.filter((invoice) => invoice.status === "overdue").length;
-  const overdueValue = scopedInvoiceSource
-    .filter((invoice) => invoice.status === "overdue")
-    .reduce((sum, invoice) => sum + invoice.amount, 0);
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
+  const openInvoiceById = (invoiceId?: string) => {
+    if (!invoiceId) return;
+    const invoice = scopedInvoiceSource.find((row) => row.id === invoiceId);
+    if (invoice) setSelectedInvoice(invoice);
   };
 
-  const formatNumber = (num: number) => {
-    return new Intl.NumberFormat("en-US").format(num);
+  const openActionRow = (row: BillingActionRequiredRow) => {
+    if (row.invoiceId) {
+      openInvoiceById(row.invoiceId);
+      return;
+    }
+    const invoice = scopedInvoiceSource.find((item) => item.organizationId === row.organizationId);
+    if (invoice) setSelectedInvoice(invoice);
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
-
-  const billingStatusLabel = (invoice: PlatformBillingInvoiceRow) => {
-    const m: Record<PlatformBillingInvoiceRow["status"], string> = {
-      paid: "Paid",
-      current: "Current",
-      pending: "Pending",
-      overdue: "Overdue",
-      failed: "Failed",
-      refund_requested: "Refund requested",
-      dispute_review: "Dispute review",
-    };
-    return m[invoice.status];
-  };
-
-  const formatDateTime = (iso: string) =>
-    new Date(iso).toLocaleString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      timeZone: "UTC",
-    });
+  const actionLabel = (primary: string, readOnly: string) => (isComplianceReadOnly ? readOnly : primary);
 
   return (
     <>
@@ -240,255 +253,315 @@ export function PlatformBilling() {
           ) : null
         }
         headerActions={
-          <>
+          <div className="flex items-center gap-2">
             {canExportAudit ? (
-              <Button variant="outline" type="button">
-                <Download className="mr-2 h-4 w-4" />
+              <Button variant="outline" size="sm" type="button" className="h-8 text-xs">
+                <Download className="mr-1.5 h-3.5 w-3.5" />
                 Export Report
               </Button>
             ) : null}
-            {canManageBilling ? <Button type="button">Generate Invoices</Button> : null}
-          </>
-        }
-        bodyClassName="space-y-6"
-      >
-      {actionMessage ? (
-        <div className="rounded-md border border-green-500/40 bg-green-500/10 px-4 py-2 text-sm text-green-700 dark:text-green-300">
-          {actionMessage}
-        </div>
-      ) : null}
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <SummaryStatCard label="Monthly verification spend" value={formatCurrency(monthlyVerificationSpend)} />
-        <SummaryStatCard label="Active organizations" value={formatNumber(activeOrganizations)} />
-        <SummaryStatCard label="Failed payments" value={failedPayments} />
-        <SummaryStatCard
-          label="Overdue invoices"
-          value={overdueInvoices}
-          hint={`Outstanding ${formatCurrency(overdueValue)}`}
-        />
-      </div>
-
-      {/* Invoices Table */}
-      <Card className="border border-border shadow-sm">
-        <div className="border-b border-border p-6">
-          <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <h3 className="text-[15px] font-semibold text-foreground">Invoices</h3>
-              <p className="text-[13px] text-muted-foreground">
-                Start with invoices that require action; open a row for reminders, refunds, or dispute review.
-              </p>
-            </div>
-            <Select
-              value={invoiceListMode}
-              onValueChange={(v) => setInvoiceListMode(v as "action" | "all")}
-            >
-              <SelectTrigger className="h-10 w-[200px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="action">Requires action</SelectItem>
-                <SelectItem value="all">All invoices</SelectItem>
-              </SelectContent>
-            </Select>
+            {canManageBilling ? (
+              <Button size="sm" type="button" className="h-8 text-xs">
+                Generate Invoices
+              </Button>
+            ) : null}
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative min-w-[200px] max-w-md flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search invoice id, organization, period…"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-10 max-w-md bg-background pl-10"
-              />
-            </div>
-            <Button
+        }
+        bodyClassName="space-y-4 px-5 pb-5 pt-3 sm:px-7"
+      >
+        {actionMessage ? (
+          <div className="rounded-md border border-green-500/40 bg-green-500/10 px-3 py-2 text-xs text-green-700 dark:text-green-300">
+            {actionMessage}
+          </div>
+        ) : null}
+
+        <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-5">
+          <SummaryStatCard
+            className="p-3 shadow-none"
+            label="Outstanding amount"
+            value={formatCurrency(snapshot.outstandingAmount)}
+          />
+          <SummaryStatCard
+            className="p-3 shadow-none"
+            label="Overdue invoices"
+            value={snapshot.overdueInvoices}
+          />
+          <SummaryStatCard
+            className="p-3 shadow-none"
+            label="Failed payments"
+            value={snapshot.failedPayments}
+          />
+          <SummaryStatCard
+            className="p-3 shadow-none"
+            label="Credit overage organizations"
+            value={snapshot.creditOverageOrganizations}
+          />
+          <SummaryStatCard
+            className="p-3 shadow-none"
+            label="Monthly billable verification spend"
+            value={formatCurrency(snapshot.monthlyBillableVerificationSpend)}
+          />
+        </div>
+
+        <Card className="overflow-hidden border border-border/70 shadow-none">
+          <div className="border-b border-border/60 px-3 py-2.5">
+            <h3 className="text-sm font-semibold text-foreground">Action Required</h3>
+            <p className="text-[11px] text-muted-foreground">Invoices and credit issues requiring follow-up.</p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] text-[12px]">
+              <thead className="border-b border-border/60 bg-muted/25">
+                <tr>
+                  <th className="px-2.5 py-1.5 text-left text-[10px] font-medium text-muted-foreground">Organization</th>
+                  <th className="px-2.5 py-1.5 text-left text-[10px] font-medium text-muted-foreground">Issue</th>
+                  <th className="px-2.5 py-1.5 text-left text-[10px] font-medium text-muted-foreground">Amount</th>
+                  <th className="px-2.5 py-1.5 text-left text-[10px] font-medium text-muted-foreground">Status</th>
+                  <th className="px-2.5 py-1.5 text-left text-[10px] font-medium text-muted-foreground">Age</th>
+                  <th className="px-2.5 py-1.5 text-right text-[10px] font-medium text-muted-foreground">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/40">
+                {actionRequiredRows.length === 0 ? (
+                  <TableEmptyStateRow colSpan={6} title="No billing items match the current filters." className="py-6" />
+                ) : null}
+                {actionRequiredRows.map((row) => (
+                  <tr key={row.id} className="transition-colors hover:bg-muted/30">
+                    <td className="px-2.5 py-1.5 align-middle">
+                      <p className="font-medium text-foreground">{row.organization}</p>
+                    </td>
+                    <td className="px-2.5 py-1.5 align-middle text-muted-foreground">{row.issue}</td>
+                    <td className="px-2.5 py-1.5 align-middle tabular-nums font-medium text-foreground">
+                      {formatCurrency(row.amount)}
+                    </td>
+                    <td className="px-2.5 py-1.5 align-middle">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <Badge variant="outline" className={cn("h-5 px-1.5 text-[10px] font-medium", actionStatusBadgeClass(row.status))}>
+                          {row.status}
+                        </Badge>
+                        <Badge variant="outline" className={cn("h-5 px-1.5 text-[10px] font-medium", severityBadgeClass(row.severity))}>
+                          {row.severity}
+                        </Badge>
+                      </div>
+                    </td>
+                    <td className="px-2.5 py-1.5 align-middle tabular-nums text-[11px] text-muted-foreground">{row.age}</td>
+                    <td className="px-2.5 py-1.5 align-middle text-right">
+                      <div className="flex flex-wrap items-center justify-end gap-1.5">
+                        {row.invoiceId ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-[11px]"
+                            onClick={() => openInvoiceById(row.invoiceId)}
+                          >
+                            {actionLabel("Open invoice", "View invoice")}
+                          </Button>
+                        ) : null}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-[11px]"
+                          onClick={() => openActionRow(row)}
+                        >
+                          {actionLabel("Review billing", "Review history")}
+                        </Button>
+                        <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-[11px]" asChild>
+                          <Link to={`/organizations/${encodeURIComponent(row.organizationId)}`}>
+                            {actionLabel("View organization", "View organization")}
+                          </Link>
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="border-t border-border/60 px-3 py-2">
+            <button
               type="button"
-              variant="outline"
-              size="icon"
-              className="h-10 w-10 shrink-0"
-              aria-label="Clear filters"
+              className="text-[11px] font-medium text-muted-foreground underline-offset-2 transition-colors hover:text-primary hover:underline"
               onClick={() => {
-                setSearchQuery("");
-                setInvoiceListMode("action");
+                setInvoiceListMode("all");
+                setInvoicePage(1);
               }}
             >
-              <Filter className="h-4 w-4" />
-            </Button>
+              View all billing activity →
+            </button>
           </div>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[1000px]">
-            <thead className="border-b border-border bg-accent/5">
-              <tr>
-                <th className="p-4 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Invoice ID</th>
-                <th className="p-4 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Organization</th>
-                <th className="p-4 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Period</th>
-                <th className="p-4 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Amount</th>
-                <th className="p-4 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Status</th>
-                <th className="p-4 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Action required</th>
-                <th className="p-4 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Issued</th>
-                <th className="p-4 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Due</th>
-                <th className="p-4 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Last updated</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {filteredInvoices.length === 0 ? (
-                <TableEmptyStateRow colSpan={9} title="No invoices match current filters." className="p-8" />
-              ) : null}
-              {filteredInvoices.map((invoice) => (
-                <tr
-                  key={invoice.id}
-                  className="cursor-pointer transition-colors hover:bg-accent/10"
-                  onClick={(e) => {
-                    if (shouldIgnoreRowOpenClick(e.target)) return;
-                    setSelectedInvoice(invoice);
-                  }}
-                >
-                  <td className="p-4">
-                    <p className="font-mono text-[14px] text-foreground">{invoice.id}</p>
-                  </td>
-                  <td className="p-4">
-                    <p className="text-[14px] text-foreground">{invoice.organization}</p>
-                  </td>
-                  <td className="p-4 text-[14px] text-muted-foreground">{invoice.periodLabel}</td>
-                  <td className="p-4">
-                    <p className="text-[14px] font-semibold text-foreground">{formatCurrency(invoice.amount)}</p>
-                  </td>
-                  <td className="p-4">
-                    <UnifiedBadge variant="billing" value={billingStatusLabel(invoice)} />
-                  </td>
-                  <td className="p-4">
-                    {invoice.actionRequired ? (
-                      <UnifiedBadge variant="status" value="Yes" />
-                    ) : (
-                      <span className="text-[13px] text-muted-foreground">No</span>
-                    )}
-                  </td>
-                  <td className="p-4 text-[14px] text-foreground">{formatDate(invoice.issuedDate)}</td>
-                  <td className="p-4 text-[14px] text-foreground">{formatDate(invoice.dueDate)}</td>
-                  <td className="p-4 text-[12px] text-muted-foreground">{formatDateTime(invoice.lastUpdated)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+        </Card>
 
-      {/* Plans Overview */}
-      <Card className="border border-border shadow-sm">
-        <div className="p-6 border-b border-border">
-          <h3 className="text-[15px] font-semibold text-foreground">Plans Overview</h3>
-          <p className="text-[13px] text-muted-foreground">Monthly verification spend by plan tier</p>
-        </div>
-        <div className="p-6">
-          <div className="grid grid-cols-3 gap-6">
-            {plans.map((plan) => (
-              <div key={plan.name} className="p-5 border border-border rounded-lg">
-                <div className="flex items-start justify-between mb-4">
-                  <h4 className="text-[15px] font-semibold text-foreground">{plan.name}</h4>
-                  <span className="text-[12px] text-green-600 font-medium flex items-center gap-1">
-                    <TrendingUp className="w-3 h-3" />
-                    +{plan.growth}%
-                  </span>
-                </div>
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-[12px] text-muted-foreground mb-1">Organizations</p>
-                    <p className="text-[22px] font-semibold text-foreground">
-                      {formatNumber(plan.organizations)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[12px] text-muted-foreground mb-1">Monthly spend</p>
-                    <p className="text-[22px] font-semibold text-foreground">
-                      {formatCurrency(plan.monthlySpend)}
-                    </p>
-                  </div>
-                </div>
+        <Card className="overflow-hidden border border-border/70 shadow-none">
+          <div className="border-b border-border/60 px-3 py-2.5">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">Invoices</h3>
+                <p className="text-[11px] text-muted-foreground">
+                  Operational invoice queue with payment standing and follow-up state.
+                </p>
               </div>
-            ))}
-          </div>
-        </div>
-      </Card>
-
-      {/* Recent Billing Activity */}
-      <Card className="border border-border shadow-sm">
-        <div className="p-6 border-b border-border">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-[15px] font-semibold text-foreground">Recent Billing Activity</h3>
-              <p className="text-[13px] text-muted-foreground">Latest billing timeline events</p>
+              <Select
+                value={invoiceListMode}
+                onValueChange={(value) => {
+                  setInvoiceListMode(value as "action" | "all");
+                  setInvoicePage(1);
+                }}
+              >
+                <SelectTrigger className="h-8 w-[11.5rem] text-[12px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="action">Action required</SelectItem>
+                  <SelectItem value="all">All invoices</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <Button variant="outline" size="sm">View Timeline</Button>
-          </div>
-        </div>
-        <div className="divide-y divide-border">
-          {recentBillingActivity.map((item) => (
-            <div key={item.id} className="p-5 flex items-center gap-4 hover:bg-accent/5 transition-colors">
-              <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-              <div className="flex-1 grid grid-cols-3 gap-4 items-center">
-                <p className="text-[13px] font-medium text-foreground">{item.action}</p>
-                <p className="text-[13px] text-foreground">{item.organization}</p>
-                <div className="flex items-center justify-between">
-                  <p className="text-[12px] text-muted-foreground">{formatCurrency(item.amount)}</p>
-                  <p className="text-[12px] text-muted-foreground">{item.time}</p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      {/* Billing Alerts */}
-      <Card className="border border-border shadow-sm">
-        <div className="p-6 border-b border-border">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-[15px] font-semibold text-foreground">Billing Alerts</h3>
-              <p className="text-[13px] text-muted-foreground">Issues requiring attention</p>
-            </div>
-            <Button variant="outline" size="sm">View All</Button>
-          </div>
-        </div>
-        <div className="divide-y divide-border">
-          {billingAlerts.map((alert) => (
-            <div key={alert.id} className="p-5 flex items-start gap-4 hover:bg-accent/5 transition-colors">
-              <div
-                className={`w-2 h-2 rounded-full mt-2 ${
-                  alert.severity === "critical"
-                    ? "bg-red-500"
-                    : alert.severity === "high"
-                    ? "bg-orange-500"
-                    : "bg-yellow-500"
-                }`}
+            <div className="relative mt-2 max-w-sm">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/70" />
+              <Input
+                placeholder="Search invoice, organization, period…"
+                value={searchQuery}
+                onChange={(event) => {
+                  setSearchQuery(event.target.value);
+                  setInvoicePage(1);
+                }}
+                className="h-8 border-border/70 bg-background/80 py-0 pl-8 text-[12px] shadow-none"
               />
-              <div className="flex-1">
-                <div className="flex items-start justify-between gap-4 mb-1">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <p className="text-[14px] font-medium text-foreground">{alert.organization}</p>
-                      <span className="text-[12px] text-muted-foreground">•</span>
-                      <p className="text-[14px] font-medium text-foreground">
-                        {formatCurrency(alert.amount)}
-                      </p>
-                    </div>
-                    <p className="text-[13px] text-muted-foreground">{alert.message}</p>
-                  </div>
-                  <span className="text-[12px] text-muted-foreground whitespace-nowrap">
-                    {alert.time}
-                  </span>
-                </div>
-              </div>
             </div>
-          ))}
-        </div>
-      </Card>
-    </PortalPageFrame>
+          </div>
 
-      <Dialog open={selectedInvoice !== null} onOpenChange={(o) => !o && setSelectedInvoice(null)}>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 px-3 py-2">
+            <p className="text-[11px] tabular-nums text-muted-foreground">
+              {filteredInvoices.length === 0
+                ? "No matching invoices"
+                : `${invoiceStartIndex + 1}–${invoiceEndIndex} of ${filteredInvoices.length}`}
+            </p>
+            <div className="flex items-center gap-1.5">
+              <Button
+                variant="ghost"
+                size="sm"
+                type="button"
+                className="h-7 px-2 text-xs"
+                disabled={safeInvoicePage === 1}
+                onClick={() => setInvoicePage((page) => Math.max(1, page - 1))}
+              >
+                Previous
+              </Button>
+              <span className="px-1 text-[11px] tabular-nums text-muted-foreground">
+                {safeInvoicePage} / {totalInvoicePages}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                type="button"
+                className="h-7 px-2 text-xs"
+                disabled={safeInvoicePage === totalInvoicePages || filteredInvoices.length === 0}
+                onClick={() => setInvoicePage((page) => Math.min(totalInvoicePages, page + 1))}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[920px] text-[12px]">
+              <thead className="border-b border-border/60 bg-muted/25">
+                <tr>
+                  <th className="px-2.5 py-1.5 text-left text-[10px] font-medium text-muted-foreground">Invoice</th>
+                  <th className="px-2.5 py-1.5 text-left text-[10px] font-medium text-muted-foreground">Organization</th>
+                  <th className="px-2.5 py-1.5 text-left text-[10px] font-medium text-muted-foreground">Amount</th>
+                  <th className="px-2.5 py-1.5 text-left text-[10px] font-medium text-muted-foreground">Status</th>
+                  <th className="px-2.5 py-1.5 text-left text-[10px] font-medium text-muted-foreground">Due date</th>
+                  <th className="px-2.5 py-1.5 text-left text-[10px] font-medium text-muted-foreground">Action required</th>
+                  <th className="px-2.5 py-1.5 text-right text-[10px] font-medium text-muted-foreground">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/40">
+                {visibleInvoices.length === 0 ? (
+                  <TableEmptyStateRow colSpan={7} title="No billing items match the current filters." className="py-6" />
+                ) : null}
+                {visibleInvoices.map((invoice) => (
+                  <tr
+                    key={invoice.id}
+                    className="cursor-pointer transition-colors hover:bg-muted/30"
+                    onClick={(event) => {
+                      if (shouldIgnoreRowOpenClick(event.target)) return;
+                      setSelectedInvoice(invoice);
+                    }}
+                  >
+                    <td className="px-2.5 py-1.5 align-middle font-mono text-[11px] text-foreground">{invoice.id}</td>
+                    <td className="px-2.5 py-1.5 align-middle text-foreground">{invoice.organization}</td>
+                    <td className="px-2.5 py-1.5 align-middle tabular-nums font-medium text-foreground">
+                      {formatCurrency(invoice.amount)}
+                    </td>
+                    <td className="px-2.5 py-1.5 align-middle">
+                      <UnifiedBadge variant="billing" value={billingStatusLabel(invoice)} size="sm" />
+                    </td>
+                    <td className="px-2.5 py-1.5 align-middle text-muted-foreground">{formatDate(invoice.dueDate)}</td>
+                    <td className="px-2.5 py-1.5 align-middle">
+                      {invoice.actionRequired ? (
+                        <Badge variant="outline" className="h-5 border-amber-200 bg-amber-50 px-1.5 text-[10px] font-medium text-amber-950">
+                          Action required
+                        </Badge>
+                      ) : (
+                        <span className="text-[11px] text-muted-foreground">No</span>
+                      )}
+                    </td>
+                    <td className="px-2.5 py-1.5 align-middle text-right">
+                      <button
+                        type="button"
+                        className="text-[10px] font-medium text-muted-foreground underline-offset-2 transition-colors hover:text-primary hover:underline"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setSelectedInvoice(invoice);
+                        }}
+                      >
+                        {actionLabel("Open invoice", "View details")}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+
+        <Card className="overflow-hidden border border-border/70 shadow-none">
+          <div className="border-b border-border/60 px-3 py-2.5">
+            <h3 className="text-sm font-semibold text-foreground">Recent billing activity</h3>
+            <p className="text-[11px] text-muted-foreground">Latest payment and invoice events.</p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px] text-[12px]">
+              <thead className="border-b border-border/60 bg-muted/25">
+                <tr>
+                  <th className="px-2.5 py-1.5 text-left text-[10px] font-medium text-muted-foreground">Event</th>
+                  <th className="px-2.5 py-1.5 text-left text-[10px] font-medium text-muted-foreground">Organization</th>
+                  <th className="px-2.5 py-1.5 text-left text-[10px] font-medium text-muted-foreground">Amount</th>
+                  <th className="px-2.5 py-1.5 text-right text-[10px] font-medium text-muted-foreground">Time</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/40">
+                {recentBillingActivity.map((item) => (
+                  <tr key={item.id} className="transition-colors hover:bg-muted/30">
+                    <td className="px-2.5 py-1.5 align-middle font-medium text-foreground">{item.event}</td>
+                    <td className="px-2.5 py-1.5 align-middle text-foreground">{item.organization}</td>
+                    <td className="px-2.5 py-1.5 align-middle tabular-nums text-muted-foreground">{formatCurrency(item.amount)}</td>
+                    <td className="px-2.5 py-1.5 align-middle text-right tabular-nums text-[11px] text-muted-foreground">
+                      {item.time}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      </PortalPageFrame>
+
+      <Dialog open={selectedInvoice !== null} onOpenChange={(open) => !open && setSelectedInvoice(null)}>
         <DialogContent className="flex max-h-[min(90vh,880px)] flex-col gap-0 overflow-hidden sm:max-w-3xl">
-          <DialogHeader className="shrink-0 space-y-1 border-b border-border pb-4 text-left">
+          <DialogHeader className="shrink-0 space-y-1 border-b border-border pb-3 text-left">
             <DialogTitle>{selectedInvoice?.id ?? "Invoice"}</DialogTitle>
             <DialogDescription>
               {selectedInvoice
@@ -498,61 +571,86 @@ export function PlatformBilling() {
           </DialogHeader>
           {selectedInvoice ? (
             <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-1 py-4 text-sm">
-              <div className="rounded-lg border border-border bg-muted/20 p-3">
+              <section className="rounded-md border border-border/70 bg-muted/15 p-3">
                 <p className="text-xs font-medium text-muted-foreground">Summary</p>
-                <div className="mt-2">
-                  <UnifiedBadge variant="billing" value={billingStatusLabel(selectedInvoice)} />
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <UnifiedBadge variant="billing" value={billingStatusLabel(selectedInvoice)} size="sm" />
+                  {selectedInvoice.actionRequired ? (
+                    <Badge variant="outline" className="h-5 border-amber-200 bg-amber-50 px-1.5 text-[10px] font-medium text-amber-950">
+                      Action required
+                    </Badge>
+                  ) : null}
                 </div>
-              </div>
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">Details</p>
-                <p>
-                  <span className="text-muted-foreground">Organization:</span> {selectedInvoice.organization}
+              </section>
+
+              <section className="space-y-1.5">
+                <p className="text-xs font-medium text-muted-foreground">Amount / period</p>
+                <p className="text-foreground">{formatCurrency(selectedInvoice.amount)}</p>
+                <p className="text-muted-foreground">{selectedInvoice.periodLabel}</p>
+              </section>
+
+              <section className="space-y-1.5">
+                <p className="text-xs font-medium text-muted-foreground">Status and action required</p>
+                <p className="text-foreground">{billingStatusLabel(selectedInvoice)}</p>
+                <p className="text-muted-foreground">
+                  {selectedInvoice.actionRequired
+                    ? "Follow-up is required before this invoice can be closed."
+                    : "No operator follow-up is required for this invoice."}
                 </p>
-                <p>
-                  <span className="text-muted-foreground">Period:</span> {selectedInvoice.periodLabel}
+              </section>
+
+              <section className="space-y-1.5">
+                <p className="text-xs font-medium text-muted-foreground">Organization</p>
+                <p className="text-foreground">{selectedInvoice.organization}</p>
+                <Button type="button" variant="link" className="h-auto p-0 text-xs" asChild>
+                  <Link to={`/organizations/${encodeURIComponent(selectedInvoice.organizationId)}`}>
+                    {actionLabel("View organization billing", "View organization record")}
+                  </Link>
+                </Button>
+              </section>
+
+              <section className="space-y-1.5">
+                <p className="text-xs font-medium text-muted-foreground">Billing activity</p>
+                <p className="text-muted-foreground">
+                  Issued {formatDate(selectedInvoice.issuedDate)} · Due {formatDate(selectedInvoice.dueDate)} · Last updated{" "}
+                  {formatDateTime(selectedInvoice.lastUpdated)}
                 </p>
-                <p>
-                  <span className="text-muted-foreground">Amount:</span> {formatCurrency(selectedInvoice.amount)}
-                </p>
-                <p>
-                  <span className="text-muted-foreground">Issued:</span> {formatDate(selectedInvoice.issuedDate)}
-                </p>
-                <p>
-                  <span className="text-muted-foreground">Due:</span> {formatDate(selectedInvoice.dueDate)}
-                </p>
-                <p>
-                  <span className="text-muted-foreground">Last updated:</span> {formatDateTime(selectedInvoice.lastUpdated)}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Payment references and bank identifiers are not shown here.
-                </p>
-              </div>
+              </section>
+
               {canManageBilling ? (
-                <div className="space-y-2 border-t border-border pt-4">
-                  <p className="text-xs font-medium text-muted-foreground">Billing controls</p>
+                <section className="space-y-2 border-t border-border pt-4">
+                  <p className="text-xs font-medium text-muted-foreground">Controls</p>
                   <div className="flex flex-wrap gap-2">
                     <Button type="button" variant="outline" size="sm" onClick={() => setReminderConfirmOpen(true)}>
-                      Send payment reminder…
+                      Send reminder
                     </Button>
                     <Button type="button" variant="outline" size="sm" onClick={() => setRefundConfirmOpen(true)}>
-                      Request refund…
+                      Request refund
                     </Button>
                     {selectedInvoice.status === "dispute_review" ? (
                       <Button type="button" variant="secondary" size="sm" onClick={() => setReviewedConfirmOpen(true)}>
-                        Mark reviewed…
+                        Mark for review
                       </Button>
                     ) : null}
                   </div>
-                </div>
+                </section>
               ) : (
-                <p className="text-xs text-muted-foreground border-t border-border pt-4">
-                  Billing actions are not available for this preview role.
+                <p className="border-t border-border pt-4 text-xs text-muted-foreground">
+                  {isComplianceReadOnly
+                    ? "Billing controls are read-only for this preview role. Use View and Review history actions from the tables."
+                    : "Billing actions are not available for this preview role."}
                 </p>
               )}
+
+              <section className="space-y-1 border-t border-border pt-4 text-xs text-muted-foreground">
+                <p className="font-medium text-foreground">Technical details</p>
+                <p>Invoice id: {selectedInvoice.id}</p>
+                <p>Organization id: {selectedInvoice.organizationId}</p>
+                <p>Payment references and bank identifiers are not shown in this portal.</p>
+              </section>
             </div>
           ) : null}
-          <DialogFooter className="shrink-0 border-t border-border px-0 pt-4">
+          <DialogFooter className="shrink-0 border-t border-border px-0 pt-3">
             <Button type="button" variant="outline" onClick={() => setSelectedInvoice(null)}>
               Close
             </Button>
@@ -617,9 +715,9 @@ export function PlatformBilling() {
       <AlertDialog open={reviewedConfirmOpen} onOpenChange={setReviewedConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Mark dispute reviewed?</AlertDialogTitle>
+            <AlertDialogTitle>Mark for review?</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
-              <span className="block">Marks this dispute as reviewed for the operations queue.</span>
+              <span className="block">Marks this dispute for review in the operations queue.</span>
               <AuditHintText className="block" />
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -630,7 +728,7 @@ export function PlatformBilling() {
                 setReviewedConfirmOpen(false);
                 const id = selectedInvoice?.id ?? "invoice";
                 setSelectedInvoice(null);
-                setActionMessage(`Dispute marked reviewed for ${id}.`);
+                setActionMessage(`Dispute marked for review for ${id}.`);
               }}
             >
               Confirm

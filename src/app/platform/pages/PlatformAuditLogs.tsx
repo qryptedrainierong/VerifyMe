@@ -1,17 +1,9 @@
-import { Search, Filter, Download, Calendar, ArrowUpDown, X } from "lucide-react";
+import { Download, X } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router";
 import { Button } from "../../shared/components/ui/button";
-import { Input } from "../../shared/components/ui/input";
 import { Card } from "../../shared/components/ui/card";
-import { Label } from "../../shared/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../../shared/components/ui/select";
+import { Badge } from "../../shared/components/ui/badge";
 import {
   AuditLog,
   ActorType,
@@ -20,7 +12,6 @@ import {
   deriveAuditEntityType,
   deriveGovernanceSeverityLabel,
   getActionLabel,
-  getAuditSummaryBucket,
   getAuditTableCategory,
   getCategoryColorForAction,
   getGovernanceCategoryForLog,
@@ -34,8 +25,8 @@ import { PortalPageFrame } from "../../shared/components/PortalPageFrame";
 import { platformAuditLogsSample } from "../data/platformAuditLogsSample";
 import { buildInitialOrganizations } from "../data/platformOrganizationsSample";
 import { shouldIgnoreRowOpenClick } from "../utils/tableRowNav";
-import { SummaryStatCard } from "../../shared/components/SummaryStatCard";
 import { TableEmptyStateRow } from "../../shared/components/TableEmptyStateRow";
+import { cn } from "../../shared/components/ui/utils";
 import { usePlatformRole } from "../context/PlatformRoleContext";
 import { canPerformPlatformAction, canShowNavSection } from "../utils/platformRolePermissions";
 
@@ -86,6 +77,44 @@ function formatDateTime(dateString: string) {
   );
 }
 
+function formatRelativeAuditTime(iso: string, nowMs: number): string {
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return iso;
+  const diffMs = Math.max(0, nowMs - t);
+  const sec = Math.floor(diffMs / 1000);
+  if (sec < 45) return "Just now";
+  const min = Math.floor(diffMs / 60000);
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.floor(diffMs / 3600000);
+  if (hr < 24) return `${hr}h ago`;
+
+  const then = new Date(t);
+  const now = new Date(nowMs);
+  const thenDay = Date.UTC(then.getUTCFullYear(), then.getUTCMonth(), then.getUTCDate());
+  const nowDay = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const dayDiff = Math.floor((nowDay - thenDay) / 86400000);
+  if (dayDiff === 1) return "Yesterday";
+  if (dayDiff < 7) return `${dayDiff}d ago`;
+
+  return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeZone: "UTC" }).format(then) + " UTC";
+}
+
+function GovernanceSeverityBadge({ label }: { label: ReturnType<typeof deriveGovernanceSeverityLabel> }) {
+  return (
+    <Badge
+      variant="outline"
+      className={cn(
+        "h-5 px-1.5 text-[10px] font-medium leading-none",
+        governanceSeverityBadgeClass(label),
+        label === "Critical" && "border-red-400/80 bg-red-50 font-semibold text-red-900 dark:border-red-900/60 dark:bg-red-950/45 dark:text-red-100",
+        label === "High" && "border-orange-300/80 bg-orange-50 text-orange-950 dark:bg-orange-950/35 dark:text-orange-50",
+      )}
+    >
+      {label}
+    </Badge>
+  );
+}
+
 const getStatusBadgeColor = (status: AuditStatus) => {
   switch (status) {
     case AuditStatus.SUCCESS:
@@ -127,15 +156,6 @@ function actorFilterMatches(log: AuditLog, filter: string): boolean {
   return log.actorType === map[filter];
 }
 
-function patchParams(prev: URLSearchParams, updates: Record<string, string | null>) {
-  const next = new URLSearchParams(prev);
-  for (const [k, v] of Object.entries(updates)) {
-    if (!v || v === "all") next.delete(k);
-    else next.set(k, v);
-  }
-  return next;
-}
-
 function entityTypeShort(log: AuditLog): string {
   const t = deriveAuditEntityType(log);
   const map: Record<string, string> = {
@@ -169,7 +189,7 @@ export function PlatformAuditLogs() {
   const canExportLogs = canPerformPlatformAction(role, "export_audit");
   const showSettingsBackLink = canShowNavSection(role, "settings");
   const knownOrgIds = useMemo(() => new Set(buildInitialOrganizations().map((o) => o.id)), []);
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
 
   const searchQuery = searchParams.get("search") ?? "";
 
@@ -191,11 +211,6 @@ export function PlatformAuditLogs() {
   const rawFocus = searchParams.get("focus") ?? "all";
   const governanceFocus = rawFocus === "risk" || rawFocus === "conflict" ? rawFocus : "all";
 
-  const patch = (updates: Record<string, string | null>) => {
-    setSearchParams((prev) => patchParams(prev, updates), { replace: true });
-    setCurrentPage(1);
-  };
-
   const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -208,12 +223,6 @@ export function PlatformAuditLogs() {
     () => [...platformAuditLogsSample].sort((a, b) => Date.parse(b.timestamp) - Date.parse(a.timestamp)),
     [],
   );
-
-  const organizationOptions = useMemo(() => {
-    const m = new Map<string, string>();
-    sortedLogs.forEach((log) => m.set(log.organizationId, log.organization));
-    return Array.from(m.entries()).sort((a, b) => a[1].localeCompare(b[1]));
-  }, [sortedLogs]);
 
   const filteredLogs = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -308,32 +317,17 @@ export function PlatformAuditLogs() {
   ]);
 
   const summary = useMemo(() => {
-    let security = 0;
-    let admin = 0;
-    let integration = 0;
-    let billing = 0;
+    let high = 0;
+    let critical = 0;
     filteredLogs.forEach((log) => {
-      switch (getAuditSummaryBucket(log.action)) {
-        case "security":
-          security += 1;
-          break;
-        case "admin":
-          admin += 1;
-          break;
-        case "integration":
-          integration += 1;
-          break;
-        case "billing":
-          billing += 1;
-          break;
-      }
+      const sev = deriveGovernanceSeverityLabel(log);
+      if (sev === "High") high += 1;
+      if (sev === "Critical") critical += 1;
     });
     return {
       total: filteredLogs.length,
-      security,
-      admin,
-      integration,
-      billing,
+      high,
+      critical,
     };
   }, [filteredLogs]);
 
@@ -354,240 +348,77 @@ export function PlatformAuditLogs() {
     setTimeout(() => setSelectedLog(null), 300);
   };
 
-  const resetFilters = () => {
-    setSearchParams(new URLSearchParams(), { replace: true });
-    setCurrentPage(1);
-  };
-
-  const sessionRef = selectedLog?.sessionRef ?? selectedLog?.relatedVerificationSessionId;
-
   return (
     <>
       <PortalPageFrame
         variant="fill"
         rootClassName="h-full"
         title="Audit Logs"
-        description="Governance-aligned audit trail across VerifyMe Users, identity links, organizations, client apps, verification sessions, and billing. Filters support deep links from entity pages."
+        description="Governance-aligned audit trail across platform operations and verification activity."
+        headerClassName="border-border/80 px-5 py-3.5 sm:px-7"
+        headingClassName="text-xl font-semibold tracking-tight md:text-2xl"
+        contentMaxWidthClass="max-w-[min(100%,90rem)]"
         headerActions={
           <div className="flex items-center gap-2">
             {showSettingsBackLink ? (
-              <Button variant="outline" type="button" asChild>
-                <Link to="/settings">Back to Platform Settings</Link>
+              <Button variant="ghost" size="sm" type="button" asChild>
+                <Link to="/settings">Platform Settings</Link>
               </Button>
             ) : null}
             {canExportLogs ? (
-              <Button variant="outline" type="button">
-                <Download className="mr-2 h-4 w-4" />
-                Export Logs
+              <Button variant="outline" size="sm" type="button" className="h-8 text-xs">
+                <Download className="mr-1.5 h-3.5 w-3.5" />
+                Export
               </Button>
             ) : null}
           </div>
         }
         headerExtra={
-          <div className="flex w-full flex-col gap-4">
-            <div className="rounded-md border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-              Audit visibility is shown for preview. Production audit access must be scoped by backend RBAC.
-            </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="relative max-w-md min-w-[200px] flex-1">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Search events, subjects, actors, organizations…"
-                  value={searchQuery}
-                  onChange={(e) => patch({ search: e.target.value || null })}
-                  className="h-10 bg-background pl-10"
-                />
-              </div>
-
-              <Select value={governanceCategory} onValueChange={(v) => patch({ governanceCategory: v })}>
-                <SelectTrigger className="h-10 w-[200px]">
-                  <SelectValue placeholder="Governance category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All governance categories</SelectItem>
-                  {GOVERNANCE_CATEGORIES.map((c) => (
-                    <SelectItem key={c} value={c}>
-                      {c}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={entityType} onValueChange={(v) => patch({ entityType: v })}>
-                <SelectTrigger className="h-10 w-[200px]">
-                  <SelectValue placeholder="Subject" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ENTITY_TYPES.map((e) => (
-                    <SelectItem key={e.value} value={e.value}>
-                      {e.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={governanceFocus} onValueChange={(v) => patch({ focus: v })}>
-                <SelectTrigger className="h-10 w-[220px]">
-                  <SelectValue placeholder="Workflow" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All events</SelectItem>
-                  <SelectItem value="risk">Risk events only</SelectItem>
-                  <SelectItem value="conflict">Conflict workflow only</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex flex-wrap items-end gap-3">
-              <div className="flex min-w-[140px] max-w-[200px] flex-col gap-1">
-                <Label className="text-[11px] text-muted-foreground">VerifyMe ID</Label>
-                <Input
-                  placeholder="vm…"
-                  value={verifymeIdFilter}
-                  onChange={(e) => patch({ verifymeId: e.target.value || null })}
-                  className="h-10 font-mono text-[13px]"
-                />
-              </div>
-              <div className="flex min-w-[140px] max-w-[200px] flex-col gap-1">
-                <Label className="text-[11px] text-muted-foreground">Identity link</Label>
-                <Input
-                  placeholder="IL-…"
-                  value={identityLinkFilter}
-                  onChange={(e) => patch({ identityLinkId: e.target.value || null })}
-                  className="h-10 font-mono text-[13px]"
-                />
-              </div>
-              <div className="flex min-w-[140px] max-w-[200px] flex-col gap-1">
-                <Label className="text-[11px] text-muted-foreground">Client app</Label>
-                <Input
-                  placeholder="APP-…"
-                  value={clientAppFilter}
-                  onChange={(e) => patch({ clientAppId: e.target.value || null })}
-                  className="h-10 font-mono text-[13px]"
-                />
-              </div>
-              <div className="flex min-w-[160px] max-w-[220px] flex-col gap-1">
-                <Label className="text-[11px] text-muted-foreground">Verification session</Label>
-                <Input
-                  placeholder="Session id"
-                  value={verificationSessionFilter}
-                  onChange={(e) => patch({ verificationSessionId: e.target.value || null })}
-                  className="h-10 font-mono text-[13px]"
-                />
-              </div>
-              <div className="flex min-w-[160px] max-w-[220px] flex-col gap-1">
-                <Label className="text-[11px] text-muted-foreground">Platform admin</Label>
-                <Input
-                  placeholder="pa000001"
-                  value={platformAdminIdFilter}
-                  onChange={(e) => patch({ platformAdminId: e.target.value || null })}
-                  className="h-10 font-mono text-[13px]"
-                />
-              </div>
-
-              <Select value={actorFilter} onValueChange={(v) => patch({ actor: v })}>
-                <SelectTrigger className="h-10 w-[180px]">
-                  <SelectValue placeholder="Actor" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All actors</SelectItem>
-                  <SelectItem value="platform-admin">Platform Admin</SelectItem>
-                  <SelectItem value="org-owner">Organization Owner</SelectItem>
-                  <SelectItem value="org-admin">Organization Admin</SelectItem>
-                  <SelectItem value="org-member">Organization Member</SelectItem>
-                  <SelectItem value="system">System</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={organizationFilter} onValueChange={(v) => patch({ organizationId: v })}>
-                <SelectTrigger className="h-10 w-[220px]">
-                  <SelectValue placeholder="Organization" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All organizations</SelectItem>
-                  {organizationOptions.map(([id, name]) => (
-                    <SelectItem key={id} value={id}>
-                      {name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select
-                value={
-                  severityGov === "all"
-                    ? "all"
-                    : severityGov === "Informational"
-                      ? "informational"
-                      : severityGov.toLowerCase()
-                }
-                onValueChange={(v) => patch({ severity: v === "all" ? null : v })}
-              >
-                <SelectTrigger className="h-10 w-[200px]">
-                  <SelectValue placeholder="Severity" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All severity levels</SelectItem>
-                  <SelectItem value="informational">Informational</SelectItem>
-                  <SelectItem value="warning">Warning</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="critical">Critical</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select value={dateRange} onValueChange={(v) => patch({ dateRange: v })}>
-                <SelectTrigger className="h-10 w-[180px]">
-                  <SelectValue placeholder="Date range" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All dates</SelectItem>
-                  <SelectItem value="1day">Last 24 hours</SelectItem>
-                  <SelectItem value="7days">Last 7 days</SelectItem>
-                  <SelectItem value="30days">Last 30 days</SelectItem>
-                  <SelectItem value="90days">Last 90 days</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Button variant="outline" size="icon" className="h-10 w-10" type="button" onClick={resetFilters}>
-                <Filter className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+          <p className="text-[11px] leading-snug text-muted-foreground">
+            Audit visibility is shown for preview. Production audit access must be scoped by backend RBAC.
+          </p>
         }
-        bodyClassName="space-y-6"
+        bodyClassName="space-y-3 px-5 pb-4 pt-3 sm:px-7 sm:pb-5 sm:pt-4"
       >
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <SummaryStatCard label="Total events" value={summary.total} />
-          <SummaryStatCard label="Security events" value={summary.security} />
-          <SummaryStatCard label="Admin actions" value={summary.admin} />
-          <SummaryStatCard label="Integration events" value={summary.integration} />
-          <SummaryStatCard label="Billing / credits" value={summary.billing} />
+        <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+          <span className="tabular-nums">
+            <span className="font-medium text-foreground">{summary.total.toLocaleString()}</span> events
+          </span>
+          <span aria-hidden>•</span>
+          <Badge variant="secondary" className="h-5 px-2 text-[10px] font-normal tabular-nums">
+            {summary.high.toLocaleString()} high severity
+          </Badge>
+          <Badge variant="secondary" className="h-5 px-2 text-[10px] font-normal tabular-nums">
+            {summary.critical.toLocaleString()} critical
+          </Badge>
         </div>
 
-        <Card className="overflow-hidden border border-border shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-4">
-            <p className="text-[13px] text-muted-foreground">
+        <Card className="overflow-hidden border border-border/70 shadow-none">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 px-3 py-2">
+            <p className="text-[11px] text-muted-foreground tabular-nums">
               {totalLogs === 0
-                ? "Showing 0 audit log entries"
-                : `Showing ${startIndex + 1}-${endIndex} of ${totalLogs} audit log entries`}
+                ? "No matching events"
+                : `${startIndex + 1}–${endIndex} of ${totalLogs.toLocaleString()}`}
             </p>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 type="button"
+                className="h-7 px-2 text-xs"
                 disabled={safeCurrentPage === 1}
                 onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
               >
                 Previous
               </Button>
-              <span className="px-2 text-[13px] text-muted-foreground">
-                Page {safeCurrentPage} of {totalPages}
+              <span className="px-1 text-[11px] tabular-nums text-muted-foreground">
+                {safeCurrentPage} / {totalPages}
               </span>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 type="button"
+                className="h-7 px-2 text-xs"
                 disabled={safeCurrentPage === totalPages || totalLogs === 0}
                 onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
               >
@@ -596,72 +427,65 @@ export function PlatformAuditLogs() {
             </div>
           </div>
 
-          <div className="min-w-[1200px] overflow-x-auto">
-            <table className="w-full text-[13px]">
-              <thead className="sticky top-0 border-b border-border bg-accent/5">
+          <div className="min-w-[640px] overflow-x-auto">
+            <table className="w-full text-[12px]">
+              <thead className="sticky top-0 border-b border-border/60 bg-muted/25">
                 <tr>
-                  <th className="p-4 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    <span className="inline-flex items-center gap-1">
-                      Timestamp
-                      <ArrowUpDown className="h-3 w-3" />
-                    </span>
-                  </th>
-                  <th className="p-4 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Event</th>
-                  <th className="p-4 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Governance category</th>
-                  <th className="p-4 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Severity</th>
-                  <th className="p-4 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Subject</th>
-                  <th className="p-4 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Actor</th>
-                  <th className="p-4 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Organization</th>
+                  <th className="px-2.5 py-1.5 text-left text-[10px] font-medium text-muted-foreground">Time</th>
+                  <th className="px-2.5 py-1.5 text-left text-[10px] font-medium text-muted-foreground">Event</th>
+                  <th className="px-2.5 py-1.5 text-left text-[10px] font-medium text-muted-foreground">Category</th>
+                  <th className="px-2.5 py-1.5 text-left text-[10px] font-medium text-muted-foreground">Severity</th>
+                  <th className="px-2.5 py-1.5 text-left text-[10px] font-medium text-muted-foreground">Actor</th>
+                  <th className="px-2.5 py-1.5 text-right text-[10px] font-medium text-muted-foreground">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <tbody className="divide-y divide-border/40">
                 {visibleLogs.map((log) => {
                   const govSev = deriveGovernanceSeverityLabel(log);
                   return (
                     <tr
                       key={log.id}
-                      className="cursor-pointer transition-colors hover:bg-accent/10"
+                      className="cursor-pointer transition-colors hover:bg-muted/30"
                       onClick={(e) => {
                         if (shouldIgnoreRowOpenClick(e.target)) return;
                         handleLogClick(log);
                       }}
                     >
-                      <td className="p-4 align-top">
-                        <div className="flex items-start gap-2">
-                          <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                          <div>
-                            <p className="text-foreground">{formatDateTime(log.timestamp)}</p>
-                          </div>
-                        </div>
+                      <td
+                        className="whitespace-nowrap px-2.5 py-1.5 align-middle tabular-nums text-[10px] text-muted-foreground"
+                        title={formatDateTime(log.timestamp)}
+                      >
+                        {formatRelativeAuditTime(log.timestamp, ANCHOR_NOW_MS)}
                       </td>
-                      <td className="p-4 align-top">
-                        <p className={`font-medium ${getCategoryColorForAction(log.action)}`}>
-                          {getActionLabel(log.action)}
-                        </p>
+                      <td className="max-w-[16rem] px-2.5 py-1.5 align-middle">
+                        <p className="line-clamp-2 font-medium leading-snug text-foreground">{getActionLabel(log.action)}</p>
                       </td>
-                      <td className="p-4 align-top text-muted-foreground">{getGovernanceCategoryForLog(log)}</td>
-                      <td className="p-4 align-top">
-                        <span
-                          className={`inline-flex items-center rounded-md border px-2 py-1 text-[12px] font-medium ${governanceSeverityBadgeClass(
-                            govSev,
-                          )}`}
+                      <td className="whitespace-nowrap px-2.5 py-1.5 align-middle text-[11px] text-muted-foreground">
+                        {getGovernanceCategoryForLog(log)}
+                      </td>
+                      <td className="px-2.5 py-1.5 align-middle whitespace-nowrap">
+                        <GovernanceSeverityBadge label={govSev} />
+                      </td>
+                      <td className="max-w-[10rem] px-2.5 py-1.5 align-middle">
+                        <p className="truncate text-foreground">{log.actor}</p>
+                      </td>
+                      <td className="px-2.5 py-1.5 align-middle text-right">
+                        <button
+                          type="button"
+                          className="text-[10px] font-medium text-muted-foreground underline-offset-2 transition-colors hover:text-primary hover:underline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleLogClick(log);
+                          }}
                         >
-                          {govSev}
-                        </span>
-                      </td>
-                      <td className="p-4 align-top text-muted-foreground">{entityTypeShort(log)}</td>
-                      <td className="p-4 align-top">
-                        <p className="text-foreground">{log.actor}</p>
-                        <p className="text-[11px] text-muted-foreground">{log.actorType}</p>
-                      </td>
-                      <td className="p-4 align-top">
-                        <p className="text-foreground">{log.organization}</p>
+                          View
+                        </button>
                       </td>
                     </tr>
                   );
                 })}
                 {visibleLogs.length === 0 ? (
-                  <TableEmptyStateRow colSpan={7} title="No audit logs match current filters." />
+                  <TableEmptyStateRow colSpan={6} title="No audit logs match current filters." />
                 ) : null}
               </tbody>
             </table>
@@ -680,6 +504,7 @@ export function PlatformAuditLogs() {
     </>
   );
 }
+
 
 interface AuditLogDetailsModalProps {
   log: AuditLog;
@@ -792,7 +617,7 @@ function AuditLogDetailsModal({ log, isOpen, onClose, knownOrgIds }: AuditLogDet
                   <p className="font-mono text-xs text-muted-foreground">{log.action}</p>
                 </div>
                 <div>
-                  <p className="mb-1 text-xs text-muted-foreground">Governance category</p>
+                  <p className="mb-1 text-xs text-muted-foreground">Category</p>
                   <p className="text-sm text-foreground">{getGovernanceCategoryForLog(log)}</p>
                 </div>
                 <div>
